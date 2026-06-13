@@ -17,37 +17,74 @@ reproduced here — the portal vision supersedes them.
 
 | File | Section | Status | Notes |
 |---|---|---|---|
-| `portal-vision-handoff.md` | Portal vision | 🟢 Handoff | Config-driven portal: problem statement, settled architectural decisions, and §9 open questions. Authoritative. |
-| `portal-open-questions.md` | Portal §9 resolutions | 🟡 Proposed | Recommended resolutions to the handoff's open questions; not yet ratified. |
+| `decisions/` | **Design decisions (ADRs)** | 🟢 Canonical | The source of truth for *what was decided and why*. See `decisions/README.md` for the system; the Decision Log below is the index. |
+| `portal-vision-handoff.md` | Portal vision | 🟢 Historical vision / context | The original config-driven portal brainstorm: problem statement, settled decisions (§2), open questions (§9), invariants checklist (§10). Read for narrative context; **cite ADRs for decisions** — §2 is backfilled as ADR-0002–0009, §9 as Proposed ADR-0010–0013. |
+| `portal-open-questions.md` | Portal §9 working notes | 🟡 Working notes | Proposed resolutions to the §9 open questions, carried into the corresponding Proposed ADRs as their recommended Decision + rationale. |
 
-## Settled Decisions (from the handoff)
+## How decisions are recorded
 
-See `portal-vision-handoff.md` §2 for the authoritative list. In brief:
+Every load-bearing choice is an **ADR** in [`decisions/`](./decisions/), indexed by the
+Decision Log below. Open questions are `Proposed` ADRs (the decision queue); ratifying one is
+a status flip to `Accepted`, not a new document. Decisions are never deleted — reversals
+`Supersede` with a forward pointer. Full process: [`decisions/README.md`](./decisions/README.md).
 
-| Decision | Choice |
-|---|---|
-| Generic vs. domain-specific | Generic against any Hippo deployment + LinkML schema; no domain nouns in source |
-| Config persistence | Config is itself a LinkML schema, stored in Hippo |
-| Configurability levels | Composition + Binding are declarative; Behavior is typed sandboxed plugins only (no middle scripting layer) |
-| Component authority | Components hold no authority; data reach resolved against the current viewer via an injected capability-scoped client |
-| Component output | Components emit a serializable view description, never direct DOM manipulation |
-| Validation | All three contract layers (manifest, data-contract, render-contract) checkable headlessly — no browser |
+## Decision Log
 
-## Open Questions
+> Canonical index of ADRs. One row per decision; the entry point to `decisions/`.
 
-Tracked in `portal-open-questions.md` (proposed resolutions to handoff §9):
-component execution runtime, view-description vocabulary richness, local-vs-remote agent
-loop, and config layering.
+| ADR | Decision | Status | Source |
+|---|---|---|---|
+| [0001](./decisions/ADR-0001-adopt-adrs.md) | Record design decisions as ADRs (this system) | ✅ Accepted | handoff §2 |
+| [0002](./decisions/ADR-0002-generic-not-domain-specific.md) | Generic against any Hippo deployment; no domain nouns in source | ✅ Accepted | handoff §2.1 |
+| [0003](./decisions/ADR-0003-config-is-linkml-in-hippo.md) | Config is a LinkML schema, stored in Hippo | ✅ Accepted | handoff §2.2, §3 |
+| [0004](./decisions/ADR-0004-three-levels-of-configurability.md) | Three configurability levels; no middle scripting layer | ✅ Accepted | handoff §2.3 |
+| [0005](./decisions/ADR-0005-config-accessible-to-humans-and-llms.md) | Config equally accessible to humans and LLMs; defaults in schema | ✅ Accepted | handoff §2.4 |
+| [0006](./decisions/ADR-0006-components-runtime-reloaded.md) | Components runtime-reloaded behind headless validation | ✅ Accepted | handoff §2.5, §5 |
+| [0007](./decisions/ADR-0007-user-and-system-components-same-artifact.md) | User/system components are one artifact; promotion is ACL-only | ✅ Accepted | handoff §2.6 |
+| [0008](./decisions/ADR-0008-components-hold-no-authority.md) | Components hold no authority; injected capability-scoped client | ✅ Accepted | handoff §2.7 |
+| [0009](./decisions/ADR-0009-components-emit-view-descriptions.md) | Components emit serializable view descriptions, never DOM | ✅ Accepted | handoff §2.8, §5 |
+| [0010](./decisions/ADR-0010-view-description-vocabulary.md) | View vocabulary is a typed noun-catalog **(keystone)** | 🟡 Proposed | handoff §9.2 (Q2) |
+| [0011](./decisions/ADR-0011-component-execution-runtime.md) | Component runtime/language: client-side Web Worker + Pyodide escape hatch | 🟡 Proposed | handoff §9.1 (Q1) + tech |
+| [0012](./decisions/ADR-0012-config-layering.md) | Layered config → one validated instance; layer-attributed resolution | 🟡 Proposed | handoff §9.4 (Q4) |
+| [0013](./decisions/ADR-0013-agent-loop-local-vs-remote.md) | One API-based agent loop; component source is the only file artifact | 🟡 Proposed | handoff §9.3 (Q3) |
+| [0014](./decisions/ADR-0014-application-architecture.md) | Application architecture: server-rendered vs client-side shell | 🟡 Proposed | raised 2026-06-13 |
+| [0015](./decisions/ADR-0015-composability-and-cross-links.md) | Composability + cross-links (hrefs) | 🟡 Proposed | raised 2026-06-13 |
 
-## Sequencing
+## Decision Queue (open — resolve in dependency order)
 
-De-risk in order (handoff §8): schema-derived browse + faceted search with config-in-Hippo
-→ dry-run validate endpoint + Type-A agent loop → typed component contract + one hand-built
-Type-B component → view construction/export → visualization catalog → sharing.
+Per `portal-open-questions.md`, resolve **ADR-0010 → 0011 → 0012 → 0013**; ADR-0014 follows
+0011 (the runtime/Pyodide weight changes the SSR-vs-SPA tradeoff), and ADR-0015 follows
+0010/0014. The keystone is **ADR-0010**: its survival-curve probe (can a KM-curve be
+expressed as catalog primitives + a stratifying query, or does it need escape-hatch
+rendering?) validates or breaks the whole chain.
+
+**Next session — first action:** run the ADR-0010 survival-curve probe.
+
+## Building against Hippo (current surface)
+
+Aperture targets Hippo's autogenerated **GraphQL transport** (sec4 §4.7), rendered from the
+shared `schema_typing` type model — same class set as the typed SDK. Design around today's
+documented limits: offset-only pagination, equality filters only (no CEL over GraphQL yet),
+multivalued slots don't persist in the v0.1 SQLite adapter (resolved lists return `[]`),
+`isAvailable` always `true` on reads, and no schema-versioning of the GraphQL surface
+(additive-only tolerance). Internal cross-links come from resolved relationship fields;
+external hrefs from `ExternalReference` + `hippo_external_xref` reverse lookup (issue #48).
+
+The kept `src/aperture/backends/` protocol has `HippoSdkBackend` (in-process) and
+`HippoRestBackend` (REST); a **GraphQL backend is not yet implemented** and is the natural
+next code artifact once the runtime/architecture ADRs settle.
+
+## Settled Invariants (review checklist)
+
+Handoff §10 remains the per-change review checklist. The invariants it lists are now owned by
+ADRs: domain-noun-free source (ADR-0002), config-as-LinkML-in-Hippo (ADR-0003), no middle
+scripting layer (ADR-0004), defaults-in-schema (ADR-0005), universal sandbox + ACL-only
+promotion (ADR-0007), no component authority (ADR-0008), view-descriptions-not-DOM and
+headless-checkable contract (ADR-0009).
 
 ## How to Use This Spec
 
 Sections feed the openplan pipeline:
 ```
-Spec sections → openplan vision.yaml → roadmap → epics → features → OpenSpec
+ADRs + spec sections → openplan vision.yaml → roadmap → epics → features → OpenSpec
 ```

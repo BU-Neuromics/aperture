@@ -1,3 +1,10 @@
+> **Decision-record note (added 2026-06-13):** This handoff is now **historical
+> vision / context**, not the decision record. Its §2 settled decisions are
+> backfilled as `Accepted` ADRs (0002–0009) and its §9 open questions are `Proposed`
+> ADRs (0010–0013) in [`decisions/`](./decisions/). **Cite ADRs for decisions; read
+> this doc for narrative context.** The §10 invariants checklist remains the
+> per-change review list (its invariants are now owned by the ADRs above).
+>
 > **Status banner (added 2026-06-13):** This handoff captures a new, broader
 > vision for Aperture as a **config-driven data portal**. It **supersedes the
 > CLI-first v0.1 framing** in `sec1`–`sec6` (which remain in this directory as

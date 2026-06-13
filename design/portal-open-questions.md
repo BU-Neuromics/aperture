@@ -2,8 +2,13 @@
 
 **Status:** 🟡 **PROPOSED — not yet ratified.** Working notes from the 2026-06-13
 design discussion. These are recommendations to pressure-test and confirm (or reject)
-in the next working session, not settled decisions. The authoritative problem statement
-is `portal-vision-handoff.md` §9.
+in the next working session, not settled decisions.
+
+> **Carried into ADRs (2026-06-13):** these proposed resolutions are now the recommended
+> *Decision* + rationale of the corresponding `Proposed` ADRs in [`decisions/`](./decisions/):
+> Q2 → ADR-0010 (keystone), Q1 → ADR-0011, Q4 → ADR-0012, Q3 → ADR-0013. Ratify by flipping
+> the ADR status to `Accepted`. This file is retained as the working notes / dependency-chain
+> rationale.
 
 ---
 
