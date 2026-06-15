@@ -52,3 +52,24 @@ Python-centric user base who would rather write analysis in Python.
 - "General WASM compatibility for components" (raised 2026-06-13) is in scope here: decide
   whether the boundary admits arbitrary WASM modules or only the Pyodide escape hatch.
 - Open: SSR/app-shell rendering of the realized view spec is a separate decision (ADR-0014).
+
+### WASM's three distinct roles (2026-06-15 analysis)
+
+"Should we use WASM?" conflates three unrelated roles; keep them separate:
+
+1. **Language for components** — Pyodide is CPython-in-WASM, so "Python components" *is* WASM.
+   **Verdict:** escape hatch, not baseline (Pyodide is ~10MB+, slow cold start). JS/TS by
+   default; load Pyodide-in-Worker only when a component declares it needs Python.
+2. **The sandbox boundary itself** — components as WASM modules for memory isolation +
+   capability-by-import. **Verdict:** overkill as baseline — a Web Worker already gives
+   no-DOM + no-ambient-network + the `postMessage` capability boundary (ADR-0008). Keep Worker
+   as the boundary; let WASM live *inside* it (role 1). WASM-grade isolation only earns its
+   keep for genuinely untrusted multi-language components.
+3. **Client-side compute engine** — DuckDB-WASM / Polars-WASM for in-browser aggregation.
+   **Verdict:** attractive given Hippo's thin GraphQL (equality filters, offset pagination),
+   but it belongs in the **layer-D source adapter** (compensating for a thin source), hidden
+   behind the capability protocol — **never** a user-facing config/scripting surface, or it
+   becomes the middle layer ADR-0004 rejects.
+
+Net: WASM rides *inside* the Web Worker boundary (roles 1 and 3); it does not replace it
+(role 2).

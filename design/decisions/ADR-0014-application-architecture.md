@@ -43,6 +43,13 @@ this decision.
 
 ## Notes / open sub-questions
 
+- **The BFF candidate is Bridge (2026-06-15).** A multi-source, per-viewer model wants a thin
+  trusted server in front of the data plane; that server is **Bridge** — the same component as
+  the platform auth gateway (platform `sec6_security_model.md`), not a new Aperture server. So
+  the "hybrid (server shell + client workers)" option resolves to "Aperture client-rendered UI
+  + Bridge as the trusted data/aggregation seam." Bridge is deferred (ADR-0016); locally
+  Aperture talks to Hippo directly, so this decision can be made without blocking near-term
+  work.
 - Decide *after* ADR-0011, since the runtime/Pyodide weight materially changes the SPA vs.
   SSR tradeoff.
 - Technology/framework selection (which JS/TS framework, build tooling) is downstream of this

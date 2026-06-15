@@ -28,8 +28,20 @@ source is the signal that the generic abstraction has drifted.
 - This invariant is a standing review check (handoff §10): grep Aperture source for domain
   nouns on every change.
 
+## Refinement (2026-06-15)
+
+Broadened from "generic against any **Hippo** deployment" to **generic against any GraphQL
+endpoint**. Hippo is the first and most-tested data source, not a requirement: Aperture binds
+to standard GraphQL `__schema` introspection (baseline) plus optional per-source enrichment
+(Hippo's `hippoSchema`/`hippoEntityType`), so Canon/Cappella or a third-party API can be data
+sources too. This also splits the GraphQL relationship into a **data plane** (browsed sources)
+and a **control plane** (config/state store) — see ADR-0017. The invariant is unchanged and, if
+anything, stricter: no source-specific *or* domain-specific nouns in Aperture source.
+
 ## Alternatives considered
 
 - **Build the brain-bank portal directly, generalize later.** Faster to first demo, but
   "generalize later" rarely survives shipped domain coupling. Rejected — generality is a
   founding constraint, not a refactor.
+- **Stay generic only over Hippo deployments.** Still couples Aperture to one backend's
+  introspection surface. Rejected by the 2026-06-15 refinement in favour of any-GraphQL.
