@@ -49,6 +49,7 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0013](./decisions/ADR-0013-agent-loop-local-vs-remote.md) | One API-based agent loop; component source is the only file artifact | 🟡 Proposed | handoff §9.3 (Q3) |
 | [0014](./decisions/ADR-0014-application-architecture.md) | Application architecture: server-rendered vs client-side shell | 🟡 Proposed | raised 2026-06-13 |
 | [0015](./decisions/ADR-0015-composability-and-cross-links.md) | Composability + cross-links (hrefs) | 🟡 Proposed | raised 2026-06-13 |
+| [0016](./decisions/ADR-0016-defer-bridge-build-aperture-first.md) | Defer Bridge impl; build/demo Aperture against Hippo via no-op capability-scoped client | ✅ Accepted | 2026-06-15 |
 
 ## Decision Queue (open — resolve in dependency order)
 
@@ -73,6 +74,15 @@ external hrefs from `ExternalReference` + `hippo_external_xref` reverse lookup (
 The kept `src/aperture/backends/` protocol has `HippoSdkBackend` (in-process) and
 `HippoRestBackend` (REST); a **GraphQL backend is not yet implemented** and is the natural
 next code artifact once the runtime/architecture ADRs settle.
+
+## Security & Bridge (deferred — see ADR-0016)
+
+Authorization lives in **Bridge** (PEP/PDP), not Aperture or Hippo — full model in the
+platform spec (`drylims/platform/design/sec6_security_model.md`). Aperture is built and demoed
+**directly against Hippo** for now (ADR-0016); Bridge implementation is deferred. The
+capability-scoped client (ADR-0008) is the seam that makes this free: present from day one as
+a no-op/full-access pass-through locally, swapped for Bridge's enforcing client later with no
+change to Aperture behavior. Aperture stays auth-unaware; it never enforces access.
 
 ## Settled Invariants (review checklist)
 
