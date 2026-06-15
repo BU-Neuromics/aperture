@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-13
 - **Deciders:** design session (backfilled from handoff §2.7)
-- **Related:** handoff §2.7, §10 (invariant), ADR-0007, ADR-0009, ADR-0011 (runtime, Proposed)
+- **Related:** handoff §2.7, §10 (invariant), ADR-0007, ADR-0009, ADR-0011 (runtime, Proposed); **platform `sec6_security_model.md`** (the model that backs the capability-scoped client)
 
 ## Context
 
@@ -26,6 +26,18 @@ client**. A component never captures or carries its author's credentials or visi
   Web Worker `postMessage` boundary).
 - Aperture maps "current viewer" onto Hippo's auth surface (Bridge-injected actor headers,
   sec8) and the capability scope onto what that actor can read.
+
+## Resolution note (2026-06-15)
+
+The capability-scoped client is no longer a promissory note. The platform security model
+(drylims `platform/sec6_security_model.md`) backs it: **Bridge** is the PEP/PDP; the scoped
+client is a `HippoClient` that Bridge builds per request and injects into the GraphQL context,
+auto-applying the viewer's **record-level predicates** and **slot-level field masks**. Same
+interface, full-access/no-op locally, enforcing via Bridge remotely — Aperture's generic
+GraphQL client cannot tell the deployments apart. Hippo stays auth-unaware. The enforcement
+mechanism (field mask + predicate pushdown, one reused GraphQL schema) is settled; remaining
+work is tracked in sec6 §6.8 (PDP engine spike, Hippo `IN`-filter dependency, Bridge sec4
+revision).
 
 ## Alternatives considered
 
