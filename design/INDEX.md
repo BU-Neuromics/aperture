@@ -19,6 +19,7 @@ reproduced here — the portal vision supersedes them.
 |---|---|---|---|
 | `decisions/` | **Design decisions (ADRs)** | 🟢 Canonical | The source of truth for *what was decided and why*. See `decisions/README.md` for the system; the Decision Log below is the index. |
 | `architecture.md` | Reference architecture (orientation) | 🟢 Orientation | The "how it all fits" map — layered model, data/control plane, source adapter, WASM roles, security/BFF. Ties the ADRs together; ADRs remain authoritative. |
+| `actors.md` | Actors & personas (orientation) | 🟢 Orientation | The cast Aperture is designed for — researcher, coding agent, admin, schema author; the two-credentials model. Links each tension to its ADR. |
 | `portal-vision-handoff.md` | Portal vision | 🟢 Historical vision / context | The original config-driven portal brainstorm: problem statement, settled decisions (§2), open questions (§9), invariants checklist (§10). Read for narrative context; **cite ADRs for decisions** — §2 is backfilled as ADR-0002–0009, §9 as Proposed ADR-0010–0013. |
 | `portal-open-questions.md` | Portal §9 working notes | 🟡 Working notes | Proposed resolutions to the §9 open questions, carried into the corresponding Proposed ADRs as their recommended Decision + rationale. |
 
@@ -52,6 +53,10 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0015](./decisions/ADR-0015-composability-and-cross-links.md) | Composability + cross-links (hrefs) | 🟡 Proposed | raised 2026-06-13 |
 | [0016](./decisions/ADR-0016-defer-bridge-build-aperture-first.md) | Defer Bridge impl; build/demo Aperture against Hippo via no-op capability-scoped client | ✅ Accepted | 2026-06-15 |
 | [0017](./decisions/ADR-0017-data-plane-vs-control-plane.md) | Separate data plane (browsed sources) from control plane (config/state store) | ✅ Accepted | 2026-06-15 |
+| [0018](./decisions/ADR-0018-agents-act-with-user-delegated-authority.md) | Agents act with the invoking user's delegated authority (not a separate principal) | ✅ Accepted | 2026-06-16 |
+| [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ✅ Accepted | 2026-06-16 |
+| [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ✅ Accepted | 2026-06-16 |
+| [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ✅ Accepted | 2026-06-16 |
 
 ## Decision Queue (open — resolve in dependency order)
 
