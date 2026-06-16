@@ -20,6 +20,8 @@ reproduced here — the portal vision supersedes them.
 | `decisions/` | **Design decisions (ADRs)** | 🟢 Canonical | The source of truth for *what was decided and why*. See `decisions/README.md` for the system; the Decision Log below is the index. |
 | `architecture.md` | Reference architecture (orientation) | 🟢 Orientation | The "how it all fits" map — layered model, data/control plane, source adapter, WASM roles, security/BFF. Ties the ADRs together; ADRs remain authoritative. |
 | `actors.md` | Actors & personas (orientation) | 🟢 Orientation | The cast Aperture is designed for — researcher, coding agent, admin, schema author; the two-credentials model. Links each tension to its ADR. |
+| `prior-art.md` | Prior-art survey (2026-06-16) | 🟢 Research | Verified buy-vs-build survey: greenfield verdict; Gen3 + Vega-Lite as prototype references; design lessons mapped to our decisions; the unproven differentiators (capability-scoped client, agent-editable config). |
+| `prefab/` | Prefab portal design (working) | 🟠 Working | Concrete brain-bank portal UX walkthrough (two-tier ladder; core-loop) that defines what the config engine must reproduce. |
 | `portal-vision-handoff.md` | Portal vision | 🟢 Historical vision / context | The original config-driven portal brainstorm: problem statement, settled decisions (§2), open questions (§9), invariants checklist (§10). Read for narrative context; **cite ADRs for decisions** — §2 is backfilled as ADR-0002–0009, §9 as Proposed ADR-0010–0013. |
 | `portal-open-questions.md` | Portal §9 working notes | 🟡 Working notes | Proposed resolutions to the §9 open questions, carried into the corresponding Proposed ADRs as their recommended Decision + rationale. |
 
