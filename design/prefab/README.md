@@ -32,6 +32,11 @@ model is correct when it can reproduce this prefab*. It matches the handoff's ow
 **PF-2 + PF-3 = the "core loop"** (browse ⇄ filter), the beating heart of the portal and the
 handoff §8.1 de-risk target. We walk it first.
 
+> **Reframed (2026-06-17):** per [`../vision.md`](../vision.md), the prefab is the *substrate*
+> for an LLM-native explorer, not the end product. [`data-stories.md`](./data-stories.md) is the
+> keystone MVP — conversational data stories over Hippo metadata — built directly on the core
+> loop's cohort/query-state.
+
 ### Tier 2 — Decompose the prefab into the configurable engine
 
 | # | Step | Absorbs |
