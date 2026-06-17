@@ -1,17 +1,20 @@
-# Aperture — Config-Driven Data Portal
+# Aperture — AI-Native Data & Workflow Explorer
 ## Design Index
 
 **Codename:** Aperture
-**Component:** Interface Layer (config-driven data portal over Hippo)
-**Version:** 0.1 — Portal fresh start
+**Component:** Interface Layer — AI-native data & workflow explorer over the BASS domain graph
+(the config-driven portal is its substrate / MVP, not the product). See
+[`vision.md`](vision.md).
+**Version:** 0.1 — Portal substrate fresh start
 
 ---
 
 This repository is a **fresh start** extracted from the `drylims` monorepo (2026-06).
 It carries forward the reusable Hippo backend protocol (`src/aperture/backends/`) and the
-config-driven **portal** design. The earlier CLI-first v0.1 specification (`sec1`–`sec6`)
-and its implementation were intentionally left behind in `drylims` history and are **not**
-reproduced here — the portal vision supersedes them.
+config-driven **portal** design — now framed as the **substrate** for the AI-native explorer
+([`vision.md`](vision.md)), not the product itself. The earlier CLI-first v0.1 specification
+(`sec1`–`sec6`) and its implementation were intentionally left behind in `drylims` history and
+are **not** reproduced here.
 
 ## Document Map
 

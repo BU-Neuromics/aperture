@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "bass-aperture"
 version = "0.1.0"
-description = "BASS Aperture - config-driven data portal over Hippo"
+description = "BASS Aperture - AI-native data & workflow explorer over the BASS domain graph (Hippo)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

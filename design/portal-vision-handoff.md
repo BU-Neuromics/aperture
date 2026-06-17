@@ -1,3 +1,11 @@
+> **Reframe note (added 2026-06-17):** The top-level framing in this handoff —
+> Aperture as a *"config-driven data portal"* — is **superseded by
+> [`vision.md`](./vision.md)**. Aperture is now an **AI-native data & workflow
+> explorer** over the BASS **domain graph**; the config-driven portal is its
+> **substrate / MVP, not the product**. This document is retained verbatim as a
+> captured artifact — read it for narrative context, but take the lead framing
+> from `vision.md` and the platform [`domain-graph.md`](../../platform/design/domain-graph.md).
+>
 > **Decision-record note (added 2026-06-13):** This handoff is now **historical
 > vision / context**, not the decision record. Its §2 settled decisions are
 > backfilled as `Accepted` ADRs (0002–0009) and its §9 open questions are `Proposed`
