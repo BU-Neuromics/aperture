@@ -8,31 +8,43 @@ validator to a correct change?"
 
 ## The driving example (verbatim use case)
 
-A multi-turn data story:
+A multi-turn data story (the **gene-expression-*value*** turn from the original example is
+**excised** — see "The boundary" below — because it crosses from the domain graph into bulk-data
+slicing that Canon/Cappella don't yet implement; "*has* expression for gene Y" stays, as an
+existence/relationship fact):
 1. *"show me a summary of all the cases that are either PTSD, MDD, or controls, with negative
-   toxicology reports for amphetamines, and that have gene expression counts for gene Y"*
-2. *"show me a histogram of the normalized gene expression counts organized by case status"*
-3. *"which genotypes do we have on these subjects?"*
-4. *"how do the samples break down by genotypes A and B?"*
+   toxicology reports for amphetamines, and that have gene expression data for gene Y"*
+2. *"which genotypes do we have on these subjects?"*
+3. *"how do the samples break down by genotypes A and B?"*
 
 ## The key insight: a data story is a narrated sequence of cohort states
 
 Each turn operates on an **evolving selection** (a cohort), not from scratch. Turn 1 *establishes*
-a cohort of subjects; turns 2–4 operate on "these subjects / these samples." So the central
+a cohort of subjects; later turns operate on "these subjects / these samples." So the central
 object is exactly the **serializable query-state** we identified in
 [core-loop.md](./core-loop.md) Step 4 — now promoted from "URL state" to "the thing the
 conversation builds." **A data story = a sequence of core-loop states + transforms, narrated.**
 This unifies the AI vision with the paused core-loop work: same substrate, conversational driver
 on top.
 
+**The cohort object is grain-agnostic and re-rootable.** Per the platform
+[domain-graph model](../../../platform/design/domain-graph.md), a query returns a *knowledge
+subgraph*, and "metadata vs. data" is a **role a node plays relative to the query**, not a storage
+category. Turn 3 ("how do the *samples* break down…") re-roots the focal entity from subjects to
+samples while the same diagnosis/toxicology predicates stay attached as *descriptors* — the
+role-swap made operational. So the selection is not "a set of subjects" but **"a position in the
+graph + predicates," re-rootable to any entity type.**
+
 ## Decomposing the turns into a query algebra
 
 | Turn | Operation(s) | Grain |
 |---|---|---|
-| 1 | **filter** (set membership: `diagnosis ∈ {PTSD,MDD,control}`) + **exists-related filter** (has ToxReport{analyte=amphetamine, result=negative}; has expression for gene Y) + **summarize/count** | subjects |
-| 2 | **bind measured value** (normalized expression, gene Y) + **histogram** + **group-by** (case status), scoped to cohort | subjects → values |
-| 3 | **distinct values** of an attribute (genotype) over the cohort | subjects |
-| 4 | **group-by + count**, **pivot grain** (subjects → samples) by genotype ∈ {A,B} | samples |
+| 1 | **filter** (set membership: `diagnosis ∈ {PTSD,MDD,control}`) + **exists-related filter** (has ToxReport{analyte=amphetamine, result=negative}; has expression *data* for gene Y) + **summarize/count** | subjects |
+| 2 | **distinct values** of an attribute (genotype) over the cohort | subjects |
+| 3 | **group-by + count**, **pivot grain** (subjects → samples) by genotype ∈ {A,B} | samples |
+
+*(The excised value-histogram turn would have added `bind-measured-value` — the one op that
+reaches across the structured/bulk boundary; deferred with the boundary, below.)*
 
 **The minimal operation set:** filter (predicates, set-membership, ranges) · exists/related-entity
 filter (join with predicate) · distinct-values (facet enumeration) · group-by + aggregate(count) ·
@@ -62,48 +74,39 @@ The LLM's job each turn: **NL utterance + current cohort + schema grounding → 
 query/view-spec → dry-run validate → execute → render + narrate.** Nothing freeform; everything
 typed and checked.
 
-## The one real fork: the metadata ↔ measured-value boundary
+## The boundary (decided): structured graph vs. bulk payload — Option B
 
-Most of the example is pure metadata and genuinely straightforward:
-- **Turns 1 (filters), 3 (distinct genotypes), 4 (sample breakdown by genotype)** operate on
-  entity *attributes and relationships* Hippo holds → tractable now (modulo the join-filter
-  capability in #2). Turn 1's "*has* gene expression counts for gene Y" is satisfiable at the
-  **existence** level (subject has a sample with a RNASeq datafile / an expression record for
-  gene Y) — still metadata.
-- **Turn 2 — the histogram of normalized expression *values* — is the exception.** It needs the
-  actual per-subject quantitative values, which classically live in expression-matrix *files*,
-  not metadata. "Just Hippo metadata" has a sharp edge here. Three ways to resolve it:
+The original example's value-histogram turn crossed a real boundary — but the boundary is **not**
+"metadata vs. data" (a query-relative role); it is **structured relational records vs. bulk opaque
+payloads** (see [domain-graph.md](../../../platform/design/domain-graph.md)). The sharp reason to
+excise that turn: expression *values* are a **bulk array payload**, not a structured record.
 
-  - **(A) Model quantitative results as queryable Hippo entities** (e.g. `ExpressionValue{subject,
-    gene, normalized_count}`). → turn 2 becomes a pure-metadata story; uniform query path.
-    *Cost:* cardinality (genes × samples = millions of rows) — is Hippo still "metadata
-    tracking" or now a data warehouse?
-  - **(B) Hippo tracks only file existence** (modality=RNASeq); values live in files. → keeps
-    Hippo metadata-only and honest to its mission, but turn 2 is **not** a pure-metadata story —
-    it needs a data-access/compute path (Canon/Cappella, deferred). MVP data stories then cover
-    attribute/relationship/categorical/count questions (turns 1,3,4), deferring value
-    distributions.
-  - **(C) An aggregation/summary tier** — precomputed per-(gene, group) summaries stored as
-    queryable metadata, or a Gen3-Guppy-style index that serves distributions without Hippo
-    holding every raw value. *This is exactly the two-tier lesson from
-    [gen3-comparison.md](../gen3-comparison.md), reconnecting here.*
+**Decision (2026-06-17): Option B.** Hippo tracks that the expression *data exists* (a
+relationship/existence fact — subject has a sample with an RNASeq datafile); the actual values
+live in files, mediated by **Canon/Cappella** (deferred). The MVP data story therefore covers
+**attribute / relationship / categorical / count** questions over the domain graph (all three
+remaining turns), and **defers value-distribution turns** until the bulk-slice path exists.
 
-  **This fork decides whether the headline example works end-to-end on metadata alone, and it's a
-  Hippo data-modeling decision, not an Aperture one.** Needs the user's call.
+When that path arrives, it is the **deliberate boundary crossing** described in the domain-graph
+model: a bulk slice (e.g., gene-Y normalized counts) is **induced as a subgraph** and **unioned**
+into the query — *or* a derived per-(gene,group) **summary** is promoted into the graph (the
+Gen3-Guppy two-tier lesson, [gen3-comparison.md](../gen3-comparison.md)). Either way it is an
+expert-implemented slicer behind uniform graph semantics, not Hippo becoming a data warehouse.
 
 ## Why this is the right first probe
 
 It exercises the entire keystone — schema-grounded NL→typed-query, dry-run validation, typed view
-primitives, cohort-state across turns — on the artifact we're closest to (Hippo metadata), with a
-real, motivating use case, and **no** dependency on Cappella/Canon (turns 1/3/4) except the one
-fork (turn 2). If this rung works, the vision is real; if NL→validated-query proves unreliable
-even here, we learn it cheaply.
+primitives, cohort-state across turns — on the structured domain graph (Hippo), with a real,
+motivating use case and **no** dependency on Cappella/Canon (all three remaining turns stay within
+the structured graph). If this rung works, the vision is real; if NL→validated-query proves
+unreliable even here, we learn it cheaply.
 
 ## Open questions
-- **DS-1 (the fork):** measured-value boundary — option A / B / C for turn-2-style value
-  distributions? *(Hippo modeling decision; user's call.)*
+- **DS-1 — RESOLVED (2026-06-17): Option B.** Structured-record/bulk-payload boundary; values live
+  in files via Canon/Cappella (deferred); MVP stories stay within the domain graph. See above +
+  [domain-graph.md](../../../platform/design/domain-graph.md).
 - **DS-2:** does Hippo's GraphQL support relationship-existence/join filters and group-by+count,
   or are those capability gaps to fill (Hippo enhancement vs. aggregation tier)? *(verify against
-  the code.)*
-- **DS-3:** the real PTSD-brain-bank schema (case_status enum, toxicology, genotype, expression)
-  vs. the `omics` demo schema — which to ground the probe in?
+  the code — the immediate next step.)*
+- **DS-3:** the real PTSD-brain-bank schema (case_status enum, toxicology, genotype) vs. the
+  `omics` demo schema — which to ground the probe in?

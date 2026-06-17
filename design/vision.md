@@ -22,6 +22,17 @@ builds understanding ("data stories") by *talking to your sources*.
 This puts Aperture in a different class than Gen3's portal. We are not building a better portal;
 we are building a conversational interface for *exploring and transforming* scientific data.
 
+## The substrate it drives: the domain graph
+
+Aperture drives the platform's **domain graph** (see
+[`platform/design/domain-graph.md`](../../platform/design/domain-graph.md)): one typed knowledge
+graph whose type system is the LinkML schema and whose runtime is Hippo — *not* a "metadata
+store." Every query returns a **knowledge subgraph**; "metadata vs. data" is a query-relative
+*role*, not a storage category. Structured records live in Hippo; bulk payloads live in files
+(Canon/Cappella) and enter the graph as **induced subgraphs unioned at query time** (OBDA/VKG).
+This is why an LLM can drive it coherently: there is *one* uniform, typed graph surface, and the
+substrate mechanics are hidden behind it.
+
 ## The through-line: our declarative work was the substrate for this all along
 
 The modular/declarative design we did is not portal plumbing — it is **exactly what makes
