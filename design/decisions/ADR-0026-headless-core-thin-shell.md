@@ -1,9 +1,17 @@
 # ADR-0026: Aperture is a headless interaction core + a thin, replaceable shell
 
-- **Status:** Proposed
+- **Status:** Superseded by Reel ADR-0005 (2026-06-22 data-story-engine split)
 - **Date:** 2026-06-22
 - **Deciders:** labadorf, design session
 - **Related:** reframes ADR-0014 (application architecture); depends on ADR-0008 (injected capability-scoped client), ADR-0009 (view-descriptions, not DOM), ADR-0017 (data plane / control-plane port), ADR-0022 (instruction-path model); informs ADR-0011 (component runtime), ADR-0015 (composability); `vision.md`; `architecture.md`
+
+> **⤳ Superseded — moved to Reel (2026-06-22).** This decision moved to the **Reel** component
+> when the AI-native data-story engine was split out of Aperture (boundary:
+> `drylims:platform/design/decisions/ADR-0001`; runbook `drylims:proposals/reel-split.md`). Its
+> canonical home is now **Reel [ADR-0005](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0005-headless-core-thin-shell.md)**
+> (renumbered from this ADR; reframed there for the post-split Reel↔View Contract↔renderer
+> boundary). Kept here as a tombstone per the never-delete convention — **do not edit; edit the
+> Reel ADR.** The body below is the original Aperture text, preserved for history.
 
 ## Context
 
