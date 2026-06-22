@@ -1,10 +1,14 @@
-# Aperture — AI-Native Data & Workflow Explorer
+# Aperture — Config-Driven Rendering Portal
 ## Design Index
 
 **Codename:** Aperture
-**Component:** Interface Layer — AI-native data & workflow explorer over the BASS domain graph
-(the config-driven portal is its substrate / MVP, not the product). See
-[`vision.md`](vision.md).
+**Component:** Interface Layer — the config-driven **rendering portal** over the BASS domain
+graph: it renders **View Contract** instances (`drylims:platform/design/view-contract.md`) into a
+usable UI, and is the deployable MVP. The AI-native **data-story engine** was split out into the
+**Reel** component on 2026-06-22 (boundary: `drylims:platform/design/decisions/ADR-0001`; runbook
+`drylims:proposals/reel-split.md`); Aperture now *consumes* Reel's output via the View Contract.
+See [`vision.md`](vision.md) for the north-star — note its AI-native-explorer narrative now
+belongs to Reel; a leaner portal framing of `vision.md` is a follow-up.
 **Version:** 0.1 — Portal substrate fresh start
 
 ---
@@ -26,8 +30,8 @@ are **not** reproduced here.
 | `vision.md` | North-star vision (AI-native explorer) | 🔵 Vision | Reframes Aperture from config-driven portal → LLM-native interaction layer over Hippo/Cappella/Canon; the declarative substrate is what makes natural-language control safe. Answers the strategic review's crux #1; sets the agentic keystone probe. |
 | `prior-art.md` | Prior-art survey (2026-06-16) | 🟢 Research | Verified buy-vs-build survey: greenfield verdict; Gen3 + Vega-Lite as prototype references; design lessons mapped to our decisions; the unproven differentiators (capability-scoped client, agent-editable config). |
 | `gen3-comparison.md` | Gen3 deep comparison | 🟢 Research | Service-by-service map of Gen3 to the whole BASS platform (fence+arborist=Bridge, Peregrine=Hippo GraphQL, dictionary=LinkML); explorerConfig ≈ our core-loop config; the two-tier graph+index lesson that answers our aggregation gap. |
-| `prefab/` | Prefab portal design (working) | 🟠 Working | Concrete brain-bank portal UX walkthrough (two-tier ladder; core-loop) that defines what the config engine must reproduce. |
-| `instruction-path-model.md` | Instruction-path model (working) | 🟠 Working | The formal data structure under `prefab/data-stories.md`: a data story as a path of source-tagged typed instructions producing intensional subgraph **states** + materialized **artifacts**. Topology (linear/tree/DAG) as a data property; reproducibility via one as-of watermark; UI modes as topology slices. Open decisions D-1–D-5 (ADR-0022–0025 + a Hippo requirement). |
+| `prefab/` | Prefab portal design (working) | 🟠 Working | Concrete brain-bank portal UX walkthrough (two-tier ladder; core-loop) that defines what the config engine must reproduce. (`data-stories.md` **moved to Reel** — the data-story keystone is Reel's now.) |
+| `instruction-path-model.md` | Instruction-path model → **moved to Reel** | ⤳ Moved | The data-story substrate model moved to the **Reel** component (2026-06-22 split); this file is now a redirect stub. Canonical home: Reel `design/instruction-path-model.md`; its decisions are Reel ADR-0001–0004. |
 | `portal-vision-handoff.md` | Portal vision | 🟢 Historical vision / context | The original config-driven portal brainstorm: problem statement, settled decisions (§2), open questions (§9), invariants checklist (§10). Read for narrative context; **cite ADRs for decisions** — §2 is backfilled as ADR-0002–0009, §9 as Proposed ADR-0010–0013. |
 | `portal-open-questions.md` | Portal §9 working notes | 🟡 Working notes | Proposed resolutions to the §9 open questions, carried into the corresponding Proposed ADRs as their recommended Decision + rationale. |
 
@@ -65,20 +69,24 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ✅ Accepted | 2026-06-16 |
 | [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ✅ Accepted | 2026-06-16 |
 | [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ✅ Accepted | 2026-06-16 |
-| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | 🟡 Proposed | instruction-path-model.md (D-1) |
-| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | 🟡 Proposed | instruction-path-model.md (D-2) |
-| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | 🟡 Proposed | instruction-path-model.md (D-3) |
-| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | 🟡 Proposed | instruction-path-model.md (D-5) |
+| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | ⤳ Superseded → [Reel ADR-0001](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0001-data-story-is-an-instruction-path.md) | moved to Reel (2026-06-22 split) |
+| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | ⤳ Superseded → [Reel ADR-0002](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0002-data-story-reproducibility-as-of-watermark.md) | moved to Reel (2026-06-22 split) |
+| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | ⤳ Superseded → [Reel ADR-0003](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0003-instruction-path-linear-first-general-schema.md) | moved to Reel (2026-06-22 split) |
+| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | ⤳ Superseded → [Reel ADR-0004](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0004-mid-path-edit-recompute-with-suspend.md) | moved to Reel (2026-06-22 split) |
+| [0026](./decisions/ADR-0026-headless-core-thin-shell.md) | Headless interaction core + thin replaceable shell; embeddability via 3 injection seams | ⤳ Superseded → [Reel ADR-0005](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0005-headless-core-thin-shell.md) | moved to Reel (2026-06-22 split) |
 
 ## Decision Queue (open — resolve in dependency order)
 
 Per `portal-open-questions.md`, resolve **ADR-0010 → 0011 → 0012 → 0013**; ADR-0014 follows
 0011 (the runtime/Pyodide weight changes the SSR-vs-SPA tradeoff), and ADR-0015 follows
-0010/0014. The keystone is **ADR-0010**: its survival-curve probe (can a KM-curve be
-expressed as catalog primitives + a stratifying query, or does it need escape-hatch
-rendering?) validates or breaks the whole chain.
+0010/0014. ADR-0010 (the typed view vocabulary) is what the platform **View Contract**
+(`drylims:platform/design/view-contract.md`) now absorbs as a shared rendering standard.
 
-**Next session — first action:** run the ADR-0010 survival-curve probe.
+> **Relocated to Reel (2026-06-22 split).** The agentic **keystone probe** — *"can an LLM drive a
+> typed declarative artifact through a validator to a correct change?"* — and its survival-curve
+> exemplar now belong to **Reel** (`drylims:platform/design/decisions/ADR-0001`); they are no
+> longer Aperture's gating "next action." Aperture's queue is the portal-rendering decisions
+> above.
 
 ## Building against Hippo (current surface)
 
