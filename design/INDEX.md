@@ -69,6 +69,7 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | 🟡 Proposed | instruction-path-model.md (D-2) |
 | [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | 🟡 Proposed | instruction-path-model.md (D-3) |
 | [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | 🟡 Proposed | instruction-path-model.md (D-5) |
+| [0026](./decisions/ADR-0026-headless-core-thin-shell.md) | Headless interaction core + thin replaceable shell; embeddability via 3 injection seams | 🟡 Proposed | raised 2026-06-22 |
 
 ## Decision Queue (open — resolve in dependency order)
 
