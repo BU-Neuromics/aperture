@@ -1,5 +1,11 @@
 # Aperture — Prior-Art Survey (2026-06-16)
 
+> **Companion:** [`library-survey.md`](./library-survey.md) (2026-06-25) takes this down to the
+> **implementation-package** altitude — concrete libraries (JSONForms, XState, Serverless
+> Workflow, TanStack Table, nuqs, Perspective) with maturity/license/fit-gap and build-vs-adopt
+> verdicts, deepest on the multi-step **workflow** component.
+
+
 **Status:** 🟢 Research findings (verified). Deep-research harness: 5 angles, 24 sources
 fetched, 91 claims extracted, 25 verified by 3-vote adversarial check (25 confirmed, 0 killed;
 mostly primary sources). Informs — does not override — the ADRs.
