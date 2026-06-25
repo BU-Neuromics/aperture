@@ -89,8 +89,11 @@ onto our LinkML-schema (data shape) + view-description (layout) separation. Cond
 
 **Not covered this round (no verified claims — still open):**
 - **Saga / compensation patterns** for multi-entity writes when the backend has only per-entity
-  transactions. ← directly the **Step-4 atomicity question (W4.7)**. Remains a design decision,
-  not a library pick.
+  transactions. ← directly the **Step-4 atomicity question (W4.7)**. **✅ Resolved** in a focused
+  follow-up pass (2026-06-25): saga *orchestration + compensation via supersede/availability-flip*,
+  hand-rolled in our workflow interpreter (no load-bearing TS saga lib). See
+  [`portal-requirements.md`](./portal-requirements.md) §Step 4 "Research basis" and decisions
+  L9/L10.
 - **Durable/server-side engines as prior art** (Temporal, Camunda/Zeebe+BPMN, Conductor,
   Prefect, Airflow, Windmill, n8n, Argo). Worth a focused follow-up for conceptual lessons.
 - **Declarative form-flow specs** beyond Serverless Workflow (BPMN/DMN, SurveyJS, Form.io).

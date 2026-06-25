@@ -26,6 +26,8 @@ This doc is the working surface where requirements are drafted and locked step b
 | L6 | **Agent-assisted component authoring in v1 (build-time only).** Tier 1 workflow components & custom views are authored with help from an **external MCP/API coding agent** (per ADR-0021's near-term surface), used by a developer/admin at **build time** — *not* a runtime surface for researchers/wet-lab staff. Re-activates the authoring substrate: typed component contract (ADR-0010/0011), dry-run validation + reversible attributed apply (ADR-0009 + handoff §6), agent-acts-with-user-authority (ADR-0018). Runtime agent (in-app chat, data-stories, conversations-as-provenance, per-user keys) stays deferred. Refines L1. | 2026-06-25 | ADR-0021 (already Accepted); narrows L1's deferral |
 | L7 | **Faceting = capability-gated honest degrade.** v1 ships what the active backend advertises (on Hippo today: equality facets + FTS + offset pages). Facet **counts, range filters, sort, `totalCount`** are *declared capabilities* surfaced only when the backend supports them; **the UI never fakes a count** over a partial page. The Hippo aggregation enhancement (X1) is filed as the top cross-component ask to bring counts in v1.x. *(Recommended default; reversible.)* | 2026-06-25 | Layer D capability protocol; Hippo req X1 |
 | L8 | **Export = client-side page-through (CSV + JSON).** v1 exports the current filtered result set by paging offset results client-side, to CSV and JSON, over the configured columns. No Hippo dependency. Server-side streamed bulk export (X2) deferred to v1.x if cohort sizes demand it. *(Recommended default; reversible.)* | 2026-06-25 | Hippo req X2 (deferred) |
+| L9 | **Workflow atomicity = orchestrated saga, not distributed transaction.** A multi-step/multi-entity workflow commits each step via Hippo's existing **per-entity** transaction (option A). The workflow component is the saga **orchestrator** (central coordinator — prior art favors orchestration over choreography for complex business processes with rollback needs). Steps MAY declare a **compensating action**; on a later-step abort the orchestrator runs compensations in reverse order. Compensation uses Hippo's existing inverse ops — **supersede / availability-flip** (no hard delete) — which is textbook saga compensation (a *semantic* undo, auto-attributed in Hippo's provenance log). A backend multi-entity/distributed transaction (option B) is **explicitly not pursued** — sagas exist precisely to avoid it; filed as X4 (deferred, likely never). *(Recommended default; reversible.)* | 2026-06-25 | Step 4 W4.7; Hippo req X4 (deferred) |
+| L10 | **Resumable drafts are first-class; workflow state lives in the control plane.** In-progress forms & workflow runs persist as **draft state** in the control plane (LinkML-on-Hippo, ADR-0017) — a saga step-journal enabling stop/resume (the durable-execution/event-sourced-resume lesson from Temporal, adapted: we persist *step state*, not replay arbitrary code). Each step write carries an **idempotency key scoped to the workflow run** (key wraps the run, not just the step) so a retried partially-applied step is safe (at-least-once + idempotent). Saga's no-isolation hazard is handled by a **semantic lock**: entities created mid-run are held **not-yet-available** (`is_available=false`) until the run's pivot/commit step, so readers never see a partial workflow. *(Recommended default; reversible.)* | 2026-06-25 | Step 4 W4.6/W4.7; ADR-0017 |
 
 ---
 
@@ -164,6 +166,66 @@ moot for now); no relationship-count fields (`#samples` omitted until aggregatio
 
 ---
 
+## Step 4 — Functional requirements: write loop  *(locked 2026-06-25)*
+
+Grounded in L3/L4 (read+write portal; v1 write boundary = Tier 0 forms + one Tier 1 workflow),
+the implementation library survey ([`library-survey.md`](./library-survey.md)), and the
+workflow-atomicity prior-art pass (saga/compensation, BPMN, durable engines — see the **Research
+basis** note below). Capability tags as in Step 3: **(a)** Hippo today · **(b)** Hippo
+enhancement · **(c)** Aperture-side.
+
+### Tier 0 — generated single-entity forms
+
+| Req | Requirement | Tag |
+|---|---|---|
+| W4.1 | **Form generation** — derive a create/edit form from a type's LinkML slots (mirror of the detail view): widget per slot kind (enum→select, bool→checkbox, ref→entity-picker, scalar→typed input, date→date-picker); `required`/`ifabsent` honored. Form definition is **serializable** (schema + UI-schema split, JSONForms-style — see survey). | (a) |
+| W4.2 | **Client pre-validation** — fast feedback from the LinkML shape rules (required, pattern, range, enum) *before* submit; **server stays the validation authority** (Hippo LinkML→CEL→plugin). UI surfaces the server `ValidationResult` (field-attributed) on rejection. | (a) |
+| W4.3 | **Submit** — `createX`/`updateX` mutation; `updateX` is partial-merge; provenance is server-tagged. | (a) |
+| W4.4 | **Edit semantics** — no hard delete; availability transitions via `setXAvailability`; supersede via `supersedeX`. | (a) |
+| W4.5 | **Relationship ref-pickers** — relationship slots resolved via a searchable picker reusing the read-loop search/facet. | (a) |
+| W4.x | **Conditional/dependent fields** — show/require slots based on other field values (Formily-style reactive linkage is the survey reference). | (a)/(c) |
+
+### Tier 1 — one guided multi-step workflow component (keystone proof)
+
+| Req | Requirement | Tag |
+|---|---|---|
+| W4.6 | **Workflow component = saga orchestrator (L9).** A typed component sequences several entity mutations as steps (e.g. register donor → accession sample → record processing) with cross-step state and per-step validation. Built as: **our serialized workflow config** (steps-as-data; CNCF Serverless Workflow is the model to steal) interpreted by an **engine** (XState is the reference runtime — engine, *not* the config format) rendering each step's form via the Tier-0 generator. Emits view-descriptions (ADR-0009); holds no authority (ADR-0008); authored build-time with agent assist (L6). | (a)+(c) |
+| W4.7 | **Atomicity via compensation, not distributed txn (L9).** Per-entity commit each step; on later-step abort, run declared **compensating actions** in reverse (supersede / availability-flip — Hippo's inverse ops). **Semantic lock:** mid-run entities held `is_available=false` until the pivot/commit step (L10) so readers never see a partial run. | (a)+(c) |
+| W4.8 | **Resumable drafts (L10).** Workflow runs (and long single forms) persist as control-plane draft state (a saga step-journal); stop/resume supported. Each step write carries a **run-scoped idempotency key** for safe retry of a partially-applied step. | (a)+(c) |
+| W4.9 | **Cross-entity validation** — steps depending on prior entities; CEL/cross-entity rules enforced **server-side per mutation** (Aperture pre-checks for UX only). | (a) |
+
+### Research basis — workflow atomicity (W4.6–W4.9)
+
+Targeted prior-art pass (2026-06-25, web search; several primary pages returned HTTP 403 to
+direct fetch — proxy behavior — so findings are synthesized from search-result extracts of those
+same primary sources, as the prior survey did):
+
+- **Saga is the standard answer** to a multi-step business transaction across stores **without** a
+  distributed transaction: a sequence of local transactions, each with a **compensating
+  transaction** that semantically undoes a prior step on failure (microservices.io; AWS
+  Prescriptive Guidance; Temporal). **Orchestration** (central coordinator triggers compensations)
+  is recommended **over choreography** for *complex workflows with rollback needs* — matching our
+  guided-workflow shape. → **chooses option A+C over B.**
+- **Compensation = inverse op, not delete.** Saga compensation is a *semantic* reversal; with a
+  no-hard-delete store, that is exactly **supersede / mark-unavailable**. Hippo's existing
+  availability-transition + supersede + provenance log are a clean, attributed compensation
+  substrate. → **confirms C is cheap on Hippo as-is; no new Hippo capability needed.**
+- **Durable engines as prior art:** definition form splits — **Temporal = code**, **Conductor =
+  JSON DSL**, **Zeebe = BPMN**. Temporal's **event-sourced durable resume** (resume exactly where
+  it left off, replay from any point) is the lesson behind **L10 drafts** (we persist step state,
+  not arbitrary code replay). **BPMN** models human-in-the-loop **user tasks** and **compensation
+  boundary events / handlers** — direct prior art for guided data-entry steps + per-step
+  compensation (Flowable; Red Hat PAM; Camunda). → **steal the model; adopt none wholesale.**
+- **Idempotency:** for at-least-once retries over a non-transactional backend, the **idempotency
+  key wraps the saga run**, not only individual steps, else retries leave correct-but-partial
+  state (idempotency literature). → **L10's run-scoped key.**
+- **Honest verdict:** the saga *orchestration + compensation* logic is **hand-rolled in our
+  workflow interpreter** — no surveyed TS/JS saga library is load-bearing-grade for this; the
+  engines that do it well (Temporal/Zeebe/Conductor) are heavyweight servers, out of scope for a
+  client-driven config portal. We steal their *models*, not their runtimes.
+
+---
+
 ## Cross-component requirements raised (tracker)
 
 Requirements this portal track imposes on **Hippo** (or other components). Each must be
@@ -174,14 +236,14 @@ two-sided-dependency rule.
 |---|---|---|---|---|
 | X1 | Hippo | **Aggregation primitive** — facet/group-by counts, `totalCount`, range filters, `order_by` on the GraphQL list surface. Enables real faceted browse (R3.3r–R3.6). | L7 | **High** — top ask; unblocks v1.x faceting |
 | X2 | Hippo | **Server-side bulk/streamed export** — full-cohort export beyond client page-through. | L8 | Low — deferred to v1.x |
+| X4 | Hippo | **Multi-entity / distributed transaction** — atomic commit across several entities in one call. | L9 | **None — explicitly not pursued.** Sagas (L9) avoid the need; recorded only to mark it considered-and-declined. |
 | X3 | Hippo | **Schema-apply mechanism** — a path for Aperture's embedded editor to submit/apply LinkML schema changes (today recipes v1 is file-based; in-place class mutation disallowed). Needs migration/versioning semantics. | L5 | **High** — gates embedded schema editing |
 
 ---
 
 ## Next steps (queue)
-- ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅ · ~~Step 3 — Read loop~~ ✅
-- **Step 4 — Functional requirements (write loop):** generated forms + the Tier 1 workflow
-  component contract; client/server validation split.
+- ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅ · ~~Step 3 — Read loop~~ ✅ ·
+  ~~Step 4 — Write loop~~ ✅ (incl. W4.7 atomicity = saga, L9/L10)
 - **Step 4b — Schema-editing requirements (L5):** embedded editor surface **and** the Hippo
   schema-apply dependency (cross-component requirement).
 - **Step 5 — Non-functional / platform constraints:** capability negotiation, auth seam,
