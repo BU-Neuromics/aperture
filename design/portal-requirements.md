@@ -24,6 +24,8 @@ This doc is the working surface where requirements are drafted and locked step b
 | L4 | **v1 write boundary = Tier 0 + one Tier 1.** v1 ships generated single-entity create/edit **forms** (Tier 0) **and one real guided multi-step workflow** (e.g. tissue banking/processing) as a proof of the component framework (Tier 1). Further workflow components ship in v1.x; agent-driven *runtime* mutation is Tier 2 (deferred). | 2026-06-25 | New keystone probe (see below) |
 | L5 | **Embedded schema editing in v1.** Aperture is the home for an admin-gated **schema-editing app** (the `linkml-modeler` idea); the schema author is a first-class *in-app* persona, not just upstream. ⚠️ Depends on a **Hippo-side mechanism to accept/apply schema changes** (Hippo recipes v1 is file/recipe-based, no live schema-edit API) — cross-component requirement to pin down (Step 5). | 2026-06-25 | Re-activates actor #5; new Hippo dependency |
 | L6 | **Agent-assisted component authoring in v1 (build-time only).** Tier 1 workflow components & custom views are authored with help from an **external MCP/API coding agent** (per ADR-0021's near-term surface), used by a developer/admin at **build time** — *not* a runtime surface for researchers/wet-lab staff. Re-activates the authoring substrate: typed component contract (ADR-0010/0011), dry-run validation + reversible attributed apply (ADR-0009 + handoff §6), agent-acts-with-user-authority (ADR-0018). Runtime agent (in-app chat, data-stories, conversations-as-provenance, per-user keys) stays deferred. Refines L1. | 2026-06-25 | ADR-0021 (already Accepted); narrows L1's deferral |
+| L7 | **Faceting = capability-gated honest degrade.** v1 ships what the active backend advertises (on Hippo today: equality facets + FTS + offset pages). Facet **counts, range filters, sort, `totalCount`** are *declared capabilities* surfaced only when the backend supports them; **the UI never fakes a count** over a partial page. The Hippo aggregation enhancement (X1) is filed as the top cross-component ask to bring counts in v1.x. *(Recommended default; reversible.)* | 2026-06-25 | Layer D capability protocol; Hippo req X1 |
+| L8 | **Export = client-side page-through (CSV + JSON).** v1 exports the current filtered result set by paging offset results client-side, to CSV and JSON, over the configured columns. No Hippo dependency. Server-side streamed bulk export (X2) deferred to v1.x if cohort sizes demand it. *(Recommended default; reversible.)* | 2026-06-25 | Hippo req X2 (deferred) |
 
 ---
 
@@ -133,10 +135,51 @@ Read and write are the two first-class **end-user** loops; the rest are supporti
 
 ---
 
+## Step 3 — Functional requirements: read loop  *(locked 2026-06-25)*
+
+Grounded in [`prefab/core-loop.md`](./prefab/core-loop.md) and Hippo's GraphQL Query surface
+(Hippo sec4 §4.7). Each requirement carries a **capability tag**: **(a)** works on Hippo today ·
+**(b)** needs a Hippo enhancement (cross-component requirement, see X-table) · **(c)**
+adapter-compensated client-side. Per L7, the capability-negotiated adapter (L2) **gates each
+feature to what the active endpoint declares — the UI never fakes a capability** (no client-side
+"facet counts" that silently describe only the loaded page).
+
+| Req | Requirement | Tag |
+|---|---|---|
+| R3.1 | **Collection nav** — derive browsable collections from `hippoSchema`; admin config reorders/relabels/hides (derive-all + override). | (a) |
+| R3.2 | **Collection table** — config-curated columns; cell renderers keyed by LinkML slot kind; loading/empty/error states. | (a) |
+| R3.3 | **Filtering** — equality facets (enum→checklist, bool, ref-id) with AND/OR; FTS box. | (a) |
+| R3.3r | **Range filters** (numeric/date facets). | (b) |
+| R3.4 | **Facet counts** — counts beside facet values (the keystone gap; L7). | (b) |
+| R3.5 | **Sort** — server `order_by`. Interim: client-sort current page only, clearly scoped. | (b)/(c) |
+| R3.6 | **Pagination + count** — offset pages (a); `totalCount` (b); interim "page N, 25+/page" (c). | (a)/(b)/(c) |
+| R3.7 | **Detail view** — single entity, typed renderers, history via `entityHistory`. | (a) |
+| R3.8 | **Cross-links** — internal via resolved relationship fields; external via `ExternalID` + xref; relationship **pivot** (jump to related collection, filtered). | (a) |
+| R3.9 | **Query state ⇄ URL** — serializable query-state object (collection+filters+sort+page) bound to the URL → shareable. Aperture-side; precursor to saved views & view-description-as-data (ADR-0009/0010). | (a) |
+| R3.10 | **Export** — client-side page-through of the filtered set → CSV + JSON over configured columns (L8). | (a) |
+
+**Degradation rules (from v0.1 Hippo adapter):** multivalued slots return `[]` (render as
+"not available," not error); `isAvailable` always `true` on reads (availability columns/filters
+moot for now); no relationship-count fields (`#samples` omitted until aggregation exists, X1).
+
+---
+
+## Cross-component requirements raised (tracker)
+
+Requirements this portal track imposes on **Hippo** (or other components). Each must be
+cross-referenced from the target component's spec/ADR when promoted (Step 6), per the CLAUDE.md
+two-sided-dependency rule.
+
+| ID | On | Requirement | Driven by | Priority |
+|---|---|---|---|---|
+| X1 | Hippo | **Aggregation primitive** — facet/group-by counts, `totalCount`, range filters, `order_by` on the GraphQL list surface. Enables real faceted browse (R3.3r–R3.6). | L7 | **High** — top ask; unblocks v1.x faceting |
+| X2 | Hippo | **Server-side bulk/streamed export** — full-cohort export beyond client page-through. | L8 | Low — deferred to v1.x |
+| X3 | Hippo | **Schema-apply mechanism** — a path for Aperture's embedded editor to submit/apply LinkML schema changes (today recipes v1 is file-based; in-place class mutation disallowed). Needs migration/versioning semantics. | L5 | **High** — gates embedded schema editing |
+
+---
+
 ## Next steps (queue)
-- ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅
-- **Step 3 — Functional requirements (read loop):** browse → facet → detail → cross-link →
-  export, mapped to Hippo's documented GraphQL limits.
+- ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅ · ~~Step 3 — Read loop~~ ✅
 - **Step 4 — Functional requirements (write loop):** generated forms + the Tier 1 workflow
   component contract; client/server validation split.
 - **Step 4b — Schema-editing requirements (L5):** embedded editor surface **and** the Hippo
