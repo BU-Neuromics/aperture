@@ -28,6 +28,8 @@ This doc is the working surface where requirements are drafted and locked step b
 | L8 | **Export = client-side page-through (CSV + JSON).** v1 exports the current filtered result set by paging offset results client-side, to CSV and JSON, over the configured columns. No Hippo dependency. Server-side streamed bulk export (X2) deferred to v1.x if cohort sizes demand it. *(Recommended default; reversible.)* | 2026-06-25 | Hippo req X2 (deferred) |
 | L9 | **Workflow atomicity = stage → whole-set dry-run validate → atomic commit** (supersedes the earlier saga-as-default, after the §Step 4 review). A workflow stages its entities in a draft buffer; nothing enters the domain graph until the **whole related set** is validated and then committed **all-or-nothing** via a Hippo batch unit-of-work. This needs a Hippo capability (**X4**, now a committed dependency — [BU-Neuromics/hippo#84](https://github.com/BU-Neuromics/hippo/issues/84)): whole-set dry-run validation + atomic multi-entity write with intra-batch reference resolution. Hippo's storage layer already has the atomic primitive (`staged_transaction()`), so this exposes existing machinery rather than building distributed transactions. **Saga/compensation (the prior L9) is retained only as the fallback** for steps with genuinely irreversible external side-effects (can't be staged). | 2026-06-25→**rev 2026-06-30** | Step 4 W4.6/W4.7; Hippo #84 / req X4 |
 | L10 | **Resumable drafts are first-class; the draft is an *inert* control-plane buffer.** In-progress forms & workflow runs persist as **draft state** in the control plane (LinkML-on-Hippo, ADR-0017) — *not* committed domain entities. Because nothing is committed until the atomic pivot (L9), resume is "reload a draft document," with **no** entity-stamping / dual-write / query-before-run reconciliation against the domain graph (the saga-era complexity is gone). The draft **pins the workflow + schema version** it began under, so an admin schema edit (L5) between save and resume is detectable rather than silently breaking. | 2026-06-25→**rev 2026-06-30** | Step 4 W4.6/W4.8; ADR-0017; L5 |
+| L11 | **Embedded schema editing in v1 = *additive* authoring via Hippo recipes.** The admin-gated editor (L5) lets a schema author **add** entity types, slots, enums, and subclasses (`is_a:`) — packaged as a **recipe** (LinkML fragment + manifest) and applied through Hippo's existing `recipe_import` (live, no-restart, single-transaction, provenance-tracked, dry-run-validatable). **In-place modify / rename / remove of existing schema elements is *not* supported in v1** — Hippo merging is bootstrap/additive-only (invariant 6: upstream `provided_by` elements can't be mutated; override is via subclassing). Breaking edits + data migration ("overlay mode") are gated on Hippo v2 (X3b). *(Recommended default; reversible.)* | 2026-06-30 | Refines L5; Hippo req X3a/X3b |
+| L12 | **Apply mechanism = recipe + dry-run preview; the only new Hippo ask is transport exposure.** The editor builds a recipe from the edits, runs a **dry-run** to preview/validate (manifest + LinkML + prefix-collision + no-override checks, no writes), then applies it — reusing Hippo's proven recipe machinery rather than a bespoke schema API. The gap is that `recipe_import`/dry-run are **SDK/CLI-only today**; a browser editor needs them over the transport. → **X3a** (REST/GraphQL exposure of recipe validate+import) — tractable, mirrors the batch unit-of-work transport (#84). *(Recommended default; reversible.)* | 2026-06-30 | Hippo req X3a |
 
 ---
 
@@ -236,6 +238,45 @@ same primary sources, as the prior survey did):
 
 ---
 
+## Step 4b — Functional requirements: embedded schema editing  *(locked 2026-06-30)*
+
+Re-activates actor #5 (schema author, first-class *in-app*; L5). Grounded in Hippo's actual
+schema-evolution surface (sec10 recipes, sec11 schema packages): the active schema is an
+in-memory `SchemaRegistry`, and the **one live, no-restart, transactional, provenance-tracked,
+dry-run-validatable** way to change it is **`recipe_import`** — merging a LinkML fragment as a
+content-addressed, version-pinned **recipe**. Two hard constraints shape v1: merging is
+**additive/bootstrap-only** (no in-place modify/rename/remove of existing elements — invariant 6),
+and `recipe_import` is **SDK/CLI-only** (no transport endpoint). Hence L11 (additive scope) and
+L12 (recipe + dry-run; X3a transport ask).
+
+| Req | Requirement | Tag |
+|---|---|---|
+| S4b.1 | **Schema browser** — render the active schema (entity types, slots, enums, relationships) from `hippoSchema` introspection; the editor's read side reuses the read-loop detail renderers. | (a) |
+| S4b.2 | **Additive authoring (L11)** — structured UI to **add** a new entity type, add a slot to a new type, add an enum, or **subclass** an existing type (`is_a:`); slot kinds map to LinkML ranges (scalar/enum/ref/date/bool). Editing/removing existing elements is **disabled with an explanatory affordance** (gated on Hippo overlay mode, X3b). | (a)+(c) |
+| S4b.3 | **Raw-LinkML escape hatch** — power users can author/paste the LinkML fragment directly; the structured editor and raw view are two views of the same fragment (Formily-style inter-convertibility, per `library-survey.md`). | (c) |
+| S4b.4 | **Recipe packaging (L12)** — the editor emits a recipe (`recipe.yaml` manifest + `schema.yaml` fragment): id, version, `hippo_version` constraint, prefix. Aperture owns the UI→recipe translation. | (c) |
+| S4b.5 | **Dry-run preview (L12)** — run `recipe_import(dry_run=True)` and show the would-apply result (classes/slots added, prefix-collision / no-override / version-compat / LinkML-validity outcomes) **before** committing. The same stage→validate→apply shape as the write loop (L9). | (b: X3a) |
+| S4b.6 | **Apply** — on confirm, `recipe_import(dry_run=False)` applies atomically; surface the `recipe_imported` provenance event and the new `schema_version`. | (b: X3a) |
+| S4b.7 | **Schema-change history** — list installed recipes (`installed_recipes`) + their provenance as an audit trail; offer lockfile export for reproducibility. | (a)/(b) |
+| S4b.8 | **Admin-gating** — the whole surface is admin-only (maps to Bridge `admin` when present; local = max permissions, ADR-0008/0016). | (a)+(c) |
+| S4b.9 | **Schema-drift awareness** — surfaced to dependent surfaces: a draft (L10) or saved view pinned to an older `schema_version` is flagged when the schema advances. | (c) |
+
+**Degradation / honesty rules:** the editor never offers an edit Hippo can't apply — modify/rename/
+remove are visibly **disabled** (not failing on apply) until overlay mode (X3b) lands; the
+dry-run is the source of truth for what will happen, never a client-side guess.
+
+**Research basis — Hippo schema-apply surface (2026-06-30, codebase + sec10/sec11):** active
+schema = in-memory `SchemaRegistry`; live changes only via `client.recipe_import(source,
+dry_run=)` → `SchemaManager.merge_fragment` → `set_registry` (no restart), schema-merge +
+`recipe_imported` provenance in **one transaction**. Dry-run validates (manifest, LinkML, prefix
+collision, digest, `hippo_version`, no-in-place-override) with **no writes**. `schema_version`
+rides on every provenance record; `installed_recipes` + lockfile give reproducibility. **No**
+`POST/PUT /schemas` and **no** `client.apply_schema()` — recipe import is the only seam, and it's
+SDK/CLI-only. **Bootstrap-only/additive** merging; overlay (modify existing + 3-way merge + data
+migration) is explicitly Hippo **v2**. → confirms L11/L12 and the X3a/X3b split below.
+
+---
+
 ## Cross-component requirements raised (tracker)
 
 Requirements this portal track imposes on **Hippo** (or other components). Each must be
@@ -246,19 +287,21 @@ two-sided-dependency rule.
 |---|---|---|---|---|
 | X1 | Hippo | **Aggregation primitive** — facet/group-by counts, `totalCount`, range filters, `order_by` on the GraphQL list surface. Enables real faceted browse (R3.3r–R3.6). | L7 | **High** — top ask; unblocks v1.x faceting |
 | X2 | Hippo | **Server-side bulk/streamed export** — full-cohort export beyond client page-through. | L8 | Low — deferred to v1.x |
-| X4 | Hippo | **Whole-set dry-run validation + atomic multi-entity write** — validate a proposed set of related entities (incl. intra-batch references) without writing, then commit the set all-or-nothing. Filed: [BU-Neuromics/hippo#84](https://github.com/BU-Neuromics/hippo/issues/84) (increment 1 = whole-set dry-run; increment 2 = atomic commit). | L9 | **High — committed dependency** for the write loop. Foundation (`staged_transaction()`) already in Hippo storage. |
-| X3 | Hippo | **Schema-apply mechanism** — a path for Aperture's embedded editor to submit/apply LinkML schema changes (today recipes v1 is file-based; in-place class mutation disallowed). Needs migration/versioning semantics. | L5 | **High** — gates embedded schema editing |
+| X4 | Hippo | **Whole-set dry-run validation + atomic multi-entity write** — validate a proposed set (incl. intra-batch references) without writing, then commit all-or-nothing. [BU-Neuromics/hippo#84](https://github.com/BU-Neuromics/hippo/issues/84) — **✅ DONE** (PRs #85/#86/#87: SDK `validate_batch`/`batch_put` + REST/GraphQL; atomic on SQLite + Postgres). | L9 | Delivered. |
+| X3a | Hippo | **Transport-expose recipe validate + import** — REST/GraphQL over the existing `recipe_import(dry_run=)` so a browser editor can dry-run-preview and apply an **additive** schema change. Mirrors the #84 transport increment. | L11/L12 | **High** — gates the embedded editor (S4b.5/.6). Tractable: SDK path already exists. |
+| X3b | Hippo | **Overlay / breaking-change schema mode** — modify/rename/remove existing elements (3-way merge + conflict resolution) + data migration. Hippo's own deferred **v2** item (sec10 §10.9). | L11 | Deferred — unlocks full (non-additive) editing. |
 
 ---
 
 ## Next steps (queue)
 - ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅ · ~~Step 3 — Read loop~~ ✅ ·
-  ~~Step 4 — Write loop~~ ✅ (incl. W4.7 atomicity = saga, L9/L10)
-- **Step 4b — Schema-editing requirements (L5):** embedded editor surface **and** the Hippo
-  schema-apply dependency (cross-component requirement).
+  ~~Step 4 — Write loop~~ ✅ (W4.7 atomicity = stage→validate→commit, L9/L10; Hippo X4 **delivered** #84) ·
+  ~~Step 4b — Schema editing~~ ✅ (additive-via-recipes, L11/L12; Hippo dep X3a)
 - **Step 5 — Non-functional / platform constraints:** capability negotiation, auth seam,
   pluggable-endpoint config, build-time agent authoring substrate (L6).
 - **Step 6 — Promote to ADRs:** flip 0019/0020/0022–0025 → Deferred; keep 0018/0021 active for
   build-time authoring (L6); narrow ADR-0017 (L2); new ADR(s) for write capability +
-  workflow-component contract + embedded schema editing + Hippo schema-apply dependency;
-  `vision.md` portal-first note.
+  workflow-component contract + embedded schema editing (additive-via-recipes) + the Hippo
+  dependencies (X1, X3a/X3b; X4 done); `vision.md` portal-first note.
+- *(Follow-on, mirrors X4→#84): file **X3a** as a Hippo issue → implement recipe validate/import
+  transport exposure.)*
