@@ -23,7 +23,7 @@ This doc is the working surface where requirements are drafted and locked step b
 | L3 | **Portal is read *and* write.** Aperture provides schema-derived **data-entry / mutation** UIs, not just browse. Validation is enforced server-side by Hippo's three-tier pipeline (LinkML → CEL → Python plugin); every mutation is transactional with provenance. Aperture generates entry UI from schema + pre-validates client-side for fast feedback. | 2026-06-25 | Re-justifies component system (ADR-0009/0010/0011) for the portal track |
 | L4 | **v1 write boundary = Tier 0 + one Tier 1.** v1 ships generated single-entity create/edit **forms** (Tier 0) **and one real guided multi-step workflow** (e.g. tissue banking/processing) as a proof of the component framework (Tier 1). Further workflow components ship in v1.x; agent-driven *runtime* mutation is Tier 2 (deferred). | 2026-06-25 | New keystone probe (see below) |
 | L5 | ⛔ **Superseded by L13 (deferred post-MVP).** ~~Embedded schema editing in v1.~~ Aperture is the home for an admin-gated **schema-editing app** (the `linkml-modeler` idea); the schema author is a first-class *in-app* persona, not just upstream. ⚠️ Depends on a **Hippo-side mechanism to accept/apply schema changes** (Hippo recipes v1 is file/recipe-based, no live schema-edit API) — cross-component requirement to pin down (Step 5). | 2026-06-25 | Re-activates actor #5; new Hippo dependency |
-| L6 | **Agent-assisted component authoring in v1 (build-time only).** Tier 1 workflow components & custom views are authored with help from an **external MCP/API coding agent** (per ADR-0021's near-term surface), used by a developer/admin at **build time** — *not* a runtime surface for researchers/wet-lab staff. Re-activates the authoring substrate: typed component contract (ADR-0010/0011), dry-run validation + reversible attributed apply (ADR-0009 + handoff §6), agent-acts-with-user-authority (ADR-0018). Runtime agent (in-app chat, data-stories, conversations-as-provenance, per-user keys) stays deferred. Refines L1. | 2026-06-25 | ADR-0021 (already Accepted); narrows L1's deferral |
+| L6 | ⛔ **Superseded by L14 (agent-assist deferred post-MVP; substrate kept).** ~~Agent-assisted component authoring in v1 (build-time only).~~ Tier 1 workflow components & custom views are authored with help from an **external MCP/API coding agent** (per ADR-0021's near-term surface), used by a developer/admin at **build time** — *not* a runtime surface for researchers/wet-lab staff. Re-activates the authoring substrate: typed component contract (ADR-0010/0011), dry-run validation + reversible attributed apply (ADR-0009 + handoff §6), agent-acts-with-user-authority (ADR-0018). Runtime agent (in-app chat, data-stories, conversations-as-provenance, per-user keys) stays deferred. Refines L1. | 2026-06-25 | ADR-0021 (already Accepted); narrows L1's deferral |
 | L7 | **Faceting = capability-gated honest degrade.** v1 ships what the active backend advertises (on Hippo today: equality facets + FTS + offset pages). Facet **counts, range filters, sort, `totalCount`** are *declared capabilities* surfaced only when the backend supports them; **the UI never fakes a count** over a partial page. The Hippo aggregation enhancement (X1) is filed as the top cross-component ask to bring counts in v1.x. *(Recommended default; reversible.)* | 2026-06-25 | Layer D capability protocol; Hippo req X1 |
 | L8 | **Export = client-side page-through (CSV + JSON).** v1 exports the current filtered result set by paging offset results client-side, to CSV and JSON, over the configured columns. No Hippo dependency. Server-side streamed bulk export (X2) deferred to v1.x if cohort sizes demand it. *(Recommended default; reversible.)* | 2026-06-25 | Hippo req X2 (deferred) |
 | L9 | **Workflow atomicity = stage → whole-set dry-run validate → atomic commit** (supersedes the earlier saga-as-default, after the §Step 4 review). A workflow stages its entities in a draft buffer; nothing enters the domain graph until the **whole related set** is validated and then committed **all-or-nothing** via a Hippo batch unit-of-work. This needs a Hippo capability (**X4**, now a committed dependency — [BU-Neuromics/hippo#84](https://github.com/BU-Neuromics/hippo/issues/84)): whole-set dry-run validation + atomic multi-entity write with intra-batch reference resolution. Hippo's storage layer already has the atomic primitive (`staged_transaction()`), so this exposes existing machinery rather than building distributed transactions. **Saga/compensation (the prior L9) is retained only as the fallback** for steps with genuinely irreversible external side-effects (can't be staged). | 2026-06-25→**rev 2026-06-30** | Step 4 W4.6/W4.7; Hippo #84 / req X4 |
@@ -31,6 +31,7 @@ This doc is the working surface where requirements are drafted and locked step b
 | L11 | ⛔ **Superseded by L13 (deferred post-MVP).** ~~Embedded schema editing in v1 = *additive* authoring via Hippo recipes.~~ The admin-gated editor (L5) lets a schema author **add** entity types, slots, enums, and subclasses (`is_a:`) — packaged as a **recipe** (LinkML fragment + manifest) and applied through Hippo's existing `recipe_import` (live, no-restart, single-transaction, provenance-tracked, dry-run-validatable). **In-place modify / rename / remove of existing schema elements is *not* supported in v1** — Hippo merging is bootstrap/additive-only (invariant 6: upstream `provided_by` elements can't be mutated; override is via subclassing). Breaking edits + data migration ("overlay mode") are gated on Hippo v2 (X3b). *(Recommended default; reversible.)* | 2026-06-30 | Refines L5; Hippo req X3a/X3b |
 | L12 | ⛔ **Superseded by L13 (deferred post-MVP).** ~~Apply mechanism = recipe + dry-run preview; the only new Hippo ask is transport exposure.~~ The editor builds a recipe from the edits, runs a **dry-run** to preview/validate, then applies via Hippo's `recipe_import`; the gap is SDK/CLI-only `recipe_import` → **X3a** (transport exposure). *Retained as the design of record for the deferred feature.* | 2026-06-30 (superseded 2026-06-30) | Hippo req X3a (deferred) |
 | L13 | **Embedded schema editing is deferred — post-MVP enhancement (supersedes L5/L11/L12).** An in-app schema-editing surface is **not** in the MVP. The MVP delivers read + write loops; schema authoring continues **upstream via Hippo's SDK/CLI `recipe_import`** for MVP. The worked-out design (Step 4b, L11/L12, S4b.1–S4b.9) is retained as the design of record and tracked in **[BU-Neuromics/aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)**. Defers actor #5's in-app role and the Hippo deps **X3a/X3b** out of the MVP. | 2026-06-30 | Supersedes L5/L11/L12; defers X3a/X3b; aperture#2 |
+| L14 | **Build-time agent-assisted component authoring deferred from MVP (refines/supersedes L6).** MVP components — the Tier-1 workflow (L4, kept in MVP) and any custom views — are **hand-authored** against the typed component contract. The substrate they need stays MVP: the typed component contract (ADR-0010/0011), the Web-Worker sandbox + capability-scoped client (ADR-0008/0011), dry-run validation (ADR-0009), and the view-description runtime. Only the **agent-assist** for authoring (ADR-0021 near-term surface, agent-acts-with-user-authority ADR-0018) recedes to **post-MVP**. | 2026-06-30 | Supersedes L6; ADR-0021/0018 → Deferred |
 
 ---
 
@@ -285,6 +286,32 @@ migration) is explicitly Hippo **v2**. → confirms L11/L12 and the X3a/X3b spli
 
 ---
 
+## Step 5 — Non-functional & platform constraints (MVP)  *(locked 2026-06-30)*
+
+Mostly **consolidates** decisions already in the ADRs / `architecture.md` into the MVP
+constraint set; the few genuine MVP stances are flagged. Each constraint cites its ADR
+(authoritative) and states the **MVP stance**.
+
+| # | Constraint | MVP stance | Source |
+|---|---|---|---|
+| N5.1 | **Capability negotiation (Layer D).** The source adapter **declares** what the endpoint supports (FTS, equality facets, offset pagination, sort, aggregation/counts, relationship traversal, batch write/validate, schema introspection); the UI **gates** features on it and **never fakes** a capability (L7). Baseline = GraphQL `__schema` + Hippo's `hippoSchema`/`hippoEntityType` enrichment. | In MVP. Hippo's current surface = FTS + equality facets + offset pages + relationship traversal + the #84 batch write/validate; counts/sort/range gated off until X1. | ADR-0002/0017; arch Layer D; L7 |
+| N5.2 | **One active data-plane endpoint (pluggable).** Exactly one source at a time; swapping Hippo→Bridge/Cappella is a **config change**, not a refactor. No cross-source federation. | In MVP: Hippo, direct. | L2; ADR-0017 |
+| N5.3 | **Auth seam = no-op pass-through for MVP (Bridge deferred).** Authorization lives in **Bridge** (PEP/PDP), not Aperture or Hippo. Aperture injects a **capability-scoped data client**; for MVP it's a transparent pass-through (local Hippo, no auth / max permissions). Bridge drops in later by swapping that client — **no Aperture change**. Aperture holds **no authority** itself. | In MVP: pass-through; admin/role gating is nominal locally. | ADR-0008/0016; arch §security |
+| N5.4 | **Control plane vs data plane.** Aperture's own config + user state (saved views, query-state, **drafts L10**) live in a **control-plane store** (LinkML-on-Hippo reference impl), distinct from the browsed data plane. | In MVP: a Hippo control-plane store (may be the same instance as the data plane). | ADR-0017; L10 |
+| N5.5 | **Config-as-data, no middle scripting layer.** Views/forms/the workflow are **serializable LinkML config**, structurally validated and versioned — not hand-written code; no user-facing scripting layer. | In MVP. | ADR-0003/0004 |
+| N5.6 | **View-description, not DOM.** Components **emit** a serializable view-description rendered by a separate runtime (Vega/Observable-style); components never touch the DOM. | In MVP (read renderers + the Tier-1 workflow). | ADR-0009/0010 |
+| N5.7 | **Typed component sandbox.** Components run in a **Web-Worker** boundary with an **injected capability-scoped client** (no ambient network/DOM); typed component contract; **dry-run-validatable**. Needed by the Tier-1 workflow (kept in MVP); **agent-assisted authoring deferred (L14)** — MVP components are hand-authored. | In MVP (runtime + contract); authoring is manual. | ADR-0008/0010/0011; L14 |
+| N5.8 | **Server is the validation authority.** Hippo's three-tier pipeline (LinkML→CEL→Python) is authoritative; Aperture pre-validates client-side for fast feedback only; every mutation is transactional + provenance-tagged server-side. | In MVP. | L3; Hippo sec9 |
+| N5.9 | **App shell / delivery = SPA.** Single-page app for MVP; SSR/hybrid is a later option, not an MVP requirement. | In MVP: SPA. | ADR-0014 |
+| N5.10 | **Generic source — no domain nouns.** Aperture source is generic over any LinkML+GraphQL endpoint; no brain-bank (or other domain) nouns in source — domain comes from schema + config. | In MVP. | ADR-0002 |
+| N5.11 | **Honest degradation & errors.** Capability-gated UI degrades visibly (never silently fakes); server `ValidationResult` (field-attributed, tier-annotated) is surfaced; client-side aggregation (Perspective) only at small scale, capability-gated. | In MVP. | L7; Step 3/4 |
+
+**Genuine MVP stances recorded here (not pre-settled by an ADR):** N5.3 (auth = pass-through for
+MVP), N5.4 (control-plane store co-located on a Hippo for MVP), N5.9 (SPA for MVP). All are
+reversible and will be ratified as ADRs in Step 6.
+
+---
+
 ## Cross-component requirements raised (tracker)
 
 Requirements this portal track imposes on **Hippo** (or other components). Each must be
@@ -305,9 +332,10 @@ two-sided-dependency rule.
 - ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅ · ~~Step 3 — Read loop~~ ✅ ·
   ~~Step 4 — Write loop~~ ✅ (W4.7 atomicity = stage→validate→commit, L9/L10; Hippo X4 **delivered** #84)
 - ⛔ ~~Step 4b — Schema editing~~ **DEFERRED post-MVP** (L13; tracked in [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)) — design of record retained.
-- **Step 5 — Non-functional / platform constraints (MVP):** capability negotiation, auth seam,
-  pluggable-endpoint config, build-time agent authoring substrate (L6).
-- **Step 6 — Promote to ADRs:** flip 0019/0020/0022–0025 → Deferred; keep 0018/0021 active for
-  build-time authoring (L6); narrow ADR-0017 (L2); new ADR(s) for write capability +
-  workflow-component contract; record **schema editing as deferred** (L13); the Hippo
-  dependencies (X1; X4 done; X3a/X3b deferred); `vision.md` portal-first note.
+- ~~Step 5 — Non-functional & platform constraints (MVP)~~ ✅ (N5.1–N5.11; MVP stances: auth
+  pass-through, co-located control plane, SPA — L14 defers agent-assist, keeps the component substrate)
+- **Step 6 — Promote to ADRs (next):** flip 0019/0020/0022–0025 **and now 0018/0021** → Deferred
+  (L14 defers build-time agent authoring); narrow ADR-0017 (L2); new ADR(s) for the write
+  capability + workflow-component contract + the NFR/platform stances (N5.3/N5.4/N5.9); record
+  **schema editing deferred** (L13) and **agent-assist deferred** (L14); the Hippo deps (X1;
+  X4 ✅ #84; X3a/X3b deferred → aperture#2); `vision.md` portal-first note.
