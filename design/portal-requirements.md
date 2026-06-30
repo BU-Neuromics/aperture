@@ -334,8 +334,13 @@ two-sided-dependency rule.
 - ⛔ ~~Step 4b — Schema editing~~ **DEFERRED post-MVP** (L13; tracked in [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)) — design of record retained.
 - ~~Step 5 — Non-functional & platform constraints (MVP)~~ ✅ (N5.1–N5.11; MVP stances: auth
   pass-through, co-located control plane, SPA — L14 defers agent-assist, keeps the component substrate)
-- **Step 6 — Promote to ADRs (next):** flip 0019/0020/0022–0025 **and now 0018/0021** → Deferred
-  (L14 defers build-time agent authoring); narrow ADR-0017 (L2); new ADR(s) for the write
-  capability + workflow-component contract + the NFR/platform stances (N5.3/N5.4/N5.9); record
-  **schema editing deferred** (L13) and **agent-assist deferred** (L14); the Hippo deps (X1;
-  X4 ✅ #84; X3a/X3b deferred → aperture#2); `vision.md` portal-first note.
+- ~~Step 6 — Promote to ADRs~~ ✅ (2026-06-30): new **ADR-0026** (portal-first MVP + deferrals,
+  L1/L13/L14), **ADR-0027** (read+write portal, L3/L4), **ADR-0028** (workflow atomicity ↔ Hippo
+  #84, L9/L10), **ADR-0029** (capability-gated honest degradation, L7/L8); **ADR-0017** amended
+  (L2/N5.4); **ADR-0014** ratified → SPA (N5.9); **0013/0018–0025** marked ⛔ Deferred-from-MVP
+  (→ ADR-0026); INDEX Decision Log + `vision.md` portal-first note updated.
+
+**Requirements track complete (Steps 1–6).** MVP design of record now lives in the ADRs;
+`portal-requirements.md` remains the working narrative + decision ledger (L1–L14). Open Hippo
+dep for v1.x: **X1** (aggregation/counts). Deferred & tracked: schema editing (aperture#2),
+agentic surfaces (ADR-0026).

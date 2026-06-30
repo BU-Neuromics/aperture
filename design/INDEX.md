@@ -57,19 +57,23 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0010](./decisions/ADR-0010-view-description-vocabulary.md) | View vocabulary is a typed noun-catalog **(keystone)** | 🟡 Proposed | handoff §9.2 (Q2) |
 | [0011](./decisions/ADR-0011-component-execution-runtime.md) | Component runtime/language: client-side Web Worker + Pyodide escape hatch | 🟡 Proposed | handoff §9.1 (Q1) + tech |
 | [0012](./decisions/ADR-0012-config-layering.md) | Layered config → one validated instance; layer-attributed resolution | 🟡 Proposed | handoff §9.4 (Q4) |
-| [0013](./decisions/ADR-0013-agent-loop-local-vs-remote.md) | One API-based agent loop; component source is the only file artifact | 🟡 Proposed | handoff §9.3 (Q3) |
-| [0014](./decisions/ADR-0014-application-architecture.md) | Application architecture: server-rendered vs client-side shell | 🟡 Proposed | raised 2026-06-13 |
+| [0013](./decisions/ADR-0013-agent-loop-local-vs-remote.md) | One API-based agent loop; component source is the only file artifact | ⛔ Deferred (MVP) | handoff §9.3 (Q3) |
+| [0014](./decisions/ADR-0014-application-architecture.md) | Application architecture: server-rendered vs client-side shell | ✅ Accepted | raised 2026-06-13 |
 | [0015](./decisions/ADR-0015-composability-and-cross-links.md) | Composability + cross-links (hrefs) | 🟡 Proposed | raised 2026-06-13 |
 | [0016](./decisions/ADR-0016-defer-bridge-build-aperture-first.md) | Defer Bridge impl; build/demo Aperture against Hippo via no-op capability-scoped client | ✅ Accepted | 2026-06-15 |
-| [0017](./decisions/ADR-0017-data-plane-vs-control-plane.md) | Separate data plane (browsed sources) from control plane (config/state store) | ✅ Accepted | 2026-06-15 |
-| [0018](./decisions/ADR-0018-agents-act-with-user-delegated-authority.md) | Agents act with the invoking user's delegated authority (not a separate principal) | ✅ Accepted | 2026-06-16 |
-| [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ✅ Accepted | 2026-06-16 |
-| [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ✅ Accepted | 2026-06-16 |
-| [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ✅ Accepted | 2026-06-16 |
-| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | 🟡 Proposed | instruction-path-model.md (D-1) |
-| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | 🟡 Proposed | instruction-path-model.md (D-2) |
-| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | 🟡 Proposed | instruction-path-model.md (D-3) |
-| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | 🟡 Proposed | instruction-path-model.md (D-5) |
+| [0017](./decisions/ADR-0017-data-plane-vs-control-plane.md) | Separate data plane (browsed sources) from control plane (config/state store) | ✅ Accepted (amended L2) | 2026-06-15 |
+| [0018](./decisions/ADR-0018-agents-act-with-user-delegated-authority.md) | Agents act with the invoking user's delegated authority (not a separate principal) | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | ⛔ Deferred (MVP) | instruction-path-model.md (D-1) |
+| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | ⛔ Deferred (MVP) | instruction-path-model.md (D-2) |
+| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | ⛔ Deferred (MVP) | instruction-path-model.md (D-3) |
+| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | ⛔ Deferred (MVP) | instruction-path-model.md (D-5) |
+| [0026](./decisions/ADR-0026-portal-first-mvp-defer-agentic-surfaces.md) | Portal-first MVP; defer agentic, agent-assist & schema-editing surfaces | ✅ Accepted | portal-requirements L1/L13/L14 |
+| [0027](./decisions/ADR-0027-read-and-write-portal.md) | Read *and* write portal; v1 write boundary = Tier 0 forms + one Tier 1 workflow | ✅ Accepted | portal-requirements L3/L4 |
+| [0028](./decisions/ADR-0028-workflow-atomicity-staged-batch.md) | Workflow atomicity: stage → whole-set dry-run validate → atomic commit (Hippo #84); saga fallback | ✅ Accepted | portal-requirements L9/L10 |
+| [0029](./decisions/ADR-0029-capability-gated-honest-degradation.md) | Capability-gated UI, honest degradation (faceting/aggregation/export) | ✅ Accepted | portal-requirements L7/L8 |
 
 ## Decision Queue (open — resolve in dependency order)
 

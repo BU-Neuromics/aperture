@@ -8,6 +8,13 @@ interaction layer** over the whole BASS platform. Honest companion to
 — it directly answers that review's crux #1 ("is the deliverable just a faceted explorer?":
 **no**) and raises, not lowers, the de-risking stakes.
 
+> **Portal-first MVP (ADR-0026).** This is the **north star**, not the MVP scope. The **MVP is the
+> config-driven portal** — read loop + write loop (forms + one guided workflow) over a single
+> Hippo endpoint (see `portal-requirements.md`). The agentic surfaces described below
+> (in-app agent/chat, data-stories, per-user keys, conversations-as-provenance) and the in-app
+> schema editor are **deferred from the MVP** (ADR-0026; schema editor → [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)).
+> The substrate invariants are preserved so this vision is an additive future, not a rewrite.
+
 ## The reframe
 
 From **"metadata browser / config-driven data portal"** → **"AI-powered data explorer."**

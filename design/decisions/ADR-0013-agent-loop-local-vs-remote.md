@@ -1,6 +1,6 @@
 # ADR-0013: One API-based agent loop; component source is the only file-based artifact
 
-- **Status:** Proposed
+- **Status:** Proposed  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-13
 - **Deciders:** —
 - **Related:** handoff §9.3 (open question Q3); depends on ADR-0003, ADR-0005; informed by ADR-0006

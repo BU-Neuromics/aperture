@@ -1,6 +1,6 @@
 # ADR-0025: Mid-path edits recompute downstream and suspend-on-invalid (not discard)
 
-- **Status:** Proposed
+- **Status:** Proposed  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-17
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0022 (instruction-path model), ADR-0023 (as-of watermark), ADR-0009 (dry-run validation), ADR-0020 (provenance events); `instruction-path-model.md` §6

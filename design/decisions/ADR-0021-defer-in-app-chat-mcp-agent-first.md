@@ -1,6 +1,6 @@
 # ADR-0021: Defer the in-app conversational agent UI; the coding agent (MCP/API) is the near-term surface
 
-- **Status:** Accepted
+- **Status:** Accepted  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-16
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0013 (one API-based agent loop), ADR-0018, ADR-0019, ADR-0020; handoff §1 (guiding intent), §7

@@ -1,6 +1,6 @@
 # ADR-0018: Agents act with the invoking user's delegated authority
 
-- **Status:** Accepted
+- **Status:** Accepted  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-16
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0008 (components hold no authority), ADR-0016 (defer Bridge), ADR-0019, ADR-0020, ADR-0021; handoff §7 (Type-A/B request types); platform `sec6_security_model.md`

@@ -1,6 +1,6 @@
 # ADR-0022: A data story is an instruction path producing typed subgraph states + artifacts
 
-- **Status:** Proposed
+- **Status:** Proposed  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-17
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0003 (config-as-LinkML-in-Hippo), ADR-0009 (view-descriptions + headless validation), ADR-0010 (typed noun-catalog, keystone), ADR-0020 (conversations/actions are provenance events), ADR-0002 (generic, no domain nouns); `instruction-path-model.md`; `prefab/data-stories.md`

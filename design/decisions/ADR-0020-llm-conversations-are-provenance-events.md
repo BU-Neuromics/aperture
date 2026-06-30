@@ -1,6 +1,6 @@
 # ADR-0020: LLM conversations and agent actions are provenance events
 
-- **Status:** Accepted
+- **Status:** Accepted  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-16
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0018 (user-delegated authority), ADR-0019 (provider keys), ADR-0003/ADR-0017 (control plane), ADR-0021; handoff §6 (versioned, provenance-tagged, reversible writes); platform `sec6_security_model.md`

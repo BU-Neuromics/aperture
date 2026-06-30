@@ -1,6 +1,6 @@
 # ADR-0024: Instruction-path topology — general schema now, linear-only validator in v1
 
-- **Status:** Proposed
+- **Status:** Proposed  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-17
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0022 (instruction-path model), ADR-0009 (dry-run validation), ADR-0021 (defer in-app chat; linear MVP first); `instruction-path-model.md` §4, §7

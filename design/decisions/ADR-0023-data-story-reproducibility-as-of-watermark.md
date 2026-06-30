@@ -1,6 +1,6 @@
 # ADR-0023: Data-story reproducibility via one as-of watermark per story-version
 
-- **Status:** Proposed
+- **Status:** Proposed  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-17
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0022 (instruction-path model), ADR-0020 (provenance events), ADR-0017 (data plane vs control plane); `instruction-path-model.md` §5; Hippo `docs/data-model.md` (provenance & history, `state_at`)

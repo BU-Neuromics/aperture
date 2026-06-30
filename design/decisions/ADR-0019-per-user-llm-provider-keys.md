@@ -1,6 +1,6 @@
 # ADR-0019: Per-user LLM provider key management
 
-- **Status:** Accepted (approach ratified; LinkML shape is an open sub-question)
+- **Status:** Accepted (approach ratified; LinkML shape is an open sub-question)  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-16
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0003 (config-as-LinkML-in-Hippo), ADR-0005, ADR-0017 (control plane), ADR-0018, ADR-0020, ADR-0021
