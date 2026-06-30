@@ -76,6 +76,7 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0028](./decisions/ADR-0028-workflow-atomicity-staged-batch.md) | Workflow atomicity: stage → whole-set dry-run validate → atomic commit (Hippo #84); saga fallback | ✅ Accepted | portal-requirements L9/L10 |
 | [0029](./decisions/ADR-0029-capability-gated-honest-degradation.md) | Capability-gated UI, honest degradation (faceting/aggregation/export) | ✅ Accepted | portal-requirements L7/L8 |
 | [0030](./decisions/ADR-0030-frontend-stack.md) | Frontend stack: TS SPA (React + Vite + urql; TanStack Table + nuqs), in-repo, talks to Hippo directly | ✅ Accepted | library-survey; N5.9 |
+| [0031](./decisions/ADR-0031-app-shell-layout-library.md) | App shell = library of fixed layouts selected by config; typed named-slot contract | ✅ Accepted | layout design session |
 
 ## Decision Queue (open — resolve in dependency order)
 

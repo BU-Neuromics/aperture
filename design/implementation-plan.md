@@ -35,6 +35,11 @@ possible surface.
 - **0.1 — Repo & tooling.** Add a top-level **`web/`** package: Vite + React + TypeScript, ESLint
   + Prettier, Vitest, `npm`/`pnpm` scripts (`dev`/`build`/`test`/`typecheck`/`lint`). Add a CI job
   (typecheck + lint + test + build) alongside the existing Python CI. *(ADR-0030)*
+- **0.1a — App shell (layout library).** A **layout registry** + a typed **named-slot contract**
+  (`header`, `primaryNav`, `main`, optional `footer`/`inspector`/`aside`); ship **one** hard-coded
+  layout `headerNavMain` implementing it. Config "selects" a layout (trivial — one entry) and binds
+  content to slots; a slot a layout lacks degrades honestly. The registry seam exists so more
+  layouts drop in later without a refactor. *(ADR-0031)*
 - **0.2 — Endpoint config.** A single **active endpoint** (L2) resolved from env/config
   (`VITE_HIPPO_GRAPHQL_URL`, mirroring the Python side's `BASS_*` convention). One config module;
   no multi-source. *(N5.2)*
@@ -46,9 +51,10 @@ possible surface.
 - **0.4 — Capability seam.** A small `useCapabilities()` surface the UI reads; features check it
   and **degrade honestly** — Phase 0 only needs "offset pagination supported?" but the seam is the
   one ADR-0029 mandates, established here so later features plug in. *(ADR-0029)*
-- **0.5 — Schema-derived collection list (the slice).** Query `hippoSchema` → list entity types →
-  select one → query its entities (offset page) → render a **TanStack Table** whose columns derive
-  from the type's slots (scalar/enum/ref renderers minimal). Loading/empty/error states. *(R3.1/R3.2)*
+- **0.5 — Schema-derived collection list (the slice).** Query `hippoSchema` → list entity types
+  (rendered in the `primaryNav` slot) → select one → query its entities (offset page) → render a
+  **TanStack Table** in the `main` slot whose columns derive from the type's slots (scalar/enum/ref
+  renderers minimal). Loading/empty/error states. *(R3.1/R3.2; slots per ADR-0031)*
 - **0.6 — Query-state in URL.** `nuqs`-backed state for `{collection, page}` so the view is
   shareable/bookmarkable — the R3.9 precursor, proven on the thin slice. *(R3.9)*
 - **0.7 — Capability-scoped client seam (no-op).** Thread the data client through an injection
@@ -83,6 +89,9 @@ sandbox; real control-plane store (Phase 4); auth beyond the no-op seam.
 ### Open questions to resolve during Phase 0
 
 - `web/` vs `app/` dir name; `npm` vs `pnpm`.
+- The **slot superset** for the layout contract (ADR-0031): start minimal
+  (`header`/`primaryNav`/`main`/`footer`) and grow, vs. enumerate `inspector`/`aside` now. Lean
+  minimal; add slots when a layout needs them.
 - Exact shape of the `Capabilities` type (enumerate now vs. grow per feature — start minimal).
 - Whether to generate TS types from the Hippo schema at build time, or stay fully runtime-derived
   (lean runtime-derived per the novel bet; revisit if DX suffers).
