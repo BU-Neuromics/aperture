@@ -22,14 +22,15 @@ This doc is the working surface where requirements are drafted and locked step b
 | L2 | **Pluggable single endpoint.** Source adapter is source-agnostic / capability-negotiated, but v1 talks to exactly **one active data-plane endpoint at a time** (Hippo now; Bridge or a future Cappella gateway later — a config swap, not a refactor). Cross-source **federation is deferred** and may never be needed if Cappella unifies upstream. | 2026-06-25 | Narrows ADR-0017 "N sources" → "one swappable source"; Layer D |
 | L3 | **Portal is read *and* write.** Aperture provides schema-derived **data-entry / mutation** UIs, not just browse. Validation is enforced server-side by Hippo's three-tier pipeline (LinkML → CEL → Python plugin); every mutation is transactional with provenance. Aperture generates entry UI from schema + pre-validates client-side for fast feedback. | 2026-06-25 | Re-justifies component system (ADR-0009/0010/0011) for the portal track |
 | L4 | **v1 write boundary = Tier 0 + one Tier 1.** v1 ships generated single-entity create/edit **forms** (Tier 0) **and one real guided multi-step workflow** (e.g. tissue banking/processing) as a proof of the component framework (Tier 1). Further workflow components ship in v1.x; agent-driven *runtime* mutation is Tier 2 (deferred). | 2026-06-25 | New keystone probe (see below) |
-| L5 | **Embedded schema editing in v1.** Aperture is the home for an admin-gated **schema-editing app** (the `linkml-modeler` idea); the schema author is a first-class *in-app* persona, not just upstream. ⚠️ Depends on a **Hippo-side mechanism to accept/apply schema changes** (Hippo recipes v1 is file/recipe-based, no live schema-edit API) — cross-component requirement to pin down (Step 5). | 2026-06-25 | Re-activates actor #5; new Hippo dependency |
+| L5 | ⛔ **Superseded by L13 (deferred post-MVP).** ~~Embedded schema editing in v1.~~ Aperture is the home for an admin-gated **schema-editing app** (the `linkml-modeler` idea); the schema author is a first-class *in-app* persona, not just upstream. ⚠️ Depends on a **Hippo-side mechanism to accept/apply schema changes** (Hippo recipes v1 is file/recipe-based, no live schema-edit API) — cross-component requirement to pin down (Step 5). | 2026-06-25 | Re-activates actor #5; new Hippo dependency |
 | L6 | **Agent-assisted component authoring in v1 (build-time only).** Tier 1 workflow components & custom views are authored with help from an **external MCP/API coding agent** (per ADR-0021's near-term surface), used by a developer/admin at **build time** — *not* a runtime surface for researchers/wet-lab staff. Re-activates the authoring substrate: typed component contract (ADR-0010/0011), dry-run validation + reversible attributed apply (ADR-0009 + handoff §6), agent-acts-with-user-authority (ADR-0018). Runtime agent (in-app chat, data-stories, conversations-as-provenance, per-user keys) stays deferred. Refines L1. | 2026-06-25 | ADR-0021 (already Accepted); narrows L1's deferral |
 | L7 | **Faceting = capability-gated honest degrade.** v1 ships what the active backend advertises (on Hippo today: equality facets + FTS + offset pages). Facet **counts, range filters, sort, `totalCount`** are *declared capabilities* surfaced only when the backend supports them; **the UI never fakes a count** over a partial page. The Hippo aggregation enhancement (X1) is filed as the top cross-component ask to bring counts in v1.x. *(Recommended default; reversible.)* | 2026-06-25 | Layer D capability protocol; Hippo req X1 |
 | L8 | **Export = client-side page-through (CSV + JSON).** v1 exports the current filtered result set by paging offset results client-side, to CSV and JSON, over the configured columns. No Hippo dependency. Server-side streamed bulk export (X2) deferred to v1.x if cohort sizes demand it. *(Recommended default; reversible.)* | 2026-06-25 | Hippo req X2 (deferred) |
 | L9 | **Workflow atomicity = stage → whole-set dry-run validate → atomic commit** (supersedes the earlier saga-as-default, after the §Step 4 review). A workflow stages its entities in a draft buffer; nothing enters the domain graph until the **whole related set** is validated and then committed **all-or-nothing** via a Hippo batch unit-of-work. This needs a Hippo capability (**X4**, now a committed dependency — [BU-Neuromics/hippo#84](https://github.com/BU-Neuromics/hippo/issues/84)): whole-set dry-run validation + atomic multi-entity write with intra-batch reference resolution. Hippo's storage layer already has the atomic primitive (`staged_transaction()`), so this exposes existing machinery rather than building distributed transactions. **Saga/compensation (the prior L9) is retained only as the fallback** for steps with genuinely irreversible external side-effects (can't be staged). | 2026-06-25→**rev 2026-06-30** | Step 4 W4.6/W4.7; Hippo #84 / req X4 |
 | L10 | **Resumable drafts are first-class; the draft is an *inert* control-plane buffer.** In-progress forms & workflow runs persist as **draft state** in the control plane (LinkML-on-Hippo, ADR-0017) — *not* committed domain entities. Because nothing is committed until the atomic pivot (L9), resume is "reload a draft document," with **no** entity-stamping / dual-write / query-before-run reconciliation against the domain graph (the saga-era complexity is gone). The draft **pins the workflow + schema version** it began under, so an admin schema edit (L5) between save and resume is detectable rather than silently breaking. | 2026-06-25→**rev 2026-06-30** | Step 4 W4.6/W4.8; ADR-0017; L5 |
-| L11 | **Embedded schema editing in v1 = *additive* authoring via Hippo recipes.** The admin-gated editor (L5) lets a schema author **add** entity types, slots, enums, and subclasses (`is_a:`) — packaged as a **recipe** (LinkML fragment + manifest) and applied through Hippo's existing `recipe_import` (live, no-restart, single-transaction, provenance-tracked, dry-run-validatable). **In-place modify / rename / remove of existing schema elements is *not* supported in v1** — Hippo merging is bootstrap/additive-only (invariant 6: upstream `provided_by` elements can't be mutated; override is via subclassing). Breaking edits + data migration ("overlay mode") are gated on Hippo v2 (X3b). *(Recommended default; reversible.)* | 2026-06-30 | Refines L5; Hippo req X3a/X3b |
-| L12 | **Apply mechanism = recipe + dry-run preview; the only new Hippo ask is transport exposure.** The editor builds a recipe from the edits, runs a **dry-run** to preview/validate (manifest + LinkML + prefix-collision + no-override checks, no writes), then applies it — reusing Hippo's proven recipe machinery rather than a bespoke schema API. The gap is that `recipe_import`/dry-run are **SDK/CLI-only today**; a browser editor needs them over the transport. → **X3a** (REST/GraphQL exposure of recipe validate+import) — tractable, mirrors the batch unit-of-work transport (#84). *(Recommended default; reversible.)* | 2026-06-30 | Hippo req X3a |
+| L11 | ⛔ **Superseded by L13 (deferred post-MVP).** ~~Embedded schema editing in v1 = *additive* authoring via Hippo recipes.~~ The admin-gated editor (L5) lets a schema author **add** entity types, slots, enums, and subclasses (`is_a:`) — packaged as a **recipe** (LinkML fragment + manifest) and applied through Hippo's existing `recipe_import` (live, no-restart, single-transaction, provenance-tracked, dry-run-validatable). **In-place modify / rename / remove of existing schema elements is *not* supported in v1** — Hippo merging is bootstrap/additive-only (invariant 6: upstream `provided_by` elements can't be mutated; override is via subclassing). Breaking edits + data migration ("overlay mode") are gated on Hippo v2 (X3b). *(Recommended default; reversible.)* | 2026-06-30 | Refines L5; Hippo req X3a/X3b |
+| L12 | ⛔ **Superseded by L13 (deferred post-MVP).** ~~Apply mechanism = recipe + dry-run preview; the only new Hippo ask is transport exposure.~~ The editor builds a recipe from the edits, runs a **dry-run** to preview/validate, then applies via Hippo's `recipe_import`; the gap is SDK/CLI-only `recipe_import` → **X3a** (transport exposure). *Retained as the design of record for the deferred feature.* | 2026-06-30 (superseded 2026-06-30) | Hippo req X3a (deferred) |
+| L13 | **Embedded schema editing is deferred — post-MVP enhancement (supersedes L5/L11/L12).** An in-app schema-editing surface is **not** in the MVP. The MVP delivers read + write loops; schema authoring continues **upstream via Hippo's SDK/CLI `recipe_import`** for MVP. The worked-out design (Step 4b, L11/L12, S4b.1–S4b.9) is retained as the design of record and tracked in **[BU-Neuromics/aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)**. Defers actor #5's in-app role and the Hippo deps **X3a/X3b** out of the MVP. | 2026-06-30 | Supersedes L5/L11/L12; defers X3a/X3b; aperture#2 |
 
 ---
 
@@ -116,9 +117,10 @@ coding agent** become first-class in-app/authoring actors (L5/L6).
 4. **Component author — developer/admin, agent-assisted at build time (L6).** Authors Tier 1
    workflow components & custom views as typed validatable artifacts, *with an external MCP/API
    coding agent* (ADR-0021), then promotes (ADR-0007). Build-time role, not a runtime surface.
-5. **Schema author / data modeler — first-class in-app (L5).** Authors/edits the LinkML domain
-   schema everything derives from, via the **embedded admin-gated schema editor**. ⚠️ Gated on the
-   Hippo schema-apply dependency (L5).
+5. **Schema author / data modeler — ⛔ in-app role DEFERRED post-MVP (L13).** Authors/edits the
+   LinkML domain schema everything derives from. For MVP this stays an **upstream** role (Hippo
+   SDK/CLI `recipe_import`); the in-app **embedded schema editor** is a tracked future enhancement
+   ([aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)).
 6. **(Boundary) Bridge / permissions owner — deferred.** Roles & enforcement live here, not
    Aperture (ADR-0008/0016). Local = max permissions.
 7. **Coding agent — build-time actor (L6), not runtime.** Scaffolds components for authors via
@@ -132,7 +134,7 @@ coding agent** become first-class in-app/authoring actors (L5/L6).
 | Researcher | "Find and extract the data I need" | browse → facet → detail → cross-link → export |
 | Wet-lab staff | "Record what happened at the bench, correctly" | pick type/workflow → guided form(s) → pre-validate → submit → confirm |
 | Admin | "Stand up and govern a deployment" | configure endpoint + views → validate → promote |
-| Schema author | "Evolve the domain model" | edit schema → validate → apply (via Hippo, L5) |
+| Schema author | "Evolve the domain model" | ⛔ *post-MVP (L13)* — for MVP: author upstream via Hippo `recipe_import` |
 | Component author | "Add a new view/workflow" | scaffold w/ agent → dry-run validate → promote |
 
 Read and write are the two first-class **end-user** loops; the rest are supporting/build-time.
@@ -238,7 +240,13 @@ same primary sources, as the prior survey did):
 
 ---
 
-## Step 4b — Functional requirements: embedded schema editing  *(locked 2026-06-30)*
+## Step 4b — Functional requirements: embedded schema editing  *(⛔ DEFERRED post-MVP — L13)*
+
+> **Status: deferred from MVP (2026-06-30, L13).** Not part of the MVP portal; tracked as a
+> future enhancement in **[BU-Neuromics/aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)**.
+> For MVP, schema authoring happens **upstream** via Hippo's SDK/CLI `recipe_import`. The
+> requirements below are retained as the **design of record** for when the feature is picked up;
+> the Hippo deps **X3a/X3b** are deferred with it.
 
 Re-activates actor #5 (schema author, first-class *in-app*; L5). Grounded in Hippo's actual
 schema-evolution surface (sec10 recipes, sec11 schema packages): the active schema is an
@@ -288,20 +296,18 @@ two-sided-dependency rule.
 | X1 | Hippo | **Aggregation primitive** — facet/group-by counts, `totalCount`, range filters, `order_by` on the GraphQL list surface. Enables real faceted browse (R3.3r–R3.6). | L7 | **High** — top ask; unblocks v1.x faceting |
 | X2 | Hippo | **Server-side bulk/streamed export** — full-cohort export beyond client page-through. | L8 | Low — deferred to v1.x |
 | X4 | Hippo | **Whole-set dry-run validation + atomic multi-entity write** — validate a proposed set (incl. intra-batch references) without writing, then commit all-or-nothing. [BU-Neuromics/hippo#84](https://github.com/BU-Neuromics/hippo/issues/84) — **✅ DONE** (PRs #85/#86/#87: SDK `validate_batch`/`batch_put` + REST/GraphQL; atomic on SQLite + Postgres). | L9 | Delivered. |
-| X3a | Hippo | **Transport-expose recipe validate + import** — REST/GraphQL over the existing `recipe_import(dry_run=)` so a browser editor can dry-run-preview and apply an **additive** schema change. Mirrors the #84 transport increment. | L11/L12 | **High** — gates the embedded editor (S4b.5/.6). Tractable: SDK path already exists. |
-| X3b | Hippo | **Overlay / breaking-change schema mode** — modify/rename/remove existing elements (3-way merge + conflict resolution) + data migration. Hippo's own deferred **v2** item (sec10 §10.9). | L11 | Deferred — unlocks full (non-additive) editing. |
+| X3a | Hippo | **Transport-expose recipe validate + import** — REST/GraphQL over the existing `recipe_import(dry_run=)` so a browser editor can dry-run-preview and apply an **additive** schema change. Mirrors the #84 transport increment. | L13 | **Deferred (post-MVP)** with the schema editor — tracked in [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2). Tractable when picked up. |
+| X3b | Hippo | **Overlay / breaking-change schema mode** — modify/rename/remove existing elements (3-way merge + conflict resolution) + data migration. Hippo's own deferred **v2** item (sec10 §10.9). | L13 | **Deferred (post-MVP)** — unlocks full (non-additive) editing; [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2). |
 
 ---
 
 ## Next steps (queue)
 - ~~Step 1 — Scope & framing~~ ✅ · ~~Step 2 — Actors & jobs~~ ✅ · ~~Step 3 — Read loop~~ ✅ ·
-  ~~Step 4 — Write loop~~ ✅ (W4.7 atomicity = stage→validate→commit, L9/L10; Hippo X4 **delivered** #84) ·
-  ~~Step 4b — Schema editing~~ ✅ (additive-via-recipes, L11/L12; Hippo dep X3a)
-- **Step 5 — Non-functional / platform constraints:** capability negotiation, auth seam,
+  ~~Step 4 — Write loop~~ ✅ (W4.7 atomicity = stage→validate→commit, L9/L10; Hippo X4 **delivered** #84)
+- ⛔ ~~Step 4b — Schema editing~~ **DEFERRED post-MVP** (L13; tracked in [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)) — design of record retained.
+- **Step 5 — Non-functional / platform constraints (MVP):** capability negotiation, auth seam,
   pluggable-endpoint config, build-time agent authoring substrate (L6).
 - **Step 6 — Promote to ADRs:** flip 0019/0020/0022–0025 → Deferred; keep 0018/0021 active for
   build-time authoring (L6); narrow ADR-0017 (L2); new ADR(s) for write capability +
-  workflow-component contract + embedded schema editing (additive-via-recipes) + the Hippo
-  dependencies (X1, X3a/X3b; X4 done); `vision.md` portal-first note.
-- *(Follow-on, mirrors X4→#84): file **X3a** as a Hippo issue → implement recipe validate/import
-  transport exposure.)*
+  workflow-component contract; record **schema editing as deferred** (L13); the Hippo
+  dependencies (X1; X4 done; X3a/X3b deferred); `vision.md` portal-first note.
