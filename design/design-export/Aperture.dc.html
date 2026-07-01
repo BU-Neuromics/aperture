@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+button{font-family:inherit;font-size:inherit}
+input{font-family:inherit}
+::selection{background:rgba(47,109,246,.18)}
+@keyframes shimmer{0%{background-position:150% 0}100%{background-position:-150% 0}}
+</style>
+</helmet>
+<div style="{{ rootStyle }}">
+  <div style="min-height:100vh;display:flex;flex-direction:column;background:var(--bg-canvas,#f6f7f9);color:var(--text-primary,#1b1f24);font-family:var(--font-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:var(--fs-body,13.5px);line-height:1.45;-webkit-font-smoothing:antialiased">
+
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:8px 16px;background:var(--bg-surface,#fff);border-bottom:1px solid var(--border,#e4e7ec)">
+      <span style="font-family:var(--font-mono,'IBM Plex Mono',monospace);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary,#949ba6);white-space:nowrap">Prototype controls</span>
+      <sc-for list="{{ controlGroups }}" as="g" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--text-tertiary,#949ba6);white-space:nowrap">{{ g.label }}</span>
+          <div style="display:inline-flex;border:1px solid var(--border,#e4e7ec);border-radius:7px;overflow:hidden;background:var(--bg-canvas,#f6f7f9)">
+            <sc-for list="{{ g.opts }}" as="o">
+              <button onClick="{{ o.onClick }}" style="{{ o.btnStyle }}">{{ o.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;padding:0 18px;height:56px;background:var(--bg-surface,#fff);border-bottom:1px solid var(--border,#e4e7ec);flex:0 0 auto">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:20px;height:20px;border-radius:6px;background:var(--accent,#2f6df6);transform:rotate(45deg)"></div>
+        <span style="font-size:16px;font-weight:700;letter-spacing:-.01em">Aperture</span>
+      </div>
+      <div style="flex:1;max-width:520px;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;background:var(--bg-canvas,#f6f7f9);border:1px solid var(--border,#e4e7ec);border-radius:8px;color:var(--text-tertiary,#949ba6)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg>
+        <input placeholder="Search across collections…" readonly style="flex:1;border:none;background:transparent;outline:none;font-size:13px;color:var(--text-secondary,#5a626d)">
+        <span style="font-family:var(--font-mono,monospace);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-tertiary,#949ba6);border:1px solid var(--border,#e4e7ec);border-radius:4px;padding:1px 5px">visual only</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <button style="height:32px;padding:0 12px;border:1px solid var(--border,#e4e7ec);border-radius:7px;background:var(--bg-surface,#fff);color:var(--text-secondary,#5a626d);font-size:12.5px;cursor:pointer">Settings</button>
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-weak,#eaf1fe);color:var(--accent,#2f6df6);display:grid;place-items:center;font-size:12px;font-weight:600">AR</div>
+      </div>
+    </div>
+
+    <div style="{{ bodyStyle }}">
+
+      <nav style="display:flex;flex-direction:column;background:var(--bg-surface,#fff);border-right:1px solid var(--border,#e4e7ec);overflow-y:auto;min-height:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 10px 8px 14px">
+          <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ true }}"><span style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary,#949ba6)">Collections</span></sc-if>
+          <button onClick="{{ toggleNav }}" style="width:24px;height:24px;display:grid;place-items:center;border:none;background:transparent;color:var(--text-tertiary,#949ba6);cursor:pointer;border-radius:5px" style-hover="background:var(--bg-hover,#eef1f5)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="{{ collapseIconStyle }}"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1px;padding:0 6px 12px 0">
+          <sc-for list="{{ collections }}" as="c" hint-placeholder-count="6">
+            <a onClick="{{ c.onClick }}" title="{{ c.title }}" style="{{ c.itemStyle }}" style-hover="background:var(--bg-hover,#eef1f5)">
+              <span style="{{ c.chipStyle }}">{{ c.initial }}</span>
+              <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ true }}"><span style="{{ c.labelStyle }}">{{ c.label }}</span></sc-if>
+              <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ true }}"><span style="{{ c.countStyle }}">{{ c.count }}</span></sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </nav>
+
+      <div onMouseDown="{{ startNavResize }}" style="{{ resizerTrackStyle }}" style-hover="background:var(--bg-hover,#eef1f5)"><div style="{{ resizerHandleStyle }}"></div></div>
+
+      <sc-if value="{{ isHeaderNavMain }}" hint-placeholder-val="{{ true }}">
+        <main style="display:flex;flex-direction:column;min-height:0;overflow:auto;background:var(--bg-canvas,#f6f7f9)">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:20px 22px 14px;flex-wrap:wrap;flex:0 0 auto">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <h1 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em">{{ titleText }}</h1>
+                <span style="font-family:var(--font-mono,monospace);font-size:10.5px;padding:2px 7px;border-radius:5px;background:var(--bg-subtle,#f1f3f6);color:var(--text-tertiary,#949ba6)">type: {{ typeName }}</span>
+              </div>
+              <div style="margin-top:3px;font-size:13px;color:var(--text-secondary,#5a626d)">{{ countText }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button style="height:32px;padding:0 13px;border:1px solid var(--border,#e4e7ec);border-radius:7px;background:var(--bg-surface,#fff);color:var(--text-secondary,#5a626d);font-size:12.5px;cursor:pointer">Columns</button>
+              <button style="height:32px;padding:0 13px;border:1px solid var(--border,#e4e7ec);border-radius:7px;background:var(--bg-surface,#fff);color:var(--text-secondary,#5a626d);font-size:12.5px;cursor:pointer">Export</button>
+            </div>
+          </div>
+
+          <div style="margin:0 22px 22px;background:var(--bg-surface,#fff);border:1px solid var(--border,#e4e7ec);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+            <div style="overflow:auto">
+              <table style="width:100%;border-collapse:collapse">
+                <thead>
+                  <tr>
+                    <sc-for list="{{ columns }}" as="col" hint-placeholder-count="6">
+                      <th onClick="{{ col.onSort }}" style="{{ col.thStyle }}">
+                        <span style="display:inline-flex;align-items:center;gap:5px">{{ col.label }}<span style="color:var(--accent,#2f6df6);font-size:11px">{{ col.indicator }}</span></span>
+                      </th>
+                    </sc-for>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-if value="{{ isLoaded }}" hint-placeholder-val="{{ true }}">
+                    <sc-for list="{{ visibleRows }}" as="row" hint-placeholder-count="10">
+                      <tr style-hover="background:var(--bg-hover,#eef1f5)">
+                        <sc-for list="{{ row.cells }}" as="cell">
+                          <td style="{{ cell.tdStyle }}">
+                            <sc-if value="{{ cell.isId }}"><a style="{{ cell.style }}">{{ cell.value }}</a></sc-if>
+                            <sc-if value="{{ cell.isRef }}"><span style="{{ cell.style }}">{{ cell.value }}</span></sc-if>
+                            <sc-if value="{{ cell.isEnum }}"><span style="{{ cell.style }}">{{ cell.value }}</span></sc-if>
+                            <sc-if value="{{ cell.isNumber }}"><span style="{{ cell.style }}">{{ cell.value }}</span></sc-if>
+                            <sc-if value="{{ cell.isCount }}"><span style="{{ cell.style }}">{{ cell.value }}</span></sc-if>
+                            <sc-if value="{{ cell.isText }}"><span style="{{ cell.style }}">{{ cell.value }}</span></sc-if>
+                          </td>
+                        </sc-for>
+                      </tr>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ isLoading }}">
+                    <sc-for list="{{ skeletonRows }}" as="row">
+                      <tr>
+                        <sc-for list="{{ row.cells }}" as="cell">
+                          <td style="{{ cell.tdStyle }}"><div style="{{ cell.barStyle }}"></div></td>
+                        </sc-for>
+                      </tr>
+                    </sc-for>
+                  </sc-if>
+                </tbody>
+              </table>
+            </div>
+
+            <sc-if value="{{ isEmpty }}">
+              <div style="padding:60px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="width:44px;height:44px;border-radius:12px;background:var(--bg-subtle,#f1f3f6);display:grid;place-items:center"><div style="width:15px;height:15px;border:2px solid var(--text-tertiary,#949ba6);border-radius:4px"></div></div>
+                <div style="font-size:15px;font-weight:600">No matching {{ collectionLower }}</div>
+                <div style="font-size:13px;color:var(--text-secondary,#5a626d);max-width:320px">No records match the current filters. Try clearing filters or switching collections.</div>
+                <button onClick="{{ onReset }}" style="margin-top:6px;height:32px;padding:0 14px;border:1px solid var(--border,#e4e7ec);border-radius:7px;background:var(--bg-surface,#fff);color:var(--text-primary,#1b1f24);font-size:12.5px;cursor:pointer">Clear filters</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isError }}">
+              <div style="padding:60px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="width:44px;height:44px;border-radius:12px;background:var(--error-bg,#fbe9e9);color:var(--error,#b23b3b);display:grid;place-items:center;font-weight:700;font-size:22px">!</div>
+                <div style="font-size:15px;font-weight:600">Couldn’t load {{ collectionLower }}</div>
+                <div style="font-size:13px;color:var(--text-secondary,#5a626d);max-width:340px">The request failed or timed out. This is a transient error — you can retry.</div>
+                <button onClick="{{ onRetry }}" style="margin-top:6px;height:32px;padding:0 16px;border:none;border-radius:7px;background:var(--accent,#2f6df6);color:#fff;font-size:12.5px;font-weight:500;cursor:pointer">Retry</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isLoaded }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px;border-top:1px solid var(--border,#e4e7ec);background:var(--bg-surface,#fff);flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-secondary,#5a626d)">
+                  <span>Rows per page</span>
+                  <div style="display:inline-flex;border:1px solid var(--border,#e4e7ec);border-radius:6px;overflow:hidden">
+                    <sc-for list="{{ pageSizeOpts }}" as="p"><button onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button></sc-for>
+                  </div>
+                  <span style="color:var(--text-tertiary,#949ba6);font-variant-numeric:tabular-nums">{{ rangeText }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <button onClick="{{ onPrev }}" style="{{ navBtnStyle }}">Prev</button>
+                  <sc-for list="{{ pages }}" as="pg"><button onClick="{{ pg.onClick }}" style="{{ pg.style }}">{{ pg.n }}</button></sc-for>
+                  <button onClick="{{ onNext }}" style="{{ navBtnStyle }}">Next</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{ isMasterDetail }}">
+        <main style="display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--bg-surface,#fff);border-right:1px solid var(--border,#e4e7ec)">
+          <div style="padding:16px 18px 12px;border-bottom:1px solid var(--border,#e4e7ec);flex:0 0 auto">
+            <h2 style="margin:0;font-size:15px;font-weight:700">{{ titleText }}</h2>
+            <div style="font-size:12px;color:var(--text-tertiary,#949ba6);margin-top:2px">{{ countText }}</div>
+          </div>
+          <div style="overflow-y:auto;min-height:0;display:flex;flex-direction:column">
+            <sc-for list="{{ listItems }}" as="it" hint-placeholder-count="12">
+              <a onClick="{{ it.onClick }}" style="{{ it.style }}" style-hover="background:var(--bg-hover,#eef1f5)">
+                <div style="{{ it.primaryStyle }}">{{ it.primary }}</div>
+                <div style="{{ it.secStyle }}">{{ it.secondary }}</div>
+              </a>
+            </sc-for>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{ isDashboard }}">
+        <main style="min-height:0;overflow-y:auto;background:var(--bg-canvas,#f6f7f9);padding:22px">
+          <h1 style="margin:0 0 4px;font-size:20px;font-weight:700;letter-spacing:-.01em">Overview</h1>
+          <div style="font-size:13px;color:var(--text-secondary,#5a626d);margin-bottom:18px">Summary across all collections · sample content</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px">
+            <sc-for list="{{ statCards }}" as="s" hint-placeholder-count="6">
+              <a onClick="{{ s.onClick }}" style="display:block;padding:16px;background:var(--bg-surface,#fff);border:1px solid var(--border,#e4e7ec);border-radius:10px;cursor:pointer;text-decoration:none" style-hover="border-color:var(--border-strong,#d3d8e0)">
+                <div style="font-size:12.5px;color:var(--text-secondary,#5a626d)">{{ s.label }}</div>
+                <div style="font-size:26px;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px;font-variant-numeric:tabular-nums;color:var(--text-primary,#1b1f24)">{{ s.value }}</div>
+                <div style="font-family:var(--font-mono,monospace);font-size:10.5px;color:var(--text-tertiary,#949ba6)">type: {{ s.type }}</div>
+              </a>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+            <div style="padding:18px;background:var(--bg-surface,#fff);border:1px solid var(--border,#e4e7ec);border-radius:10px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px">Ingest volume</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary,#949ba6);margin-bottom:16px">Records ingested · last 7 days</div>
+              <div style="display:flex;align-items:flex-end;gap:10px;height:140px">
+                <sc-for list="{{ barVals }}" as="b" hint-placeholder-count="7">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+                    <div style="width:100%;border-radius:5px 5px 0 0;background:var(--accent,#2f6df6);opacity:.85;height:{{ b.h }}%"></div>
+                    <span style="font-size:10.5px;color:var(--text-tertiary,#949ba6)">{{ b.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:18px;background:var(--bg-surface,#fff);border:1px solid var(--border,#e4e7ec);border-radius:10px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px">Records by collection</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary,#949ba6);margin-bottom:16px">Total records per type</div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ recBars }}" as="rb" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:100px;font-size:12px;color:var(--text-secondary,#5a626d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rb.label }}</span>
+                    <div style="flex:1;height:9px;border-radius:999px;background:var(--bg-subtle,#f1f3f6);overflow:hidden"><div style="height:100%;border-radius:999px;background:var(--accent,#2f6df6);width:{{ rb.w }}%"></div></div>
+                    <span style="width:64px;text-align:right;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--text-tertiary,#949ba6)">{{ rb.val }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{ hasInspector }}">
+        <div onMouseDown="{{ startRightResize }}" style="{{ resizerTrackStyle }}" style-hover="background:var(--bg-hover,#eef1f5)"><div style="{{ resizerHandleStyle }}"></div></div>
+      </sc-if>
+
+      <sc-if value="{{ isHeaderNavMain }}">
+        <aside style="border-left:1px solid var(--border,#e4e7ec);background:var(--bg-surface,#fff);display:flex;flex-direction:column;min-height:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px 16px 12px;border-bottom:1px solid var(--border,#e4e7ec);flex:0 0 auto">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:13px;font-weight:700">Filters</span>
+              <sc-if value="{{ hasFilters }}"><span style="display:inline-flex;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 5px;border-radius:999px;font-size:11px;font-weight:600;background:var(--accent,#2f6df6);color:#fff">{{ activeFilterCount }}</span></sc-if>
+            </div>
+            <sc-if value="{{ hasFilters }}"><button onClick="{{ clearFilters }}" style="border:none;background:transparent;color:var(--accent,#2f6df6);font-size:12px;cursor:pointer;padding:2px 4px">Clear all</button></sc-if>
+          </div>
+          <div style="overflow-y:auto;min-height:0;padding:2px 12px 14px">
+            <sc-for list="{{ facetGroups }}" as="fg" hint-placeholder-count="3">
+              <div style="padding:12px 4px 6px">
+                <div style="font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary,#949ba6);margin-bottom:6px">{{ fg.label }}</div>
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <sc-for list="{{ fg.options }}" as="o">
+                    <div onClick="{{ o.onClick }}" style="{{ o.rowStyle }}" style-hover="background:var(--bg-hover,#eef1f5)">
+                      <span style="{{ o.boxStyle }}"><span style="{{ o.checkStyle }}">✓</span></span>
+                      <span style="{{ o.labelStyle }}">{{ o.value }}</span>
+                      <span style="{{ o.countStyle }}">{{ o.count }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <div style="margin-top:14px;padding:10px 11px;border-radius:8px;background:var(--bg-subtle,#f1f3f6);font-size:11px;line-height:1.5;color:var(--text-tertiary,#949ba6)">Facets are derived from the schema’s enum columns. Counts reflect loaded sample rows, not the full collection.</div>
+          </div>
+        </aside>
+      </sc-if>
+
+      <sc-if value="{{ isMasterDetail }}">
+        <aside style="background:var(--bg-canvas,#f6f7f9);display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+          <div style="padding:20px 22px;border-bottom:1px solid var(--border,#e4e7ec);background:var(--bg-surface,#fff);flex:0 0 auto">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-family:var(--font-mono,monospace);font-size:16px;font-weight:600;color:var(--text-primary,#1b1f24)">{{ detailTitle }}</span>
+              <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--accent-weak,#eaf1fe);color:var(--accent,#2f6df6)">{{ typeName }}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-tertiary,#949ba6);margin-top:4px">Record detail</div>
+          </div>
+          <div style="padding:4px 22px 22px">
+            <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary,#949ba6);margin:16px 0 2px">Fields</div>
+            <sc-for list="{{ detailFields }}" as="f" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--border,#e4e7ec)">
+                <span style="font-size:12.5px;color:var(--text-secondary,#5a626d)">{{ f.label }}</span>
+                <span style="{{ f.style }}">{{ f.value }}</span>
+              </div>
+            </sc-for>
+            <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary,#949ba6);margin:22px 0 8px">Relationships</div>
+            <sc-for list="{{ detailRels }}" as="r" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border,#e4e7ec);border-radius:8px;margin-bottom:8px">
+                <span style="font-size:12.5px;color:var(--text-primary,#1b1f24)">{{ r.label }}</span>
+                <span style="display:inline-flex;min-width:22px;justify-content:center;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-weak,#eaf1fe);color:var(--accent,#2f6df6)">{{ r.count }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </aside>
+      </sc-if>
+
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 18px;background:var(--bg-surface,#fff);border-top:1px solid var(--border,#e4e7ec);font-size:11.5px;color:var(--text-tertiary,#949ba6);flex:0 0 auto;flex-wrap:wrap">
+      <span>Aperture · walking skeleton · generic config-driven portal</span>
+      <span style="font-family:var(--font-mono,monospace)">layout: {{ layoutName }} · slots: header · primaryNav · main · inspector? · footer?</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2f6df6&quot;,&quot;options&quot;:[&quot;#2f6df6&quot;,&quot;#0d9488&quot;,&quot;#4f46e5&quot;,&quot;#334155&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;navWidth&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:232,&quot;min&quot;:180,&quot;max&quot;:300,&quot;step&quot;:4,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;defaultLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;headerNavMain&quot;,&quot;masterDetail&quot;,&quot;dashboard&quot;],&quot;default&quot;:&quot;headerNavMain&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.schemas = this.buildSchemas();
+    this.rows = {};
+    Object.keys(this.schemas).forEach(k => { this.rows[k] = this.genRows(k); });
+    this.state = {
+      layout: (props && props.defaultLayout) || 'headerNavMain',
+      tableState: 'loaded',
+      density: 'comfortable',
+      mode: 'light',
+      typePair: 'plex',
+      collectionId: 'donors',
+      sortKey: null, sortDir: 'asc',
+      page: 1, pageSize: 10,
+      navCollapsed: false,
+      selectedId: null,
+      filters: {},
+      navW: (props && props.navWidth) || 232,
+      inspectorW: 300,
+      mdListW: 340,
+    };
+  }
+
+  buildSchemas(){
+    return {
+      donors: { label:'Donors', initial:'Do', type:'Subject', count:1243, columns:[
+        {key:'external_id', label:'External ID', kind:'id'},
+        {key:'species', label:'Species', kind:'enum'},
+        {key:'biological_sex', label:'Biological sex', kind:'enum'},
+        {key:'age_at_collection', label:'Age at collection', kind:'number'},
+        {key:'diagnosis', label:'Diagnosis', kind:'enum'},
+        {key:'sample_count', label:'# Samples', kind:'count'},
+      ]},
+      samples: { label:'Samples', initial:'Sa', type:'Specimen', count:8710, columns:[
+        {key:'external_id', label:'External ID', kind:'id'},
+        {key:'donor', label:'Donor', kind:'ref'},
+        {key:'tissue', label:'Tissue', kind:'enum'},
+        {key:'preservation', label:'Preservation', kind:'enum'},
+        {key:'collected_on', label:'Collected on', kind:'text'},
+        {key:'datafile_count', label:'# Datafiles', kind:'count'},
+      ]},
+      brain: { label:'Brain Samples', initial:'Br', type:'BrainSpecimen', count:2104, columns:[
+        {key:'external_id', label:'External ID', kind:'id'},
+        {key:'donor', label:'Donor', kind:'ref'},
+        {key:'region', label:'Region', kind:'enum'},
+        {key:'hemisphere', label:'Hemisphere', kind:'enum'},
+        {key:'pmi_hours', label:'PMI (hours)', kind:'number'},
+        {key:'datafile_count', label:'# Datafiles', kind:'count'},
+      ]},
+      datafiles: { label:'Datafiles', initial:'Df', type:'DataFile', count:41290, columns:[
+        {key:'external_id', label:'External ID', kind:'id'},
+        {key:'sample', label:'Sample', kind:'ref'},
+        {key:'modality', label:'Modality', kind:'enum'},
+        {key:'size_gb', label:'Size (GB)', kind:'number'},
+        {key:'format', label:'Format', kind:'enum'},
+        {key:'status', label:'Status', kind:'enum'},
+      ]},
+      datasets: { label:'Datasets', initial:'Ds', type:'Dataset', count:96, columns:[
+        {key:'name', label:'Name', kind:'id'},
+        {key:'collections', label:'Collections', kind:'number'},
+        {key:'records', label:'Records', kind:'number'},
+        {key:'released', label:'Released', kind:'text'},
+        {key:'access', label:'Access', kind:'enum'},
+      ]},
+      workflows: { label:'Workflows', initial:'Wf', type:'Workflow', count:312, columns:[
+        {key:'name', label:'Name', kind:'id'},
+        {key:'status', label:'Status', kind:'enum'},
+        {key:'runtime_min', label:'Runtime (min)', kind:'number'},
+        {key:'started', label:'Started', kind:'text'},
+        {key:'owner', label:'Owner', kind:'text'},
+      ]},
+    };
+  }
+
+  rng(seed){ let s = (seed >>> 0) || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  pick(a, r){ return a[Math.floor(r() * a.length)]; }
+  pad(n, w){ return String(n).padStart(w, '0'); }
+  iso(r){ return '2024-' + this.pad(1 + Math.floor(r() * 12), 2) + '-' + this.pad(1 + Math.floor(r() * 28), 2); }
+  fmt(n){ return typeof n === 'number' ? n.toLocaleString('en-US') : String(n); }
+
+  genRows(key){
+    const seed = key.split('').reduce((a, c) => a + c.charCodeAt(0), 7) * 97 + 13;
+    const r = this.rng(seed);
+    const out = [];
+    const species = ['Human','Mouse','Rat'];
+    const sex = ['Female','Male','Unknown'];
+    const dx = ['Control','Alzheimer\u2019s','Parkinson\u2019s','Schizophrenia','ALS'];
+    const tissue = ['Cortex','Blood','Liver','Muscle','Skin'];
+    const pres = ['Frozen','FFPE','Fresh'];
+    const region = ['Frontal Cortex','Hippocampus','Cerebellum','Striatum','Brainstem'];
+    const hemi = ['Left','Right'];
+    const modality = ['RNA-seq','WGS','ATAC-seq','Imaging','Proteomics'];
+    const fmt = ['FASTQ','BAM','VCF','TIFF','CSV'];
+    const status = ['Succeeded','Running','Failed','Queued'];
+    const access = ['Open','Controlled'];
+    const owners = ['a.rivera','j.chen','m.osei','k.patel','s.novak','t.ahmed'];
+    const dsNames = ['cohort-atlas-2024','multiomics-pilot','reference-normals','longitudinal-v3','pilot-batch-07','aging-brain-map','control-baselines','rnaseq-megaset','imaging-collection','variant-catalog','proteomics-pilot','qc-holdouts'];
+    const wfNames = ['align-rnaseq','call-variants','qc-fastq','normalize-counts','annotate-vcf','imaging-register','demux-samples','build-matrix','filter-vcf','ingest-datafiles','compute-metrics','export-release','segment-regions','harmonize-meta','score-quality','archive-batch'];
+    if (key === 'donors') for (let i = 0; i < 24; i++) out.push({ external_id:'DNR-'+this.pad(i+1,4), species:this.pick(species,r), biological_sex:this.pick(sex,r), age_at_collection:19+Math.floor(r()*74), diagnosis:this.pick(dx,r), sample_count:1+Math.floor(r()*14) });
+    else if (key === 'samples') for (let i = 0; i < 20; i++) out.push({ external_id:'SPC-'+this.pad(i+1,4), donor:'DNR-'+this.pad(1+Math.floor(r()*24),4), tissue:this.pick(tissue,r), preservation:this.pick(pres,r), collected_on:this.iso(r), datafile_count:Math.floor(r()*9) });
+    else if (key === 'brain') for (let i = 0; i < 16; i++) out.push({ external_id:'BRN-'+this.pad(i+1,4), donor:'DNR-'+this.pad(1+Math.floor(r()*24),4), region:this.pick(region,r), hemisphere:this.pick(hemi,r), pmi_hours:+(4+r()*44).toFixed(1), datafile_count:Math.floor(r()*6) });
+    else if (key === 'datafiles') for (let i = 0; i < 32; i++) out.push({ external_id:'DF-'+this.pad(i+1,5), sample:'SPC-'+this.pad(1+Math.floor(r()*20),4), modality:this.pick(modality,r), size_gb:+(0.2+r()*63).toFixed(1), format:this.pick(fmt,r), status:this.pick(status,r) });
+    else if (key === 'datasets') for (let i = 0; i < 12; i++) out.push({ name:dsNames[i], collections:2+Math.floor(r()*12), records:1000+Math.floor(r()*499000), released:this.iso(r), access:this.pick(access,r) });
+    else if (key === 'workflows') for (let i = 0; i < 16; i++) out.push({ name:'wf-'+wfNames[i], status:this.pick(status,r), runtime_min:3+Math.floor(r()*477), started:this.iso(r), owner:this.pick(owners,r) });
+    return out;
+  }
+
+  themeVars(){
+    const { mode, density, typePair } = this.state;
+    const accent = (this.props && this.props.accent) || '#2f6df6';
+    const light = {'--bg-canvas':'#f6f7f9','--bg-surface':'#ffffff','--bg-subtle':'#f1f3f6','--bg-hover':'#eef1f5','--border':'#e4e7ec','--border-strong':'#d3d8e0','--text-primary':'#1b1f24','--text-secondary':'#5a626d','--text-tertiary':'#949ba6','--accent-weak':'#eaf1fe','--success':'#0f7a43','--success-bg':'#e6f4ec','--warn':'#8a5a12','--warn-bg':'#f8eeda','--error':'#b23b3b','--error-bg':'#fbe9e9'};
+    const dark = {'--bg-canvas':'#0e1116','--bg-surface':'#161a20','--bg-subtle':'#1d222b','--bg-hover':'#222834','--border':'#272d38','--border-strong':'#39414f','--text-primary':'#e7eaef','--text-secondary':'#9aa3b0','--text-tertiary':'#69727f','--accent-weak':'#182740','--success':'#57c98a','--success-bg':'#132a1e','--warn':'#e0a95a','--warn-bg':'#2c2413','--error':'#e2807f','--error-bg':'#2c1717'};
+    const dens = density === 'compact'
+      ? {'--row-py':'6px','--cell-px':'12px','--fs-body':'12.5px'}
+      : {'--row-py':'11px','--cell-px':'16px','--fs-body':'13.5px'};
+    const fonts = {
+      plex: {'--font-ui':"'IBM Plex Sans', system-ui, sans-serif",'--font-mono':"'IBM Plex Mono', ui-monospace, monospace"},
+      grotesk: {'--font-ui':"'Space Grotesk', system-ui, sans-serif",'--font-mono':"'Space Mono', ui-monospace, monospace"},
+      helvetica: {'--font-ui':"'Helvetica Neue', Helvetica, Arial, sans-serif",'--font-mono':"'JetBrains Mono', ui-monospace, monospace"},
+    }[typePair];
+    return Object.assign({}, mode === 'dark' ? dark : light, dens, fonts, { '--accent': accent });
+  }
+
+  chipStyle(val){
+    const sem = { Succeeded:'success', Running:'warn', Failed:'error', Queued:'neutral', Open:'success', Controlled:'warn' };
+    const t = sem[val];
+    const base = { display:'inline-flex', alignItems:'center', padding:'2px 8px', borderRadius:'999px', fontSize:'0.86em', lineHeight:1.4, whiteSpace:'nowrap', fontWeight:500 };
+    if (t === 'success') return Object.assign({}, base, { background:'var(--success-bg)', color:'var(--success)' });
+    if (t === 'warn') return Object.assign({}, base, { background:'var(--warn-bg)', color:'var(--warn)' });
+    if (t === 'error') return Object.assign({}, base, { background:'var(--error-bg)', color:'var(--error)' });
+    return Object.assign({}, base, { background:'var(--bg-subtle)', color:'var(--text-secondary)', border:'1px solid var(--border)' });
+  }
+
+  buildCell(col, row){
+    const raw = row[col.key];
+    const align = (col.kind === 'number' || col.kind === 'count') ? 'right' : 'left';
+    const c = { isId:false, isRef:false, isEnum:false, isNumber:false, isCount:false, isText:false, value:'', style:{}, tdStyle:{} };
+    c.tdStyle = { padding:'var(--row-py) var(--cell-px)', borderBottom:'1px solid var(--border)', textAlign:align, verticalAlign:'middle', whiteSpace:'nowrap' };
+    if (col.kind === 'id') { c.isId = true; c.value = String(raw); c.style = { fontFamily:'var(--font-mono)', fontSize:'0.9em', fontWeight:500, color:'var(--accent)', textDecoration:'none', cursor:'pointer' }; }
+    else if (col.kind === 'ref') { c.isRef = true; c.value = String(raw); c.style = { fontFamily:'var(--font-mono)', fontSize:'0.9em', color:'var(--text-secondary)' }; }
+    else if (col.kind === 'enum') { c.isEnum = true; c.value = String(raw); c.style = this.chipStyle(raw); }
+    else if (col.kind === 'number') { c.isNumber = true; c.value = this.fmt(raw); c.style = { fontVariantNumeric:'tabular-nums', color:'var(--text-primary)' }; }
+    else if (col.kind === 'count') { c.isCount = true; c.value = this.fmt(raw); const zero = Number(raw) === 0; c.style = { display:'inline-flex', minWidth:'22px', justifyContent:'center', padding:'1px 8px', borderRadius:'999px', fontSize:'0.86em', fontWeight:600, fontVariantNumeric:'tabular-nums', background: zero ? 'var(--bg-subtle)' : 'var(--accent-weak)', color: zero ? 'var(--text-tertiary)' : 'var(--accent)' }; }
+    else { c.isText = true; c.value = String(raw); c.style = { color:'var(--text-secondary)' }; }
+    return c;
+  }
+
+  set(k, v){ this.setState({ [k]: v }); }
+  toggleNav(){ this.setState(s => ({ navCollapsed: !s.navCollapsed })); }
+  selectCollection(id){ this.setState({ collectionId:id, page:1, sortKey:null, sortDir:'asc', selectedId:null, filters:{} }); }
+  toggleSort(key){ this.setState(s => ({ sortKey:key, sortDir: (s.sortKey === key && s.sortDir === 'asc') ? 'desc' : 'asc', page:1 })); }
+  toggleFilter(key, val){
+    this.setState(s => {
+      const f = Object.assign({}, s.filters);
+      const arr = (f[key] || []).slice();
+      const i = arr.indexOf(val);
+      if (i >= 0) arr.splice(i, 1); else arr.push(val);
+      if (arr.length) f[key] = arr; else delete f[key];
+      return { filters: f, page: 1 };
+    });
+  }
+  clearFilters(){ this.setState({ filters:{}, page:1, tableState:'loaded' }); }
+  clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+  startResize(kind, e){
+    if (e && e.preventDefault) e.preventDefault();
+    const startX = e.clientX;
+    const s0 = { nav:this.state.navW, insp:this.state.inspectorW, list:this.state.mdListW };
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX;
+      if (kind === 'nav') this.setState({ navW: this.clamp(s0.nav + dx, 168, 420) });
+      else if (kind === 'insp') this.setState({ inspectorW: this.clamp(s0.insp - dx, 240, 560) });
+      else if (kind === 'list') this.setState({ mdListW: this.clamp(s0.list + dx, 260, 620) });
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  }
+
+  renderVals(){
+    const S = this.state;
+    const sc = this.schemas[S.collectionId];
+    const all = this.rows[S.collectionId];
+    const primaryKey = sc.columns[0].key;
+
+    // filter + sort
+    const activeFilters = S.filters || {};
+    const filterKeys = Object.keys(activeFilters);
+    let sorted = all.filter(rw => filterKeys.every(k => activeFilters[k].indexOf(String(rw[k])) >= 0));
+    if (S.sortKey) {
+      const dir = S.sortDir === 'asc' ? 1 : -1;
+      sorted.sort((a, b) => {
+        const x = a[S.sortKey], y = b[S.sortKey];
+        if (typeof x === 'number' && typeof y === 'number') return (x - y) * dir;
+        return String(x).localeCompare(String(y)) * dir;
+      });
+    }
+    const total = sorted.length;
+    const pageCount = Math.max(1, Math.ceil(total / S.pageSize));
+    const page = Math.min(S.page, pageCount);
+    const start = (page - 1) * S.pageSize;
+    const pageRows = sorted.slice(start, start + S.pageSize);
+
+    const visibleRows = pageRows.map(rw => ({ id:String(rw[primaryKey]), cells: sc.columns.map(col => this.buildCell(col, rw)) }));
+
+    const columns = sc.columns.map(col => {
+      const active = S.sortKey === col.key;
+      const align = (col.kind === 'number' || col.kind === 'count') ? 'right' : 'left';
+      return {
+        key: col.key, label: col.label, active,
+        indicator: active ? (S.sortDir === 'asc' ? '\u2191' : '\u2193') : '',
+        onSort: () => this.toggleSort(col.key),
+        thStyle: { padding:'10px var(--cell-px)', borderBottom:'2px solid var(--border-strong)', textAlign:align, color: active ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight:600, fontSize:'0.76em', letterSpacing:'.04em', textTransform:'uppercase', cursor:'pointer', userSelect:'none', background:'var(--bg-surface)', whiteSpace:'nowrap', position:'sticky', top:0, zIndex:1 },
+      };
+    });
+
+    // skeleton
+    const skRng = this.rng(777);
+    const skeletonRows = Array.from({ length: 8 }).map(() => ({
+      cells: sc.columns.map(col => ({
+        tdStyle: { padding:'var(--row-py) var(--cell-px)', borderBottom:'1px solid var(--border)' },
+        barStyle: { height:'11px', borderRadius:'4px', width:(40 + Math.floor(skRng() * 45)) + '%', background:'linear-gradient(90deg,var(--bg-subtle) 0%,var(--bg-hover) 50%,var(--bg-subtle) 100%)', backgroundSize:'250% 100%', animation:'shimmer 1.3s ease-in-out infinite' },
+      })),
+    }));
+
+    // nav
+    const collections = Object.keys(this.schemas).map(id => {
+      const s = this.schemas[id];
+      const active = id === S.collectionId;
+      return {
+        id, label: s.label, initial: s.initial, count: this.fmt(s.count),
+        title: s.label + ' \u2192 type: ' + s.type,
+        onClick: () => this.selectCollection(id),
+        itemStyle: { display:'flex', alignItems:'center', gap:'10px', padding:'7px 12px 7px 12px', borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent', background: active ? 'var(--accent-weak)' : 'transparent', cursor:'pointer', textDecoration:'none', borderRadius:'0 6px 6px 0' },
+        chipStyle: { flex:'0 0 auto', display:'grid', placeItems:'center', width:'22px', height:'22px', borderRadius:'6px', fontFamily:'var(--font-mono)', fontSize:'10px', fontWeight:600, background: active ? 'var(--accent)' : 'var(--bg-subtle)', color: active ? '#fff' : 'var(--text-tertiary)' },
+        labelStyle: { flex:1, fontSize:'0.95em', fontWeight: active ? 600 : 500, color: active ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+        countStyle: { fontSize:'0.8em', color:'var(--text-tertiary)', fontVariantNumeric:'tabular-nums' },
+      };
+    });
+
+    // pagination
+    const rangeText = total === 0 ? '0 of 0' : (start + 1) + '\u2013' + Math.min(start + S.pageSize, total) + ' of ' + this.fmt(total);
+    const pageBtn = (active) => ({ minWidth:'28px', height:'28px', padding:'0 8px', border:'1px solid ' + (active ? 'var(--accent)' : 'var(--border)'), borderRadius:'6px', fontSize:'12px', cursor:'pointer', fontVariantNumeric:'tabular-nums', background: active ? 'var(--accent)' : 'var(--bg-surface)', color: active ? '#fff' : 'var(--text-secondary)' });
+    const pages = [];
+    for (let i = 1; i <= pageCount; i++) pages.push({ n:i, active:i === page, onClick:() => this.set('page', i), style: pageBtn(i === page) });
+    const navBtnStyle = { height:'28px', padding:'0 10px', border:'1px solid var(--border)', borderRadius:'6px', background:'var(--bg-surface)', color:'var(--text-secondary)', fontSize:'12px', cursor:'pointer' };
+    const psBtn = (active) => ({ padding:'4px 9px', border:'none', fontSize:'12px', cursor:'pointer', background: active ? 'var(--accent)' : 'var(--bg-surface)', color: active ? '#fff' : 'var(--text-secondary)', fontVariantNumeric:'tabular-nums' });
+    const pageSizeOpts = [10, 25, 50].map(n => ({ label:String(n), onClick:() => this.setState({ pageSize:n, page:1 }), style: psBtn(S.pageSize === n) }));
+
+    // control groups
+    const btn = (active) => ({ padding:'5px 11px', fontSize:'12px', fontWeight:500, border:'none', cursor:'pointer', background: active ? 'var(--accent)' : 'transparent', color: active ? '#fff' : 'var(--text-secondary)' });
+    const seg = (label, cur, opts) => ({ label, opts: opts.map(o => ({ label:o.l, onClick:o.on, btnStyle: btn(cur === o.v) })) });
+    const controlGroups = [
+      seg('Layout', S.layout, [
+        { l:'headerNavMain', v:'headerNavMain', on:() => this.set('layout','headerNavMain') },
+        { l:'masterDetail', v:'masterDetail', on:() => this.set('layout','masterDetail') },
+        { l:'dashboard', v:'dashboard', on:() => this.set('layout','dashboard') },
+      ]),
+      seg('Table state', S.tableState, [
+        { l:'Loaded', v:'loaded', on:() => this.set('tableState','loaded') },
+        { l:'Loading', v:'loading', on:() => this.set('tableState','loading') },
+        { l:'Empty', v:'empty', on:() => this.set('tableState','empty') },
+        { l:'Error', v:'error', on:() => this.set('tableState','error') },
+      ]),
+      seg('Density', S.density, [
+        { l:'Comfortable', v:'comfortable', on:() => this.set('density','comfortable') },
+        { l:'Compact', v:'compact', on:() => this.set('density','compact') },
+      ]),
+      seg('Mode', S.mode, [
+        { l:'Light', v:'light', on:() => this.set('mode','light') },
+        { l:'Dark', v:'dark', on:() => this.set('mode','dark') },
+      ]),
+      seg('Type', S.typePair, [
+        { l:'Plex', v:'plex', on:() => this.set('typePair','plex') },
+        { l:'Grotesk', v:'grotesk', on:() => this.set('typePair','grotesk') },
+        { l:'Helvetica', v:'helvetica', on:() => this.set('typePair','helvetica') },
+      ]),
+    ];
+
+    // master-detail
+    const selId = S.selectedId || String(all[0][primaryKey]);
+    const listItems = all.map(rw => {
+      const id = String(rw[primaryKey]);
+      const active = id === selId;
+      const secondary = sc.columns.slice(1, 3).map(c => String(rw[c.key])).join('  \u00b7  ');
+      return {
+        id, primary:id, secondary, active,
+        onClick: () => this.set('selectedId', id),
+        style: { display:'block', padding:'11px 18px', borderBottom:'1px solid var(--border)', cursor:'pointer', textDecoration:'none', borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent', background: active ? 'var(--accent-weak)' : 'transparent' },
+        primaryStyle: { fontFamily:'var(--font-mono)', fontSize:'12.5px', fontWeight:600, color: active ? 'var(--accent)' : 'var(--text-primary)' },
+        secStyle: { fontSize:'11.5px', color:'var(--text-tertiary)', marginTop:'3px' },
+      };
+    });
+    const selRow = all.find(rw => String(rw[primaryKey]) === selId) || all[0];
+    const detailFields = sc.columns.map(col => {
+      const c = this.buildCell(col, selRow);
+      return { label: col.label, value: c.value, style: Object.assign({ textAlign:'right' }, c.style) };
+    });
+    const detailRels = sc.columns.filter(col => col.kind === 'count').map(col => ({ label: col.label.replace(/^#\s*/, ''), count: this.fmt(selRow[col.key]) }));
+    if (detailRels.length === 0) detailRels.push({ label:'Datasets', count:this.fmt(1 + Math.floor((selId.length * 7) % 5)) });
+
+    // dashboard
+    const statCards = Object.keys(this.schemas).map(id => {
+      const s = this.schemas[id];
+      return { label: s.label, value: this.fmt(s.count), type: s.type, onClick: () => this.setState({ layout:'headerNavMain', collectionId:id, page:1, sortKey:null }) };
+    });
+    const dRng = this.rng(4242);
+    const rawBars = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => ({ label:d, v: 200 + Math.floor(dRng() * 1400) }));
+    const barMax = Math.max.apply(null, rawBars.map(b => b.v));
+    const barVals = rawBars.map(b => ({ label:b.label, h: Math.round(b.v / barMax * 100) }));
+    const recMax = Math.max.apply(null, Object.values(this.schemas).map(s => s.count));
+    const recBars = Object.values(this.schemas).map(s => ({ label:s.label, val:this.fmt(s.count), w: Math.max(3, Math.round(s.count / recMax * 100)) }));
+
+    // facets (derived from enum columns)
+    const enumCols = sc.columns.filter(c => c.kind === 'enum');
+    const facetGroups = enumCols.map(col => {
+      const counts = {};
+      all.forEach(rw => { const v = String(rw[col.key]); counts[v] = (counts[v] || 0) + 1; });
+      const sel = activeFilters[col.key] || [];
+      const options = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map(v => {
+        const active = sel.indexOf(v) >= 0;
+        return {
+          value: v, count: counts[v],
+          onClick: () => this.toggleFilter(col.key, v),
+          rowStyle: { display:'flex', alignItems:'center', gap:'9px', padding:'5px 6px', borderRadius:'6px', cursor:'pointer' },
+          boxStyle: { flex:'0 0 auto', width:'15px', height:'15px', borderRadius:'4px', border:'1.5px solid ' + (active ? 'var(--accent)' : 'var(--border-strong)'), background: active ? 'var(--accent)' : 'transparent', display:'grid', placeItems:'center' },
+          checkStyle: { opacity: active ? 1 : 0, color:'#fff', fontSize:'10px', lineHeight:1, fontWeight:700 },
+          labelStyle: { flex:1, fontSize:'12.5px', color: active ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+          countStyle: { fontSize:'11px', color:'var(--text-tertiary)', fontVariantNumeric:'tabular-nums' },
+        };
+      });
+      return { key: col.key, label: col.label, options };
+    });
+    const activeFilterCount = filterKeys.reduce((n, k) => n + activeFilters[k].length, 0);
+    const countText = activeFilterCount > 0
+      ? this.fmt(total) + ' of ' + this.fmt(all.length) + ' rows \u00b7 filtered'
+      : this.fmt(sc.count) + ' ' + sc.label.toLowerCase();
+
+    // shell grid + resizers
+    const navPx = S.navCollapsed ? 64 : S.navW;
+    let cols;
+    if (S.layout === 'dashboard') cols = navPx + 'px 8px minmax(0,1fr)';
+    else if (S.layout === 'masterDetail') cols = navPx + 'px 8px ' + S.mdListW + 'px 8px minmax(0,1fr)';
+    else cols = navPx + 'px 8px minmax(0,1fr) 8px ' + S.inspectorW + 'px';
+    const resizerTrackStyle = { cursor:'col-resize', display:'grid', placeItems:'center', background:'transparent' };
+    const resizerHandleStyle = { width:'3px', height:'30px', borderRadius:'3px', background:'var(--border-strong)', pointerEvents:'none' };
+
+    return {
+      rootStyle: this.themeVars(),
+      controlGroups,
+      collections,
+      navExpanded: !S.navCollapsed,
+      toggleNav: () => this.toggleNav(),
+      collapseIconStyle: { transform: S.navCollapsed ? 'rotate(180deg)' : 'none', transition:'transform .15s ease' },
+      bodyStyle: { display:'grid', gridTemplateColumns: cols, flex:1, minHeight:0 },
+
+      isHeaderNavMain: S.layout === 'headerNavMain',
+      isMasterDetail: S.layout === 'masterDetail',
+      isDashboard: S.layout === 'dashboard',
+
+      titleText: sc.label,
+      typeName: sc.type,
+      countText,
+      collectionLower: sc.label.toLowerCase(),
+      facetGroups,
+      hasFilters: activeFilterCount > 0,
+      activeFilterCount,
+      clearFilters: () => this.clearFilters(),
+      hasInspector: S.layout !== 'dashboard',
+      resizerTrackStyle, resizerHandleStyle,
+      startNavResize: (e) => this.startResize('nav', e),
+      startRightResize: (e) => this.startResize(S.layout === 'masterDetail' ? 'list' : 'insp', e),
+
+      columns,
+      visibleRows,
+      skeletonRows,
+      isLoaded: S.tableState === 'loaded' && total > 0,
+      isLoading: S.tableState === 'loading',
+      isEmpty: S.tableState === 'empty' || (S.tableState === 'loaded' && total === 0),
+      isError: S.tableState === 'error',
+      onReset: () => this.clearFilters(),
+      onRetry: () => this.set('tableState','loaded'),
+
+      rangeText, pages, pageSizeOpts, navBtnStyle,
+      onPrev: () => this.setState(s => ({ page: Math.max(1, s.page - 1) })),
+      onNext: () => { const s = this.state; const t = this.rows[s.collectionId].length; const pc = Math.max(1, Math.ceil(t / s.pageSize)); this.setState({ page: Math.min(pc, s.page + 1) }); },
+
+      listItems, detailFields, detailRels, detailTitle: String(selRow[primaryKey]),
+      statCards, barVals, recBars,
+      layoutName: S.layout,
+    };
+  }
+}
+</script>
+</body>
+</html>

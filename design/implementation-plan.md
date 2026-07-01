@@ -4,6 +4,12 @@
 (esp. ADR-0014 SPA, ADR-0017 Layer-D adapter, ADR-0029 capability-gating, ADR-0030 stack) and
 `portal-requirements.md` (R3.*/W4.*/N5.*). **Current focus: Phase 0 — the walking skeleton.**
 
+> **Visual target available (2026-07-01):** the Claude Design export
+> ([`design-export/`](./design-export/)) is the visual source of truth for the skeleton, and
+> [`design-tokens.md`](./design-tokens.md) is the extracted design-system seed for the `web/`
+> theme. Phase-0 steps 0.1a / 0.5 implement against these (hand-translated to React + TanStack —
+> not converted; self-host fonts, tokenize inline styles — see the export README's "deltas").
+
 ## Phasing (overview)
 
 | Phase | Deliverable | Requirements |
