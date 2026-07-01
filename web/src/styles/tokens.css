@@ -1,0 +1,48 @@
+/*
+ * Aperture design tokens — seeded from design/design-tokens.md, extracted from the
+ * Claude Design export (design/design-export/). Light theme. A [data-theme='dark']
+ * block is a follow-on. Define tokens once here; reference var(--token) elsewhere
+ * (no inline fallbacks, unlike the prototype).
+ */
+:root {
+  /* Color — surfaces */
+  --bg-canvas: #f6f7f9;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f3f6;
+  --bg-hover: #eef1f5;
+
+  /* Color — borders */
+  --border: #e4e7ec;
+  --border-strong: #d3d8e0;
+
+  /* Color — text */
+  --text-primary: #1b1f24;
+  --text-secondary: #5a626d;
+  --text-tertiary: #949ba6;
+
+  /* Color — accent + semantic */
+  --accent: #2f6df6;
+  --accent-weak: #eaf1fe;
+  --error: #b23b3b;
+  --error-bg: #fbe9e9;
+
+  /* Typography. Self-host IBM Plex (woff2) under web/public/fonts/ to drop the
+     system fallback; see design/design-export/README.md "deltas". */
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --fs-body: 13.5px;
+
+  /* Spacing scale (systematized from the export's inline literals) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 18px;
+  --space-6: 24px;
+
+  /* Radius */
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+}
