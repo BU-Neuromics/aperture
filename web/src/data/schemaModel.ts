@@ -81,6 +81,8 @@ export interface CollectionModel {
   argTypes: Partial<Record<'limit' | 'offset' | 'filter' | 'search', string>>;
   /** Equality facets the endpoint's filter input advertises. */
   facets: FacetModel[];
+  /** All non-combinator fields of the filter input (equality-filterable). */
+  filterFields: string[];
   /** How to fetch one entity, when the endpoint offers a way (else detail gates off). */
   detail?: DetailPath;
   /** Create/update mutation paths + derived forms; absent members gate the write UI off. */
@@ -453,6 +455,12 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         search: args.search && typeRefToSDL(args.search.type),
       },
       facets: deriveFacets(schema, filterTypeName, detailColumns),
+      filterFields:
+        filterType?.kind === 'INPUT_OBJECT'
+          ? (filterType.inputFields ?? [])
+              .filter((f) => !COMBINATOR_FIELDS.has(f.name))
+              .map((f) => f.name)
+          : [],
       detail: deriveDetailPath(queryFields, named.name, filterType, idColumn),
       write: deriveWriteModel(schema, named.name, detailColumns),
     });
