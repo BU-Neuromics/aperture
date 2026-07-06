@@ -6,7 +6,7 @@ describe('layout registry', () => {
   it('resolves headerNavMain (the MVP catalog entry)', () => {
     const layout = getLayout('headerNavMain');
     expect(layout).toBeDefined();
-    expect(layout!.supports).toEqual(['header', 'primaryNav', 'main', 'footer']);
+    expect(layout!.supports).toEqual(['header', 'primaryNav', 'main', 'inspector', 'footer']);
     expect(DEFAULT_LAYOUT).toBe('headerNavMain');
   });
 
@@ -48,11 +48,11 @@ describe('AppShell + headerNavMain', () => {
     render(
       <AppShell
         config={{ layout: 'headerNavMain' }}
-        slots={{ main: <span>content</span>, inspector: <span>inspector content</span> }}
+        slots={{ main: <span>content</span>, aside: <span>aside content</span> }}
       />,
     );
-    expect(screen.queryByText('inspector content')).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent(/does not support: inspector/);
+    expect(screen.queryByText('aside content')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/does not support: aside/);
     // The supported slots still render — degraded, not broken.
     expect(screen.getByRole('main')).toHaveTextContent('content');
   });

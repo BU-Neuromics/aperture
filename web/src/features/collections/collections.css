@@ -309,3 +309,154 @@
   opacity: 0.45;
   cursor: default;
 }
+
+/* Facet panel (inspector slot) */
+
+.facet-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.facet-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.facet-panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.facet-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.facet-active-count {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+}
+
+.facet-clear-all {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.facet-panel-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 2px 12px 14px;
+}
+
+.facet-group {
+  padding: 12px 4px 6px;
+}
+
+.facet-group-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.facet-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.facet-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.facet-option:hover {
+  background: var(--bg-hover);
+}
+
+.facet-box {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.facet-box-on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.facet-option-label {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.facet-option[aria-pressed='true'] .facet-option-label {
+  color: var(--text-primary);
+}
+
+.facet-search-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.facet-search-input:focus {
+  border-color: var(--accent);
+}
+
+.facet-footnote {
+  margin-top: 14px;
+  padding: 10px 11px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}

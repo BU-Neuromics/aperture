@@ -69,27 +69,27 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
   const argList: string[] = [];
   const variables: Record<string, unknown> = {};
 
-  const use = (arg: string | undefined, type: string | undefined, name: string, value: unknown) => {
+  const addArg = (arg: string | undefined, type: string | undefined, name: string, value: unknown) => {
     if (!arg || !type || value === undefined) return;
     varDefs.push(`$${name}: ${type}`);
     argList.push(`${arg}: $${name}`);
     variables[name] = value;
   };
 
-  use(collection.args.limit, collection.argTypes.limit, 'limit', options.pageSize);
-  use(
+  addArg(collection.args.limit, collection.argTypes.limit, 'limit', options.pageSize);
+  addArg(
     collection.args.offset,
     collection.argTypes.offset,
     'offset',
     (options.page - 1) * options.pageSize,
   );
-  use(
+  addArg(
     collection.args.filter,
     collection.argTypes.filter,
     'filter',
     options.filters && Object.keys(options.filters).length > 0 ? options.filters : undefined,
   );
-  use(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
+  addArg(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
 
   const defs = varDefs.length > 0 ? `(${varDefs.join(', ')})` : '';
   const args = argList.length > 0 ? `(${argList.join(', ')})` : '';
