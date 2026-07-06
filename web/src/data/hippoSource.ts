@@ -1,4 +1,6 @@
 import type { Capabilities } from './capabilities';
+import type { BatchModel, BatchOperation, BatchResult } from './batch';
+import { buildBatchMutation, deriveBatchModel, normalizeBatchResult } from './batch';
 import type { IntrospectionData } from './introspection';
 import { INTROSPECTION_QUERY } from './introspection';
 import type { ScopedDataClient } from './scopedClient';
@@ -48,6 +50,10 @@ export interface HippoSource {
   createEntity(collectionId: string, values: WriteValues): Promise<string | null>;
   /** Partial-merge update: send only the given fields (W4.3). */
   updateEntity(collectionId: string, id: string, values: WriteValues): Promise<void>;
+  /** The introspected batch unit-of-work surface, when usable (ADR-0028). */
+  batch?: BatchModel;
+  /** Whole-set dry-run (dryRun=true) or atomic commit of a staged set (W4.7). */
+  runBatch(operations: BatchOperation[], dryRun: boolean): Promise<BatchResult>;
 }
 
 function selectionFor(column: ColumnModel): string {
@@ -175,6 +181,7 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
   const collections = deriveCollections(schema);
   const capabilities = deriveCapabilities(schema, collections);
   const history = deriveHistory(schema);
+  const batch = deriveBatchModel(schema);
 
   const collectionFor = (collectionId: string): CollectionModel => {
     const collection = collections.find((c) => c.id === collectionId);
@@ -186,6 +193,23 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
     capabilities,
     collections,
     history,
+    batch,
+
+    async runBatch(operations, dryRun) {
+      if (!batch) throw new Error('The endpoint does not advertise a batch unit-of-work');
+      if (operations.length === 0) throw new Error('Nothing staged to submit');
+      const built = buildBatchMutation(batch, operations, dryRun);
+      const batchResult = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
+      if (batchResult.error || batchResult.data == null) {
+        throw new Error(
+          `Batch ${dryRun ? 'validation' : 'commit'} failed: ${batchResult.error?.message ?? 'empty response'}`,
+        );
+      }
+      return normalizeBatchResult(batchResult.data[batch.field]);
+    },
 
     async listEntities(collectionId, options) {
       const collection = collectionFor(collectionId);

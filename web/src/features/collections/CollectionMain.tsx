@@ -1,5 +1,6 @@
 import { useDataSource } from '../../data/DataSourceContext';
 import { useCollectionUrlState } from './urlState';
+import { WorkflowRunner } from '../../workflows/WorkflowRunner';
 import { CollectionTable } from './CollectionTable';
 import { EntityDetail } from './EntityDetail';
 import { EntityForm } from './EntityForm';
@@ -13,7 +14,12 @@ import './collections.css';
  */
 export function CollectionMain() {
   const state = useDataSource();
-  const { collection, entity, form, closeEntity, closeForm } = useCollectionUrlState();
+  const { collection, entity, form, workflow, closeEntity, closeForm } = useCollectionUrlState();
+
+  // The guided workflow runner owns main when a workflow is open (W4.6).
+  if (workflow != null) {
+    return <WorkflowRunner key={workflow} workflowId={workflow} />;
+  }
 
   if (state.status === 'unconfigured') {
     return (

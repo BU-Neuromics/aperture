@@ -56,7 +56,7 @@ const listArgs = [
 
 /** A capable, Hippo-like endpoint: pagination, filters, FTS, detail, history, batch write. */
 export function capableSchema(
-  options: { hippoSchema?: boolean; authorDetail?: boolean } = {},
+  options: { hippoSchema?: boolean; authorDetail?: boolean; authorWrite?: boolean } = {},
 ): IntrospectionSchema {
   const queryFields = [
     field('books', nonNull(list(nonNull(object('Book')))), listArgs),
@@ -82,13 +82,30 @@ export function capableSchema(
   if (options.authorDetail) {
     authorFields.push(field('books', list(nonNull(object('Book')))));
   }
+  const mutationExtras: IntrospectionField[] = [];
+  const typeExtras: IntrospectionType[] = [];
+  if (options.authorWrite) {
+    mutationExtras.push(
+      field('createAuthor', object('Author'), [
+        arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'AuthorInput', ofType: null })),
+      ]),
+    );
+    typeExtras.push(inputObjectType('AuthorInput', [arg('name', nonNull(scalar('String')))]));
+  }
   return {
     queryType: { name: 'Query' },
     mutationType: { name: 'Mutation' },
     types: [
       objectType('Query', queryFields),
       objectType('Mutation', [
-        field('batchPut', object('BatchResult')),
+        // Batch unit-of-work (Hippo #84 shape assumption): ops list + dry-run.
+        field('batchPut', nonNull(object('BatchPutResult')), [
+          arg(
+            'operations',
+            nonNull(list(nonNull({ kind: 'INPUT_OBJECT', name: 'BatchOperationInput', ofType: null }))),
+          ),
+          arg('dryRun', scalar('Boolean')),
+        ]),
         // Tier-0 write paths (W4.3): create takes an input; update adds an id.
         field('createBook', object('Book'), [
           arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'BookInput', ofType: null })),
@@ -97,6 +114,7 @@ export function capableSchema(
           arg('id', nonNull(scalar('ID'))),
           arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'BookUpdateInput', ofType: null })),
         ]),
+        ...mutationExtras,
       ]),
       inputObjectType('BookInput', [
         arg('title', nonNull(scalar('String'))),
@@ -127,6 +145,22 @@ export function capableSchema(
         field('action', scalar('String')),
         field('actor', scalar('String')),
       ]),
+      inputObjectType('BatchOperationInput', [
+        arg('ref', nonNull(scalar('String'))),
+        arg('type', nonNull(scalar('String'))),
+        arg('data', nonNull(scalar('JSON'))),
+      ]),
+      objectType('BatchPutResult', [
+        field('ok', nonNull(scalar('Boolean'))),
+        field('results', list(nonNull(object('BatchRef')))),
+        field('errors', list(nonNull(object('BatchError')))),
+      ]),
+      objectType('BatchRef', [field('ref', scalar('String')), field('id', scalar('ID'))]),
+      objectType('BatchError', [
+        field('ref', scalar('String')),
+        field('field', scalar('String')),
+        field('message', scalar('String')),
+      ]),
       objectType('Book', [
         field('id', nonNull(scalar('ID'))),
         field('title', nonNull(scalar('String'))),
@@ -142,6 +176,7 @@ export function capableSchema(
       objectType('HippoSchema', [field('version', scalar('String'))]),
       objectType('BatchResult', [field('ok', scalar('Boolean'))]),
       enumType('BookFormat', ['HARDCOVER', 'PAPERBACK', 'EBOOK']),
+      ...typeExtras,
     ],
   };
 }

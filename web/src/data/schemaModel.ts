@@ -5,6 +5,7 @@ import type {
 } from './introspection';
 import { findType, isListType, namedType, typeRefToSDL } from './introspection';
 import type { Capabilities } from './capabilities';
+import { deriveBatchModel } from './batch';
 
 /**
  * The schema-derived binding model (the novel bet, `prior-art.md`): browsable
@@ -501,7 +502,6 @@ export function deriveCapabilities(
 ): Capabilities {
   const queryType = findType(schema, schema.queryType.name);
   const hasHippoSchema = (queryType?.fields ?? []).some((f) => f.name === 'hippoSchema');
-  const mutationType = findType(schema, schema.mutationType?.name ?? null);
 
   const some = (pick: (c: CollectionModel) => unknown) => collections.some((c) => Boolean(pick(c)));
 
@@ -520,6 +520,8 @@ export function deriveCapabilities(
     aggregation: (queryType?.fields ?? []).some((f) => /aggregate|count/i.test(f.name)),
     relationshipTraversal,
     entityHistory: deriveHistory(schema) != null,
-    batchWrite: (mutationType?.fields ?? []).some((f) => /batch|staged/i.test(f.name)),
+    // True only when the batch surface introspects to a usable shape —
+    // a name match alone is not a capability (ADR-0029).
+    batchWrite: deriveBatchModel(schema) != null,
   };
 }

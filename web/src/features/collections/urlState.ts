@@ -35,6 +35,7 @@ export function useCollectionUrlState() {
     filters: parseAsJson(validateFilters),
     entity: parseAsString,
     form: parseAsStringLiteral(['new', 'edit'] as const),
+    workflow: parseAsString,
   });
 
   const filters = state.filters ?? EMPTY_FILTERS;
@@ -46,9 +47,18 @@ export function useCollectionUrlState() {
     filters,
     entity: state.entity,
     form: state.form,
+    workflow: state.workflow,
 
     selectCollection: (collection: string) =>
-      void setState({ collection, page: 1, q: null, filters: null, entity: null, form: null }),
+      void setState({
+        collection,
+        page: 1,
+        q: null,
+        filters: null,
+        entity: null,
+        form: null,
+        workflow: null,
+      }),
     setPage: (page: number) => void setState({ page: Math.max(1, page) }),
     setSearch: (q: string) => void setState({ q: q.trim() === '' ? null : q.trim(), page: 1 }),
     /** Single-value equality per facet (flat AND semantics — R3.3); toggle clears. */
@@ -63,7 +73,15 @@ export function useCollectionUrlState() {
     closeEntity: () => void setState({ entity: null, form: null }),
     /** Cross-link: open another collection's entity detail (R3.8). */
     openIn: (collection: string, entity: string) =>
-      void setState({ collection, entity, page: 1, q: null, filters: null, form: null }),
+      void setState({
+        collection,
+        entity,
+        page: 1,
+        q: null,
+        filters: null,
+        form: null,
+        workflow: null,
+      }),
     /** Relationship pivot: jump to a related collection filtered by this entity (R3.8). */
     pivotTo: (collection: string, field: string, value: string) =>
       void setState({
@@ -73,10 +91,14 @@ export function useCollectionUrlState() {
         q: null,
         entity: null,
         form: null,
+        workflow: null,
       }),
     /** Write loop (W4): open the generated create/edit form. */
     openCreateForm: () => void setState({ form: 'new', entity: null }),
     openEditForm: () => void setState({ form: 'edit' }),
     closeForm: () => void setState({ form: null }),
+    /** Tier-1 workflow (W4.6): open/close the guided runner. */
+    openWorkflow: (workflow: string) => void setState({ workflow, entity: null, form: null }),
+    closeWorkflow: () => void setState({ workflow: null }),
   };
 }
