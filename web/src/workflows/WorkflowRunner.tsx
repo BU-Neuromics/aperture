@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useControlPlane } from '../control/ControlPlaneContext';
 import type { BatchOpError, BatchResult } from '../data/batch';
 import { useDataSource } from '../data/DataSourceContext';
 import type { HippoSource, WriteValues } from '../data/hippoSource';
@@ -86,46 +87,64 @@ type Notice =
 
 function Runner({ workflow, source }: { workflow: WorkflowConfig; source: HippoSource }) {
   const { closeWorkflow, openIn } = useCollectionUrlState();
+  const { status: storeStatus, store } = useControlPlane();
   const fingerprint = useMemo(() => schemaFingerprint(source), [source]);
 
   const [notice, setNotice] = useState<Notice>(null);
-  const [run, setRun] = useState<WorkflowRunState>(() => {
-    const draft = loadDraft(workflow.id);
-    if (draft && draft.state.workflowVersion === workflow.version) {
-      return draft.state;
-    }
-    return initRun(workflow, fingerprint);
-  });
-  const noticeInitialized = useRef(false);
+  // null until the control-plane draft lookup resolves (W4.8 — async store).
+  const [run, setRun] = useState<WorkflowRunState | null>(null);
+
   useEffect(() => {
-    if (noticeInitialized.current) return;
-    noticeInitialized.current = true;
-    const draft = loadDraft(workflow.id);
-    if (draft && draft.state.workflowVersion === workflow.version) {
-      setNotice(
-        draft.state.schemaFingerprint === fingerprint
-          ? { kind: 'resumed', savedAt: draft.savedAt }
-          : { kind: 'drift', savedAt: draft.savedAt },
-      );
-    }
-  }, [workflow, fingerprint]);
+    if (storeStatus !== 'ready' || run != null) return;
+    let cancelled = false;
+    loadDraft(store, workflow.id)
+      .then((draft) => {
+        if (cancelled) return;
+        if (draft && draft.state.workflowVersion === workflow.version) {
+          setRun(draft.state);
+          setNotice(
+            draft.state.schemaFingerprint === fingerprint
+              ? { kind: 'resumed', savedAt: draft.savedAt }
+              : { kind: 'drift', savedAt: draft.savedAt },
+          );
+        } else {
+          setRun(initRun(workflow, fingerprint));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRun(initRun(workflow, fingerprint));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [storeStatus, store, workflow, fingerprint, run]);
 
   const [batchErrors, setBatchErrors] = useState<BatchOpError[]>([]);
   const [transportError, setTransportError] = useState<string | null>(null);
+  const [draftIssue, setDraftIssue] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [committed, setCommitted] = useState<BatchResult | null>(null);
 
   const update = (next: WorkflowRunState) => {
     setRun(next);
-    saveDraft(next); // the draft is the state — every change persists (W4.8)
+    // The draft is the state — every change persists (W4.8). A store failure
+    // must not block the run, but it must not be silent either.
+    saveDraft(store, next)
+      .then(() => setDraftIssue(null))
+      .catch((error: unknown) =>
+        setDraftIssue(
+          `Draft could not be saved: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
   };
 
   const discard = () => {
-    clearDraft(workflow.id);
+    void clearDraft(store, workflow.id).catch(() => {});
     setRun(initRun(workflow, fingerprint));
     setNotice(null);
     setBatchErrors([]);
     setTransportError(null);
+    setDraftIssue(null);
   };
 
   const runDryRun = async (state: WorkflowRunState): Promise<BatchOpError[] | null> => {
@@ -140,13 +159,14 @@ function Runner({ workflow, source }: { workflow: WorkflowConfig; source: HippoS
   };
 
   const commit = async () => {
+    if (run == null) return;
     setBusy(true);
     setBatchErrors([]);
     setTransportError(null);
     try {
       const result = await source.runBatch(buildOperations(workflow, run), false);
       if (result.ok && result.errors.length === 0) {
-        clearDraft(workflow.id);
+        void clearDraft(store, workflow.id).catch(() => {});
         setCommitted(result);
       } else {
         setBatchErrors(result.errors);
@@ -161,6 +181,14 @@ function Runner({ workflow, source }: { workflow: WorkflowConfig; source: HippoS
   if (committed) {
     return (
       <SuccessPanel workflow={workflow} source={source} result={committed} onClose={closeWorkflow} openIn={openIn} />
+    );
+  }
+
+  if (run == null) {
+    return (
+      <div className="main-panel" role="status">
+        <p className="main-panel-detail">Checking the control plane for a saved draft…</p>
+      </div>
     );
   }
 
@@ -193,6 +221,11 @@ function Runner({ workflow, source }: { workflow: WorkflowConfig; source: HippoS
       {transportError && (
         <div className="form-server-error wf-margin" role="alert">
           {transportError}
+        </div>
+      )}
+      {draftIssue && (
+        <div className="wf-notice wf-notice-warn wf-margin" role="status">
+          {draftIssue}
         </div>
       )}
 

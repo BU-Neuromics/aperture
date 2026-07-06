@@ -136,3 +136,80 @@ describe('saved views (Phase 4, R3.9)', () => {
     expect(screen.queryByText('garbage')).not.toBeInTheDocument();
   });
 });
+
+describe('config-as-data through the control plane (Phase 4)', () => {
+  const wfConfig = [
+    {
+      id: 'register-work',
+      version: '1',
+      label: 'Register a work',
+      steps: [{ id: 'author-step', label: 'Register author', entityType: 'Author' }],
+    },
+  ];
+
+  it('a valid control-plane workflows document wins over the env default', async () => {
+    const { client } = makeClient([
+      {
+        id: 'DOC-1',
+        kind: 'config',
+        name: 'workflows',
+        payload: sealPayload(1, wfConfig),
+      },
+    ]);
+    renderApp(
+      <App endpoint={endpoint} clientFactory={() => client} workflows={{ workflows: [] }} />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    expect(await within(nav).findByText('Register a work')).toBeInTheDocument();
+  });
+
+  it('an invalid document falls back to env with the error surfaced', async () => {
+    const { client } = makeClient([
+      {
+        id: 'DOC-1',
+        kind: 'config',
+        name: 'workflows',
+        payload: sealPayload(1, [{ id: 'broken' }]),
+      },
+    ]);
+    renderApp(
+      <App endpoint={endpoint} clientFactory={() => client} workflows={{ workflows: [] }} />,
+    );
+    expect(
+      await screen.findByText(/control-plane workflows config is invalid/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('workflow drafts through the control plane (W4.8)', () => {
+  it('staging a step writes a draft document to the Hippo store', async () => {
+    const user = userEvent.setup();
+    const wf = [
+      {
+        id: 'solo',
+        version: '1',
+        label: 'Solo book',
+        steps: [{ id: 'book-step', label: 'Add book', entityType: 'Book' }],
+      },
+    ];
+    const { client, docs } = makeClient();
+    renderApp(
+      <App
+        endpoint={endpoint}
+        clientFactory={() => client}
+        workflows={{ workflows: wf }}
+      />,
+      '?workflow=solo',
+    );
+
+    await user.type(await screen.findByLabelText(/Title/), 'Draft Book');
+    await user.click(screen.getByRole('button', { name: 'Stage & continue' }));
+
+    await vi.waitFor(() => {
+      const draft = docs.find((d) => d.kind === 'workflowDraft' && d.name === 'solo');
+      expect(draft).toBeDefined();
+      const payload = JSON.parse(draft!.payload);
+      expect(payload.data.state.staged['book-step'].title).toBe('Draft Book');
+    });
+  });
+});

@@ -1,3 +1,4 @@
+import { createLocalStore } from '../control/store';
 import { connectHippoSource } from '../data/hippoSource';
 import { capableSchema, fakeClient } from '../data/testing/fixtures';
 import { parseWorkflowConfigs, resolveWorkflows } from './config';
@@ -119,34 +120,27 @@ describe('workflowAvailability (honest gating — ADR-0029)', () => {
   });
 });
 
-describe('drafts (W4.8 — inert, version-pinned, resumable)', () => {
-  function memoryStorage() {
-    const map = new Map<string, string>();
-    return {
-      getItem: (k: string) => map.get(k) ?? null,
-      setItem: (k: string, v: string) => void map.set(k, v),
-      removeItem: (k: string) => void map.delete(k),
-    };
-  }
+describe('drafts (W4.8 — inert, version-pinned, resumable control-plane documents)', () => {
+  beforeEach(() => window.localStorage.clear());
 
-  it('save → load round-trips the run state; clear removes it', () => {
-    const storage = memoryStorage();
+  it('save → load round-trips the run state; clear removes it', async () => {
+    const store = createLocalStore();
     let state = initRun(REGISTER, 'fp-9');
     state = stageStep(REGISTER, state, 'author-step', { name: 'A' });
-    saveDraft(state, storage);
+    await saveDraft(store, state);
 
-    const draft = loadDraft('register-work', storage);
+    const draft = await loadDraft(store, 'register-work');
     expect(draft?.state).toEqual(state);
     expect(draft?.state.schemaFingerprint).toBe('fp-9'); // the drift pin
 
-    clearDraft('register-work', storage);
-    expect(loadDraft('register-work', storage)).toBeNull();
+    await clearDraft(store, 'register-work');
+    expect(await loadDraft(store, 'register-work')).toBeNull();
   });
 
-  it('a corrupt draft reads as absent, never crashes resume', () => {
-    const storage = memoryStorage();
-    storage.setItem('aperture:workflow-draft:register-work', '{nope');
-    expect(loadDraft('register-work', storage)).toBeNull();
+  it('a corrupt draft reads as absent, never crashes resume', async () => {
+    const store = createLocalStore();
+    window.localStorage.setItem('aperture:cp:workflowDraft:register-work', '{nope');
+    expect(await loadDraft(store, 'register-work')).toBeNull();
   });
 });
 
