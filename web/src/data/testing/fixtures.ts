@@ -88,7 +88,14 @@ export function capableSchema(
     types: [
       objectType('Query', queryFields),
       objectType('Mutation', [
-        field('batchPut', object('BatchResult')),
+        // Batch unit-of-work (Hippo #84 shape assumption): ops list + dry-run.
+        field('batchPut', nonNull(object('BatchPutResult')), [
+          arg(
+            'operations',
+            nonNull(list(nonNull({ kind: 'INPUT_OBJECT', name: 'BatchOperationInput', ofType: null }))),
+          ),
+          arg('dryRun', scalar('Boolean')),
+        ]),
         // Tier-0 write paths (W4.3): create takes an input; update adds an id.
         field('createBook', object('Book'), [
           arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'BookInput', ofType: null })),
@@ -126,6 +133,22 @@ export function capableSchema(
         field('timestamp', nonNull(scalar('String'))),
         field('action', scalar('String')),
         field('actor', scalar('String')),
+      ]),
+      inputObjectType('BatchOperationInput', [
+        arg('ref', nonNull(scalar('String'))),
+        arg('type', nonNull(scalar('String'))),
+        arg('data', nonNull(scalar('JSON'))),
+      ]),
+      objectType('BatchPutResult', [
+        field('ok', nonNull(scalar('Boolean'))),
+        field('results', list(nonNull(object('BatchRef')))),
+        field('errors', list(nonNull(object('BatchError')))),
+      ]),
+      objectType('BatchRef', [field('ref', scalar('String')), field('id', scalar('ID'))]),
+      objectType('BatchError', [
+        field('ref', scalar('String')),
+        field('field', scalar('String')),
+        field('message', scalar('String')),
       ]),
       objectType('Book', [
         field('id', nonNull(scalar('ID'))),
