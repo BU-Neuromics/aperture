@@ -83,6 +83,58 @@ describe('deriveCollections', () => {
   });
 });
 
+describe('deriveWriteModel (W4.1/W4.3)', () => {
+  it('derives create/update paths + a serializable form model from the mutation surface', () => {
+    const [books] = deriveCollections(capableSchema());
+    expect(books.write.create).toEqual({
+      field: 'createBook',
+      inputArgName: 'input',
+      inputArgType: 'BookInput!',
+      form: {
+        inputTypeName: 'BookInput',
+        fields: [
+          { name: 'title', label: 'Title', widget: 'text', required: true },
+          { name: 'published_on', label: 'Published on', widget: 'date', required: false },
+          { name: 'page_count', label: 'Page count', widget: 'number', required: false },
+          { name: 'in_print', label: 'In print', widget: 'checkbox', required: false },
+          {
+            name: 'format',
+            label: 'Format',
+            widget: 'select',
+            required: false,
+            options: ['HARDCOVER', 'PAPERBACK', 'EBOOK'],
+          },
+          {
+            name: 'author',
+            label: 'Author',
+            widget: 'ref',
+            required: false,
+            targetType: 'Author',
+          },
+          // multivalued 'tags' has no Tier-0 widget → omitted, never offered
+        ],
+      },
+    });
+    expect(books.write.update?.field).toBe('updateBook');
+    expect(books.write.update?.idArgName).toBe('id');
+    expect(books.write.update?.form.fields.find((f) => f.name === 'title')?.required).toBe(false);
+  });
+
+  it('is empty when no mutations target the type (write UI gates off)', () => {
+    const collections = deriveCollections(capableSchema());
+    const authors = collections.find((c) => c.id === 'authors')!;
+    expect(authors.write).toEqual({});
+    const [things] = deriveCollections(bareSchema());
+    expect(things.write).toEqual({});
+  });
+
+  it('form model is plain serializable data (config-as-data seed)', () => {
+    const [books] = deriveCollections(capableSchema());
+    const form = books.write.create!.form;
+    expect(JSON.parse(JSON.stringify(form))).toEqual(form);
+  });
+});
+
 describe('deriveHistory (R3.7)', () => {
   it('derives the entityHistory surface when advertised', () => {
     expect(deriveHistory(capableSchema())).toEqual({

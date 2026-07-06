@@ -43,6 +43,9 @@ describe('CollectionTable states (design-export: loading / empty / error)', () =
         }
         return pending as Promise<GraphQLResult<T>>;
       },
+      async mutate<T>(): Promise<GraphQLResult<T>> {
+        return pending as Promise<GraphQLResult<T>>;
+      },
     };
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
 

@@ -39,11 +39,10 @@ describe('DataSourceProvider / useCapabilities (step 0.4)', () => {
   });
 
   it('surfaces connection failure as an error state (honest degradation)', async () => {
-    const failing = () => ({
-      async query() {
-        return { data: null, error: new Error('unreachable') };
-      },
-    });
+    const failing = () => {
+      const fail = async () => ({ data: null, error: new Error('unreachable') });
+      return { query: fail, mutate: fail };
+    };
     render(
       <DataSourceProvider endpoint={{ url: 'http://example.test/graphql' }} clientFactory={failing}>
         <Probe />

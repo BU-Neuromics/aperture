@@ -82,6 +82,8 @@ export interface CollectionModel {
   facets: FacetModel[];
   /** How to fetch one entity, when the endpoint offers a way (else detail gates off). */
   detail?: DetailPath;
+  /** Create/update mutation paths + derived forms; absent members gate the write UI off. */
+  write: WriteModel;
 }
 
 /** Derived from a Query `entityHistory`-style field, when advertised (R3.7). */
@@ -91,6 +93,47 @@ export interface HistoryModel {
   argType: string;
   /** Scalar columns of the history row type. */
   columns: ColumnModel[];
+}
+
+/**
+ * A form field derived from a mutation input type (W4.1). The whole
+ * FormModel is plain serializable data — the schema/UI-schema seed for
+ * config-as-data forms (ADR-0003/0004).
+ */
+export interface FormFieldModel {
+  /** Input-object field name (what the mutation receives). */
+  name: string;
+  label: string;
+  widget: 'text' | 'number' | 'checkbox' | 'select' | 'date' | 'ref';
+  /** NON_NULL input field → required (client pre-validation; server authoritative). */
+  required: boolean;
+  /** For select widgets: the advertised enum values. */
+  options?: readonly string[];
+  /** For ref widgets: the target entity type (picker searches its collection). */
+  targetType?: string;
+}
+
+export interface FormModel {
+  inputTypeName: string;
+  fields: FormFieldModel[];
+}
+
+/** How a collection's entities are created/updated, when the endpoint offers it (W4.3). */
+export interface WriteModel {
+  create?: {
+    field: string;
+    inputArgName: string;
+    inputArgType: string;
+    form: FormModel;
+  };
+  update?: {
+    field: string;
+    idArgName: string;
+    idArgType: string;
+    inputArgName: string;
+    inputArgType: string;
+    form: FormModel;
+  };
 }
 
 /** Table column budget for the derived default view (curation is later config). */
@@ -247,6 +290,107 @@ function deriveDetailPath(
 }
 
 /**
+ * The form model derives from a mutation's input object type (W4.1): widget
+ * per input-field kind, required from NON_NULL. Multivalued and nested inputs
+ * are deferred (Tier-1 workflow territory); those fields are omitted, which
+ * is honest — the form never offers what it can't submit.
+ */
+function deriveFormModel(
+  schema: IntrospectionSchema,
+  inputTypeName: string | null,
+  entityColumns: ColumnModel[],
+): FormModel | undefined {
+  const inputType = findType(schema, inputTypeName);
+  if (inputType?.kind !== 'INPUT_OBJECT') return undefined;
+  const refTargets = new Map(
+    entityColumns.filter((c) => c.kind === 'ref').map((c) => [c.field, c.targetType]),
+  );
+
+  const fields: FormFieldModel[] = [];
+  for (const input of inputType.inputFields ?? []) {
+    if (isListType(input.type)) continue;
+    const named = namedType(input.type);
+    const base = {
+      name: input.name,
+      label: humanize(input.name),
+      required: input.type.kind === 'NON_NULL',
+    };
+    if (named.kind === 'ENUM') {
+      const enumType = findType(schema, named.name);
+      fields.push({
+        ...base,
+        widget: 'select',
+        options: enumType?.enumValues?.map((v) => v.name) ?? [],
+      });
+    } else if (named.kind === 'SCALAR') {
+      const scalar = named.name ?? '';
+      if (refTargets.has(input.name) && (scalar === 'ID' || scalar === 'String')) {
+        fields.push({ ...base, widget: 'ref', targetType: refTargets.get(input.name) });
+      } else if (scalar === 'Boolean') {
+        fields.push({ ...base, widget: 'checkbox' });
+      } else if (NUMBER_SCALARS.has(scalar)) {
+        fields.push({ ...base, widget: 'number' });
+      } else if (DATE_SCALARS.has(scalar)) {
+        fields.push({ ...base, widget: 'date' });
+      } else {
+        fields.push({ ...base, widget: 'text' });
+      }
+    }
+    // Nested input objects are skipped (no Tier-0 widget).
+  }
+  if (fields.length === 0) return undefined;
+  return { inputTypeName: inputType.name, fields };
+}
+
+/**
+ * Create/update mutation paths derive from the Mutation type (W4.3): a
+ * create-shaped field returns the entity type and takes one input object; an
+ * update-shaped field additionally takes a scalar id arg. Nothing advertised
+ * → the write UI gates off (ADR-0029).
+ */
+function deriveWriteModel(
+  schema: IntrospectionSchema,
+  typeName: string,
+  entityColumns: ColumnModel[],
+): WriteModel {
+  const mutationType = findType(schema, schema.mutationType?.name ?? null);
+  const write: WriteModel = {};
+
+  for (const field of mutationType?.fields ?? []) {
+    if (isListType(field.type)) continue;
+    if (namedType(field.type).name !== typeName) continue;
+
+    const inputArg = field.args.find((a) => namedType(a.type).kind === 'INPUT_OBJECT');
+    const idArg = field.args.find((a) => {
+      const t = namedType(a.type);
+      return t.kind === 'SCALAR' && (t.name === 'ID' || t.name === 'String');
+    });
+    if (!inputArg) continue;
+    const form = deriveFormModel(schema, namedType(inputArg.type).name, entityColumns);
+    if (!form) continue;
+
+    if (!write.create && !idArg && /^(create|add|new)/i.test(field.name)) {
+      write.create = {
+        field: field.name,
+        inputArgName: inputArg.name,
+        inputArgType: typeRefToSDL(inputArg.type),
+        form,
+      };
+    } else if (!write.update && idArg && /^(update|edit|patch)/i.test(field.name)) {
+      write.update = {
+        field: field.name,
+        idArgName: idArg.name,
+        idArgType: typeRefToSDL(idArg.type),
+        inputArgName: inputArg.name,
+        inputArgType: typeRefToSDL(inputArg.type),
+        form,
+      };
+    }
+  }
+  return write;
+}
+
+/**
  * A Query field is a browsable collection when it returns a list of OBJECTs.
  * Nav derives all of them (derive-all; config reorder/relabel/hide is later —
  * R3.1).
@@ -309,6 +453,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       },
       facets: deriveFacets(schema, filterTypeName, detailColumns),
       detail: deriveDetailPath(queryFields, named.name, filterType, idColumn),
+      write: deriveWriteModel(schema, named.name, detailColumns),
     });
   }
 

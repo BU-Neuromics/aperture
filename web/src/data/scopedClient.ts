@@ -14,6 +14,7 @@ export interface GraphQLResult<T> {
 
 export interface ScopedDataClient {
   query<T>(document: string, variables?: Record<string, unknown>): Promise<GraphQLResult<T>>;
+  mutate<T>(document: string, variables?: Record<string, unknown>): Promise<GraphQLResult<T>>;
 }
 
 export function createPassthroughClient(url: string): ScopedDataClient {
@@ -21,6 +22,12 @@ export function createPassthroughClient(url: string): ScopedDataClient {
   return {
     async query<T>(document: string, variables?: Record<string, unknown>) {
       const result = await client.query<T>(document, variables ?? {}).toPromise();
+      return { data: result.data ?? null, error: result.error ?? null };
+    },
+    // Routed through urql's mutation path so the document cache invalidates
+    // queries touching the mutated typename.
+    async mutate<T>(document: string, variables?: Record<string, unknown>) {
+      const result = await client.mutation<T>(document, variables ?? {}).toPromise();
       return { data: result.data ?? null, error: result.error ?? null };
     },
   };

@@ -1,4 +1,10 @@
-import { buildDetailQuery, buildListQuery, connectHippoSource } from './hippoSource';
+import {
+  buildCreateMutation,
+  buildDetailQuery,
+  buildListQuery,
+  buildUpdateMutation,
+  connectHippoSource,
+} from './hippoSource';
 import { deriveCollections } from './schemaModel';
 import { bareSchema, capableSchema, fakeClient } from './testing/fixtures';
 
@@ -64,6 +70,50 @@ describe('buildDetailQuery', () => {
   });
 });
 
+describe('write mutations (W4.3)', () => {
+  it('builds create/update documents from the derived write paths', () => {
+    const [books] = deriveCollections(capableSchema());
+    const create = buildCreateMutation(books, { title: 'T' })!;
+    expect(create.document).toBe(
+      'mutation ApertureCreate($input: BookInput!) { createBook(input: $input) { id } }',
+    );
+    expect(create.variables).toEqual({ input: { title: 'T' } });
+
+    const update = buildUpdateMutation(books, 'BK-1', { page_count: 9 })!;
+    expect(update.document).toBe(
+      'mutation ApertureUpdate($id: ID!, $input: BookUpdateInput!) ' +
+        '{ updateBook(id: $id, input: $input) { id } }',
+    );
+    // Partial-merge: only the provided fields travel.
+    expect(update.variables).toEqual({ id: 'BK-1', input: { page_count: 9 } });
+  });
+
+  it('returns null for collections without write paths', () => {
+    const collections = deriveCollections(capableSchema());
+    const authors = collections.find((c) => c.id === 'authors')!;
+    expect(buildCreateMutation(authors, {})).toBeNull();
+    expect(buildUpdateMutation(authors, 'AU-1', {})).toBeNull();
+  });
+
+  it('createEntity returns the new id; updateEntity surfaces server rejection', async () => {
+    const client = fakeClient(capableSchema(), (query) => {
+      if (query.includes('ApertureCreate')) {
+        return { data: { createBook: { id: 'BK-NEW' } }, error: null };
+      }
+      if (query.includes('ApertureUpdate')) {
+        return { data: null, error: new Error('title must not be empty') };
+      }
+      return { data: {}, error: null };
+    });
+    const source = await connectHippoSource(client);
+    expect(await source.createEntity('books', { title: 'T' })).toBe('BK-NEW');
+    await expect(source.updateEntity('books', 'BK-1', { title: '' })).rejects.toThrow(
+      /Could not update Book “BK-1”: title must not be empty/,
+    );
+    await expect(source.createEntity('authors', {})).rejects.toThrow(/does not support create/);
+  });
+});
+
 describe('connectHippoSource', () => {
   it('introspects, then serves schema-derived pages', async () => {
     const rows = [{ id: 'b1' }, { id: 'b2' }];
@@ -114,11 +164,8 @@ describe('connectHippoSource', () => {
   });
 
   it('surfaces introspection failure as an error (honest, not a blank UI)', async () => {
-    const failing = {
-      async query() {
-        return { data: null, error: new Error('boom') };
-      },
-    };
+    const boom = async () => ({ data: null, error: new Error('boom') });
+    const failing = { query: boom, mutate: boom };
     await expect(connectHippoSource(failing)).rejects.toThrow(/Could not introspect.*boom/);
   });
 
