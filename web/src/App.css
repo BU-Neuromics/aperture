@@ -1,27 +1,4 @@
-.app-frame {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  height: 56px;
-  padding: 0 var(--space-5);
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-}
-
-.app-wordmark {
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.01em;
-}
-
-.app-main {
-  flex: 1 1 auto;
+.main-placeholder {
   padding: var(--space-6);
 }
 
