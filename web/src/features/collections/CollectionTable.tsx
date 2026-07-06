@@ -9,6 +9,7 @@ import { useCapabilities } from '../../data/DataSourceContext';
 import type { HippoSource } from '../../data/hippoSource';
 import type { CollectionModel } from '../../data/schemaModel';
 import { isRightAligned, renderCell } from './cells';
+import { ExportButtons } from './ExportButtons';
 import { useCollectionUrlState } from './urlState';
 import { useEntityPage } from './useEntityPage';
 import './collections.css';
@@ -89,6 +90,13 @@ export function CollectionTable({
               : ' '}
           </div>
         </div>
+        <ExportButtons
+          source={source}
+          collection={collection}
+          filters={filters}
+          search={search}
+          disabled={result.status !== 'ready'}
+        />
       </div>
 
       <div className="collection-card">
