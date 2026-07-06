@@ -59,3 +59,17 @@ from this list):
 - `page.on('console'/'pageerror')` catches React errors the screenshots hide.
 - A `/favicon.ico` 404 in the console is pre-existing scaffold noise (no icon link in
   `index.html`), not an app error.
+
+Phase-2 write loop (give the stub `createBook(input: BookInput!)` / `updateBook(id, input)`
+mutations with server-side validation that throws on named fields, e.g. empty title, negative
+page_count):
+
+- "New <Type>" appears only on collections with a create-shaped mutation; `?form=new` in URL.
+- Empty submit → client "Required." block, nothing on the wire; server-invalid value →
+  rejection banner verbatim + "See server message above." under the named field.
+- Ref picker: type in a ref field → suggestions from the target collection; click fills the id.
+- Create → lands on the new entity's detail; the row is then findable via FTS in the table.
+- Edit → prefilled; change one field → the update mutation carries only that field
+  (partial-merge); save returns to detail with the new value.
+- Probes: no-mutation collections show no New/Edit buttons and `?form=new` deep links get an
+  honest panel; Cancel from a dirty form persists nothing.

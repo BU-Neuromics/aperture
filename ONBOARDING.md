@@ -5,13 +5,16 @@ graph — the substrate for an AI-native explorer (`design/vision.md`). Generic 
 domain comes from config, not code (ADR-0002).
 
 **Status (2026-07-06):** design **complete and ratified** (Steps 1–6, 31 ADRs). Implementation
-**Phases 0–1 built** — the walking skeleton (issues [#3](https://github.com/BU-Neuromics/aperture/issues/3),
-[#4](https://github.com/BU-Neuromics/aperture/issues/4), [#5](https://github.com/BU-Neuromics/aperture/issues/5))
-plus the **read loop** ([#6](https://github.com/BU-Neuromics/aperture/issues/6)): equality
-facets + FTS from the endpoint's filter surface, entity detail with cross-links/pivot/history,
-CSV+JSON export, full query-state ⇄ URL. Facet **counts**/sort stay capability-gated off until
-Hippo X1 ([hippo#96](https://github.com/BU-Neuromics/hippo/issues/96)). Next action:
-**Phase 2** (issue [#7](https://github.com/BU-Neuromics/aperture/issues/7)).
+**Phases 0–2 built** — the walking skeleton (issues [#3](https://github.com/BU-Neuromics/aperture/issues/3),
+[#4](https://github.com/BU-Neuromics/aperture/issues/4), [#5](https://github.com/BU-Neuromics/aperture/issues/5)),
+the **read loop** ([#6](https://github.com/BU-Neuromics/aperture/issues/6)): facets + FTS,
+detail with cross-links/pivot/history, CSV+JSON export, query-state ⇄ URL; and the **Tier-0
+write loop** ([#7](https://github.com/BU-Neuromics/aperture/issues/7)): mutation-derived
+create/edit forms (serializable FormModel), client pre-validation with the server as
+authority, partial-merge updates, relationship ref-pickers. Facet **counts**/sort stay
+capability-gated off until Hippo X1 ([hippo#96](https://github.com/BU-Neuromics/hippo/issues/96)).
+Next action: **Phase 3** (issue [#8](https://github.com/BU-Neuromics/aperture/issues/8)) —
+the Tier-1 guided workflow over Hippo's batch unit-of-work (delivered, hippo#84).
 
 ---
 
