@@ -36,6 +36,22 @@ surface, not by re-running CI (typecheck/lint/test/build are `.github/workflows/
   state; restart stub + Retry recovers.
 - No `VITE_HIPPO_GRAPHQL_URL` → "No data-plane endpoint configured" guidance panel.
 
+Phase-1 read loop (give the stub `filter`/`search` args, singular `book(id)`/`author(id)`
+fields, and `entityHistory(entityId)`; see `stub-hippo.mjs` in a session scratchpad or rebuild
+from this list):
+
+- Facet panel derives Search + enum/boolean/ref groups; clicking a value filters server-side
+  and puts `filters={"field":"value"}` in the URL; second facet ANDs; clear-all resets.
+- FTS input applies on Enter → `?q=…`.
+- Id cell → detail view (`?entity=…`): fields, relationships, history rows; ref cross-link →
+  target detail; "View in <collection>" pivot → filtered target with the facet input pre-filled.
+- Export CSV downloads the filtered set (Playwright `page.waitForEvent('download')`), note
+  reports row count/truncation.
+- Probes: garbage `filters=not-json` → unfiltered table; missing entity id → "Record not
+  found"; no-match search → filtered empty state → Clear filters recovers; a collection with
+  no filter arg → no facet panel and the inspector column collapses; no detail path → id cells
+  are plain text and `?entity=` deep links get an honest panel.
+
 ## Gotchas
 
 - The stub must answer the standard `__schema` introspection query — `graphql()` does this
