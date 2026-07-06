@@ -4,9 +4,12 @@
 graph — the substrate for an AI-native explorer (`design/vision.md`). Generic over any schema;
 domain comes from config, not code (ADR-0002).
 
-**Status (2026-07-01):** design **complete and ratified** (Steps 1–6, 31 ADRs). Implementation
-**Phase 0.1 built** (the `web/` SPA scaffold + CI). Next action: **Phase 0.1a** (issue
-[#3](https://github.com/BU-Neuromics/aperture/issues/3)).
+**Status (2026-07-06):** design **complete and ratified** (Steps 1–6, 31 ADRs). Implementation
+**Phase 0 built end-to-end** (the walking skeleton — issues [#3](https://github.com/BU-Neuromics/aperture/issues/3),
+[#4](https://github.com/BU-Neuromics/aperture/issues/4), [#5](https://github.com/BU-Neuromics/aperture/issues/5)):
+app shell (layout registry + slot contract), Layer-D adapter + capability negotiation,
+schema-derived collections nav + table, `{collection, page}` in the URL. Next action:
+**Phase 1** (issue [#6](https://github.com/BU-Neuromics/aperture/issues/6)).
 
 ---
 
