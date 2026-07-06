@@ -38,11 +38,10 @@ export function WorkflowsProvider({
       .get('config', 'workflows')
       .then((document) => {
         if (cancelled || document == null) return;
-        const raw = openPayload(
-          document.payload,
-          WORKFLOWS_CONFIG_VERSION,
-          (_d): _d is unknown => true,
-        );
+        // The envelope check is version-only here; parseWorkflowConfigs is
+        // the structural validator for the data inside.
+        const isAny = (d: unknown): d is unknown => d !== undefined;
+        const raw = openPayload(document.payload, WORKFLOWS_CONFIG_VERSION, isAny);
         if (raw == null) {
           setResolved({
             workflows: value.workflows,
