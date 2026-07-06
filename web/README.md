@@ -5,13 +5,14 @@ data explorer over a Hippo (LinkML + GraphQL) endpoint. Stack per **ADR-0030**: 
 TypeScript, urql (GraphQL), TanStack Table, nuqs. Talks to Hippo's GraphQL **directly**
 (ADR-0014/0016).
 
-> **Phase 1 — read loop (built).** On top of the Phase-0 walking skeleton (introspect →
-> negotiate capabilities → schema-derived nav + table), the app now has equality facets + FTS
-> derived from the endpoint's filter surface, an entity detail view with cross-links,
-> relationship pivot and change history, and CSV/JSON export of the filtered set. The full
-> query state `{collection, page, q, filters, entity}` lives in the URL. See
-> `../design/implementation-plan.md` for the phased build and `../design/design-export/` +
-> `../design/design-tokens.md` for the visual target.
+> **Phases 0–2 built.** The app introspects the endpoint, negotiates capabilities, and derives
+> everything from the schema: collections nav + table (Phase 0), equality facets + FTS, entity
+> detail with cross-links/relationship pivot/change history, CSV/JSON export (Phase 1), and
+> Tier-0 create/edit forms generated from the mutation input types, with client pre-validation,
+> server-authoritative rejection surfacing, partial-merge updates, and relationship ref-pickers
+> (Phase 2). The full query state `{collection, page, q, filters, entity, form}` lives in the
+> URL. See `../design/implementation-plan.md` for the phased build and
+> `../design/design-export/` + `../design/design-tokens.md` for the visual target.
 
 ## Getting started
 
@@ -82,4 +83,9 @@ web/
   the UI never fakes a count or a server sort (ADR-0029).
 - **External xrefs:** `src/config/xrefs.ts` maps field names to URL templates per deployment;
   empty by default.
-- **Next:** Phase 2 — the write loop (Tier-0 schema-derived forms); see issue #7.
+- **Write loop:** entry points gate on derived mutation paths (`New <Type>` needs a
+  create-shaped mutation, `Edit` an update-shaped one). Updates are partial-merge; clearing a
+  field to null is a later affordance. Field attribution of server rejections is heuristic
+  until Hippo's structured `ValidationResult` shape over GraphQL is confirmed.
+- **Next:** Phase 3 — the Tier-1 guided workflow (stage → whole-set validate → atomic commit
+  via Hippo's batch unit-of-work); see issue #8.

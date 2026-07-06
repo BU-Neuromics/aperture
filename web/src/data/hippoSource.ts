@@ -32,6 +32,9 @@ export interface HistoryEntry {
   [field: string]: unknown;
 }
 
+/** Form values keyed by input-field name; null clears a field on update. */
+export type WriteValues = Record<string, string | number | boolean | null>;
+
 export interface HippoSource {
   capabilities: Capabilities;
   collections: CollectionModel[];
@@ -41,6 +44,10 @@ export interface HippoSource {
   getEntity(collectionId: string, id: string): Promise<Record<string, unknown> | null>;
   /** Entity change history, when the endpoint advertises it (R3.7). */
   getHistory(id: string): Promise<HistoryEntry[]>;
+  /** Create via the derived write path; returns the new entity's id column value (W4.3). */
+  createEntity(collectionId: string, values: WriteValues): Promise<string | null>;
+  /** Partial-merge update: send only the given fields (W4.3). */
+  updateEntity(collectionId: string, id: string, values: WriteValues): Promise<void>;
 }
 
 function selectionFor(column: ColumnModel): string {
@@ -125,6 +132,37 @@ export function buildDetailQuery(collection: CollectionModel, id: string): Built
   };
 }
 
+/** Builds the create mutation for a collection's derived write path. */
+export function buildCreateMutation(
+  collection: CollectionModel,
+  values: Record<string, unknown>,
+): BuiltQuery | null {
+  const create = collection.write.create;
+  if (!create) return null;
+  const idSelection = collection.idColumn ?? collection.columns[0].field;
+  return {
+    document: `mutation ApertureCreate($input: ${create.inputArgType}) { ${create.field}(${create.inputArgName}: $input) { ${idSelection} } }`,
+    variables: { input: values },
+  };
+}
+
+/** Builds the partial-merge update mutation (only the provided fields travel). */
+export function buildUpdateMutation(
+  collection: CollectionModel,
+  id: string,
+  values: Record<string, unknown>,
+): BuiltQuery | null {
+  const update = collection.write.update;
+  if (!update) return null;
+  const idSelection = collection.idColumn ?? collection.columns[0].field;
+  return {
+    document:
+      `mutation ApertureUpdate($id: ${update.idArgType}, $input: ${update.inputArgType}) ` +
+      `{ ${update.field}(${update.idArgName}: $id, ${update.inputArgName}: $input) { ${idSelection} } }`,
+    variables: { id, input: values },
+  };
+}
+
 export async function connectHippoSource(client: ScopedDataClient): Promise<HippoSource> {
   const result = await client.query<IntrospectionData>(INTROSPECTION_QUERY);
   if (result.error || !result.data?.__schema) {
@@ -189,6 +227,41 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       }
       const rows = (detailResult.data[collection.id] ?? []) as Record<string, unknown>[];
       return rows[0] ?? null;
+    },
+
+    async createEntity(collectionId, values) {
+      const collection = collectionFor(collectionId);
+      const built = buildCreateMutation(collection, values);
+      if (!built) throw new Error(`${collection.label} does not support create`);
+      const createResult = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
+      if (createResult.error || createResult.data == null) {
+        throw new Error(
+          `Could not create ${collection.typeName}: ${createResult.error?.message ?? 'empty response'}`,
+        );
+      }
+      const entity = createResult.data[collection.write.create!.field] as
+        | Record<string, unknown>
+        | null;
+      const id = entity?.[collection.idColumn ?? ''];
+      return id == null ? null : String(id);
+    },
+
+    async updateEntity(collectionId, id, values) {
+      const collection = collectionFor(collectionId);
+      const built = buildUpdateMutation(collection, id, values);
+      if (!built) throw new Error(`${collection.label} does not support update`);
+      const updateResult = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
+      if (updateResult.error) {
+        throw new Error(
+          `Could not update ${collection.typeName} “${id}”: ${updateResult.error.message}`,
+        );
+      }
     },
 
     async getHistory(id) {

@@ -87,7 +87,34 @@ export function capableSchema(
     mutationType: { name: 'Mutation' },
     types: [
       objectType('Query', queryFields),
-      objectType('Mutation', [field('batchPut', object('BatchResult'))]),
+      objectType('Mutation', [
+        field('batchPut', object('BatchResult')),
+        // Tier-0 write paths (W4.3): create takes an input; update adds an id.
+        field('createBook', object('Book'), [
+          arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'BookInput', ofType: null })),
+        ]),
+        field('updateBook', object('Book'), [
+          arg('id', nonNull(scalar('ID'))),
+          arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'BookUpdateInput', ofType: null })),
+        ]),
+      ]),
+      inputObjectType('BookInput', [
+        arg('title', nonNull(scalar('String'))),
+        arg('published_on', scalar('Date')),
+        arg('page_count', scalar('Int')),
+        arg('in_print', scalar('Boolean')),
+        arg('format', enumRef('BookFormat')),
+        arg('author', scalar('ID')),
+        arg('tags', list(scalar('String'))), // multivalued — no Tier-0 widget, omitted
+      ]),
+      inputObjectType('BookUpdateInput', [
+        arg('title', scalar('String')),
+        arg('published_on', scalar('Date')),
+        arg('page_count', scalar('Int')),
+        arg('in_print', scalar('Boolean')),
+        arg('format', enumRef('BookFormat')),
+        arg('author', scalar('ID')),
+      ]),
       inputObjectType('BookFilter', [
         arg('format', enumRef('BookFormat')),
         arg('in_print', scalar('Boolean')),
@@ -150,20 +177,26 @@ export function fakeClient(
 ): ScopedDataClient & { queries: string[]; recorded: RecordedQuery[] } {
   const queries: string[] = [];
   const recorded: RecordedQuery[] = [];
+  const handle = <T,>(
+    document: string,
+    variables: Record<string, unknown>,
+  ): GraphQLResult<T> => {
+    queries.push(document);
+    recorded.push({ document, variables });
+    if (document.includes('__schema')) {
+      const data: IntrospectionData = { __schema: schema };
+      return { data: data as T, error: null };
+    }
+    return respond(document, variables) as GraphQLResult<T>;
+  };
   return {
     queries,
     recorded,
-    async query<T>(
-      document: string,
-      variables: Record<string, unknown> = {},
-    ): Promise<GraphQLResult<T>> {
-      queries.push(document);
-      recorded.push({ document, variables });
-      if (document.includes('__schema')) {
-        const data: IntrospectionData = { __schema: schema };
-        return { data: data as T, error: null };
-      }
-      return respond(document, variables) as GraphQLResult<T>;
+    async query<T>(document: string, variables: Record<string, unknown> = {}) {
+      return handle<T>(document, variables);
+    },
+    async mutate<T>(document: string, variables: Record<string, unknown> = {}) {
+      return handle<T>(document, variables);
     },
   };
 }

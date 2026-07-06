@@ -30,7 +30,7 @@ export function EntityDetail({
   collection: CollectionModel;
   entityId: string;
 }) {
-  const { closeEntity } = useCollectionUrlState();
+  const { closeEntity, openEditForm } = useCollectionUrlState();
   const [state, setState] = useState<DetailState>({ status: 'loading' });
 
   useEffect(() => {
@@ -70,6 +70,12 @@ export function EntityDetail({
         <div className="detail-title-row">
           <span className="detail-title">{entityId}</span>
           <span className="detail-type-chip">{collection.typeName}</span>
+          {/* Gated on the derived update path (W4.3); no hard delete (W4.4). */}
+          {collection.write.update && state.status === 'ready' && (
+            <button type="button" className="action-button" onClick={openEditForm}>
+              Edit
+            </button>
+          )}
         </div>
       </div>
 

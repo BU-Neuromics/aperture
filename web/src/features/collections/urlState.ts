@@ -1,4 +1,10 @@
-import { parseAsInteger, parseAsJson, parseAsString, useQueryStates } from 'nuqs';
+import {
+  parseAsInteger,
+  parseAsJson,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryStates,
+} from 'nuqs';
 import type { FilterValues } from '../../data/hippoSource';
 
 /**
@@ -28,6 +34,7 @@ export function useCollectionUrlState() {
     q: parseAsString,
     filters: parseAsJson(validateFilters),
     entity: parseAsString,
+    form: parseAsStringLiteral(['new', 'edit'] as const),
   });
 
   const filters = state.filters ?? EMPTY_FILTERS;
@@ -38,9 +45,10 @@ export function useCollectionUrlState() {
     search: state.q ?? '',
     filters,
     entity: state.entity,
+    form: state.form,
 
     selectCollection: (collection: string) =>
-      void setState({ collection, page: 1, q: null, filters: null, entity: null }),
+      void setState({ collection, page: 1, q: null, filters: null, entity: null, form: null }),
     setPage: (page: number) => void setState({ page: Math.max(1, page) }),
     setSearch: (q: string) => void setState({ q: q.trim() === '' ? null : q.trim(), page: 1 }),
     /** Single-value equality per facet (flat AND semantics — R3.3); toggle clears. */
@@ -51,13 +59,24 @@ export function useCollectionUrlState() {
       void setState({ filters: Object.keys(next).length > 0 ? next : null, page: 1 });
     },
     clearFilters: () => void setState({ filters: null, q: null, page: 1 }),
-    openEntity: (entity: string) => void setState({ entity }),
-    closeEntity: () => void setState({ entity: null }),
+    openEntity: (entity: string) => void setState({ entity, form: null }),
+    closeEntity: () => void setState({ entity: null, form: null }),
     /** Cross-link: open another collection's entity detail (R3.8). */
     openIn: (collection: string, entity: string) =>
-      void setState({ collection, entity, page: 1, q: null, filters: null }),
+      void setState({ collection, entity, page: 1, q: null, filters: null, form: null }),
     /** Relationship pivot: jump to a related collection filtered by this entity (R3.8). */
     pivotTo: (collection: string, field: string, value: string) =>
-      void setState({ collection, filters: { [field]: value }, page: 1, q: null, entity: null }),
+      void setState({
+        collection,
+        filters: { [field]: value },
+        page: 1,
+        q: null,
+        entity: null,
+        form: null,
+      }),
+    /** Write loop (W4): open the generated create/edit form. */
+    openCreateForm: () => void setState({ form: 'new', entity: null }),
+    openEditForm: () => void setState({ form: 'edit' }),
+    closeForm: () => void setState({ form: null }),
   };
 }
