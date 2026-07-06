@@ -10,6 +10,7 @@ import type { HippoSource } from '../../data/hippoSource';
 import type { CollectionModel } from '../../data/schemaModel';
 import { isRightAligned, renderCell } from './cells';
 import { ExportButtons } from './ExportButtons';
+import { SaveViewButton } from './SaveViewButton';
 import { useCollectionUrlState } from './urlState';
 import { useEntityPage } from './useEntityPage';
 import './collections.css';
@@ -98,6 +99,7 @@ export function CollectionTable({
               New {collection.typeName}
             </button>
           )}
+          <SaveViewButton source={source} collectionId={collection.id} />
           <ExportButtons
             source={source}
             collection={collection}

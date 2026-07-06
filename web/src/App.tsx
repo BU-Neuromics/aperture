@@ -4,6 +4,9 @@ import { DataSourceProvider } from './data/DataSourceContext';
 import { resolveEndpoint } from './data/endpoint';
 import type { EndpointConfig } from './data/endpoint';
 import type { ScopedDataClient } from './data/scopedClient';
+import { ControlPlaneProvider } from './control/ControlPlaneContext';
+import { ControlPlaneStatus } from './control/ControlPlaneStatus';
+import { SavedViewsProvider } from './control/SavedViewsContext';
 import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
@@ -23,26 +26,33 @@ interface AppProps {
   endpoint?: EndpointConfig;
   clientFactory?: (url: string) => ScopedDataClient;
   workflows?: ResolvedWorkflows;
+  controlUrl?: string | null;
 }
 
 export function App({
   endpoint = resolveEndpoint(),
   clientFactory,
   workflows = resolveWorkflows(),
+  controlUrl,
 }: AppProps) {
   return (
     <DataSourceProvider endpoint={endpoint} clientFactory={clientFactory}>
-      <WorkflowsProvider value={workflows}>
-        <AppShell
-          config={shellConfig}
-          slots={{
-            header: <Brand />,
-            primaryNav: <CollectionsNav />,
-            main: <CollectionMain />,
-            inspector: <FacetPanel />,
-          }}
-        />
-      </WorkflowsProvider>
+      <ControlPlaneProvider controlUrl={controlUrl} clientFactory={clientFactory}>
+        <SavedViewsProvider>
+          <WorkflowsProvider value={workflows}>
+            <AppShell
+              config={shellConfig}
+              slots={{
+                header: <Brand />,
+                primaryNav: <CollectionsNav />,
+                main: <CollectionMain />,
+                inspector: <FacetPanel />,
+                footer: <ControlPlaneStatus />,
+              }}
+            />
+          </WorkflowsProvider>
+        </SavedViewsProvider>
+      </ControlPlaneProvider>
     </DataSourceProvider>
   );
 }

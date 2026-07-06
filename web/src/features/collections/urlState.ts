@@ -100,5 +100,16 @@ export function useCollectionUrlState() {
     /** Tier-1 workflow (W4.6): open/close the guided runner. */
     openWorkflow: (workflow: string) => void setState({ workflow, entity: null, form: null }),
     closeWorkflow: () => void setState({ workflow: null }),
+    /** Saved views (Phase 4): apply a persisted query-state wholesale. */
+    applyView: (view: { collection: string; page: number; q?: string; filters?: FilterValues }) =>
+      void setState({
+        collection: view.collection,
+        page: Math.max(1, view.page),
+        q: view.q ?? null,
+        filters: view.filters && Object.keys(view.filters).length > 0 ? view.filters : null,
+        entity: null,
+        form: null,
+        workflow: null,
+      }),
   };
 }
