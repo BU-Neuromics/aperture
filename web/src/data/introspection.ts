@@ -29,6 +29,8 @@ export interface IntrospectionType {
   name: string;
   description?: string | null;
   fields?: IntrospectionField[] | null;
+  /** For INPUT_OBJECT types (e.g. filter inputs) — feeds facet derivation. */
+  inputFields?: IntrospectionInputValue[] | null;
   enumValues?: { name: string }[] | null;
 }
 
@@ -64,6 +66,7 @@ export const INTROSPECTION_QUERY = `
           args { name type { ${typeRefSelection(TYPE_REF_DEPTH)} } }
           type { ${typeRefSelection(TYPE_REF_DEPTH)} }
         }
+        inputFields { name type { ${typeRefSelection(TYPE_REF_DEPTH)} } }
         enumValues { name }
       }
     }
@@ -93,4 +96,11 @@ export function findType(
 ): IntrospectionType | undefined {
   if (name == null) return undefined;
   return schema.types.find((t) => t.name === name);
+}
+
+/** Renders a type ref back to SDL notation (for variable definitions). */
+export function typeRefToSDL(ref: TypeRef): string {
+  if (ref.kind === 'NON_NULL' && ref.ofType) return `${typeRefToSDL(ref.ofType)}!`;
+  if (ref.kind === 'LIST' && ref.ofType) return `[${typeRefToSDL(ref.ofType)}]`;
+  return ref.name ?? 'String';
 }

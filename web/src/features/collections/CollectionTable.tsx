@@ -9,6 +9,7 @@ import { useCapabilities } from '../../data/DataSourceContext';
 import type { HippoSource } from '../../data/hippoSource';
 import type { CollectionModel } from '../../data/schemaModel';
 import { isRightAligned, renderCell } from './cells';
+import { ExportButtons } from './ExportButtons';
 import { useCollectionUrlState } from './urlState';
 import { useEntityPage } from './useEntityPage';
 import './collections.css';
@@ -34,8 +35,9 @@ export function CollectionTable({
   collection: CollectionModel;
 }) {
   const capabilities = useCapabilities();
-  const { page, setPage } = useCollectionUrlState();
-  const result = useEntityPage(source, collection.id, page, PAGE_SIZE);
+  const { page, setPage, filters, search, clearFilters, openEntity } = useCollectionUrlState();
+  const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search);
+  const isFiltered = Object.keys(filters).length > 0 || search !== '';
 
   const columns = useMemo(
     () =>
@@ -43,11 +45,26 @@ export function CollectionTable({
         columnHelper.accessor((row: Row) => row[model.field], {
           id: model.field,
           header: model.label,
-          cell: (info) => renderCell(model, info.getValue()),
+          cell: (info) => {
+            const value = info.getValue();
+            // The id column links to the detail view when a detail path exists (R3.7).
+            if (model.field === collection.idColumn && collection.detail && value != null) {
+              return (
+                <button
+                  type="button"
+                  className="cell-id cell-id-link"
+                  onClick={() => openEntity(String(value))}
+                >
+                  {String(value)}
+                </button>
+              );
+            }
+            return renderCell(model, value);
+          },
           meta: { align: isRightAligned(model) ? 'right' : 'left' },
         }),
       ),
-    [collection],
+    [collection, openEntity],
   );
 
   const table = useReactTable({
@@ -69,10 +86,17 @@ export function CollectionTable({
           <div className="collection-count">
             {/* No aggregation capability yet (Hippo X1) — page-scoped honesty only. */}
             {result.status === 'ready'
-              ? `Page ${page} · ${result.page.rows.length}${result.page.mayHaveMore ? '+' : ''} rows`
+              ? `Page ${page} · ${result.page.rows.length}${result.page.mayHaveMore ? '+' : ''} rows${isFiltered ? ' · filtered' : ''}`
               : ' '}
           </div>
         </div>
+        <ExportButtons
+          source={source}
+          collection={collection}
+          filters={filters}
+          search={search}
+          disabled={result.status !== 'ready'}
+        />
       </div>
 
       <div className="collection-card">
@@ -136,13 +160,24 @@ export function CollectionTable({
         {result.status === 'ready' && result.page.rows.length === 0 && (
           <div className="collection-state" role="status">
             <div className="state-icon state-icon-empty" aria-hidden="true" />
-            <div className="state-title">No {collection.label.toLowerCase()} on this page</div>
-            <div className="state-detail">
-              {page > 1
-                ? 'This page is past the end of the collection.'
-                : 'The endpoint returned no records for this collection.'}
+            <div className="state-title">
+              No {isFiltered ? 'matching ' : ''}
+              {collection.label.toLowerCase()}
+              {!isFiltered && page > 1 ? ' on this page' : ''}
             </div>
-            {page > 1 && (
+            <div className="state-detail">
+              {isFiltered
+                ? 'No records match the current filters. Try clearing filters or switching collections.'
+                : page > 1
+                  ? 'This page is past the end of the collection.'
+                  : 'The endpoint returned no records for this collection.'}
+            </div>
+            {isFiltered && (
+              <button type="button" className="state-button" onClick={clearFilters}>
+                Clear filters
+              </button>
+            )}
+            {!isFiltered && page > 1 && (
               <button type="button" className="state-button" onClick={() => setPage(1)}>
                 Back to first page
               </button>

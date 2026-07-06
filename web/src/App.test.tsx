@@ -87,6 +87,13 @@ describe('App — the Phase-0 walking skeleton end to end', () => {
     expect(await screen.findByRole('heading', { name: 'Authors' })).toBeInTheDocument();
 
     // The list query for authors was actually issued (offset page derived from URL state).
-    expect(client.queries.some((q) => q.includes('authors(limit: 25, offset: 0)'))).toBe(true);
+    expect(
+      client.recorded.some(
+        (q) =>
+          q.document.includes('authors(limit: $limit, offset: $offset)') &&
+          q.variables['limit'] === 25 &&
+          q.variables['offset'] === 0,
+      ),
+    ).toBe(true);
   });
 });

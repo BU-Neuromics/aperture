@@ -1,6 +1,7 @@
 import { useDataSource } from '../../data/DataSourceContext';
 import { useCollectionUrlState } from './urlState';
 import { CollectionTable } from './CollectionTable';
+import { EntityDetail } from './EntityDetail';
 import './collections.css';
 
 /**
@@ -11,7 +12,7 @@ import './collections.css';
  */
 export function CollectionMain() {
   const state = useDataSource();
-  const { collection } = useCollectionUrlState();
+  const { collection, entity, closeEntity } = useCollectionUrlState();
 
   if (state.status === 'unconfigured') {
     return (
@@ -57,5 +58,31 @@ export function CollectionMain() {
   }
 
   const active = collections.find((c) => c.id === collection) ?? collections[0];
+
+  if (entity != null) {
+    if (!active.detail) {
+      // Deep link into a collection with no single-entity fetch path (ADR-0029).
+      return (
+        <div className="main-panel" role="status">
+          <h1 className="main-panel-title">No detail view for {active.label}</h1>
+          <p className="main-panel-detail">
+            The endpoint offers no way to fetch a single {active.typeName}.{' '}
+            <button type="button" className="detail-link" onClick={closeEntity}>
+              Back to the table
+            </button>
+          </p>
+        </div>
+      );
+    }
+    return (
+      <EntityDetail
+        key={`${active.id}:${entity}`}
+        source={state.source}
+        collection={active}
+        entityId={entity}
+      />
+    );
+  }
+
   return <CollectionTable key={active.id} source={state.source} collection={active} />;
 }

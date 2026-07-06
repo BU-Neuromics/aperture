@@ -36,6 +36,11 @@ export const objectType = (name: string, fields: IntrospectionField[]): Introspe
   fields,
 });
 
+export const inputObjectType = (
+  name: string,
+  inputFields: IntrospectionInputValue[],
+): IntrospectionType => ({ kind: 'INPUT_OBJECT', name, inputFields });
+
 export const enumType = (name: string, values: string[]): IntrospectionType => ({
   kind: 'ENUM',
   name,
@@ -49,8 +54,10 @@ const listArgs = [
   arg('search', scalar('String')),
 ];
 
-/** A capable, Hippo-like endpoint: pagination, filters, FTS, batch write. */
-export function capableSchema(options: { hippoSchema?: boolean } = {}): IntrospectionSchema {
+/** A capable, Hippo-like endpoint: pagination, filters, FTS, detail, history, batch write. */
+export function capableSchema(
+  options: { hippoSchema?: boolean; authorDetail?: boolean } = {},
+): IntrospectionSchema {
   const queryFields = [
     field('books', nonNull(list(nonNull(object('Book')))), listArgs),
     field(
@@ -58,9 +65,22 @@ export function capableSchema(options: { hippoSchema?: boolean } = {}): Introspe
       nonNull(list(nonNull(object('Author')))),
       [arg('limit', scalar('Int')), arg('offset', scalar('Int'))],
     ),
+    // Singular detail field (R3.7) — the preferred detail path for books.
+    field('book', object('Book'), [arg('id', nonNull(scalar('ID')))]),
+    // Entity change history (R3.7).
+    field('entityHistory', nonNull(list(nonNull(object('HistoryEntry')))), [
+      arg('entityId', nonNull(scalar('ID'))),
+    ]),
   ];
   if (options.hippoSchema) {
     queryFields.push(field('hippoSchema', object('HippoSchema')));
+  }
+  if (options.authorDetail) {
+    queryFields.push(field('author', object('Author'), [arg('id', nonNull(scalar('ID')))]));
+  }
+  const authorFields = [field('id', nonNull(scalar('ID'))), field('name', scalar('String'))];
+  if (options.authorDetail) {
+    authorFields.push(field('books', list(nonNull(object('Book')))));
   }
   return {
     queryType: { name: 'Query' },
@@ -68,6 +88,18 @@ export function capableSchema(options: { hippoSchema?: boolean } = {}): Introspe
     types: [
       objectType('Query', queryFields),
       objectType('Mutation', [field('batchPut', object('BatchResult'))]),
+      inputObjectType('BookFilter', [
+        arg('format', enumRef('BookFormat')),
+        arg('in_print', scalar('Boolean')),
+        arg('author', scalar('ID')),
+        arg('title', scalar('String')), // plain text — not an equality facet
+        arg('or', list(nonNull({ kind: 'INPUT_OBJECT', name: 'BookFilter', ofType: null }))),
+      ]),
+      objectType('HistoryEntry', [
+        field('timestamp', nonNull(scalar('String'))),
+        field('action', scalar('String')),
+        field('actor', scalar('String')),
+      ]),
       objectType('Book', [
         field('id', nonNull(scalar('ID'))),
         field('title', nonNull(scalar('String'))),
@@ -78,10 +110,7 @@ export function capableSchema(options: { hippoSchema?: boolean } = {}): Introspe
         field('author', object('Author')),
         field('reviews', list(nonNull(object('Review')))),
       ]),
-      objectType('Author', [
-        field('id', nonNull(scalar('ID'))),
-        field('name', scalar('String')),
-      ]),
+      objectType('Author', authorFields),
       objectType('Review', [field('id', nonNull(scalar('ID'))), field('rating', scalar('Int'))]),
       objectType('HippoSchema', [field('version', scalar('String'))]),
       objectType('BatchResult', [field('ok', scalar('Boolean'))]),
@@ -105,22 +134,36 @@ export function bareSchema(): IntrospectionSchema {
 /**
  * A ScopedDataClient test double: introspection queries get the fixture
  * schema; anything else is answered by `respond` (which also records the
- * query documents it sees).
+ * query documents + variables it sees).
  */
+export interface RecordedQuery {
+  document: string;
+  variables: Record<string, unknown>;
+}
+
 export function fakeClient(
   schema: IntrospectionSchema,
-  respond: (query: string) => GraphQLResult<unknown> = () => ({ data: {}, error: null }),
-): ScopedDataClient & { queries: string[] } {
+  respond: (
+    query: string,
+    variables: Record<string, unknown>,
+  ) => GraphQLResult<unknown> = () => ({ data: {}, error: null }),
+): ScopedDataClient & { queries: string[]; recorded: RecordedQuery[] } {
   const queries: string[] = [];
+  const recorded: RecordedQuery[] = [];
   return {
     queries,
-    async query<T>(document: string): Promise<GraphQLResult<T>> {
+    recorded,
+    async query<T>(
+      document: string,
+      variables: Record<string, unknown> = {},
+    ): Promise<GraphQLResult<T>> {
       queries.push(document);
+      recorded.push({ document, variables });
       if (document.includes('__schema')) {
         const data: IntrospectionData = { __schema: schema };
         return { data: data as T, error: null };
       }
-      return respond(document) as GraphQLResult<T>;
+      return respond(document, variables) as GraphQLResult<T>;
     },
   };
 }

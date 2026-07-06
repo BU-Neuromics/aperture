@@ -5,11 +5,13 @@ data explorer over a Hippo (LinkML + GraphQL) endpoint. Stack per **ADR-0030**: 
 TypeScript, urql (GraphQL), TanStack Table, nuqs. Talks to Hippo's GraphQL **directly**
 (ADR-0014/0016).
 
-> **Phase 0 — walking skeleton (built).** The app boots, introspects the configured endpoint,
-> negotiates capabilities, derives the collections nav + one collection's table from the schema,
-> and keeps `{collection, page}` in the URL. See `../design/implementation-plan.md` for the
-> phased build and `../design/design-export/` + `../design/design-tokens.md` for the visual
-> target.
+> **Phase 1 — read loop (built).** On top of the Phase-0 walking skeleton (introspect →
+> negotiate capabilities → schema-derived nav + table), the app now has equality facets + FTS
+> derived from the endpoint's filter surface, an entity detail view with cross-links,
+> relationship pivot and change history, and CSV/JSON export of the filtered set. The full
+> query state `{collection, page, q, filters, entity}` lives in the URL. See
+> `../design/implementation-plan.md` for the phased build and `../design/design-export/` +
+> `../design/design-tokens.md` for the visual target.
 
 ## Getting started
 
@@ -58,7 +60,7 @@ web/
 │   │   ├── schemaModel.ts        # collections + column models + Capabilities derivation
 │   │   ├── hippoSource.ts        # the source adapter (ADR-0017)
 │   │   └── DataSourceContext.tsx # useDataSource() / useCapabilities() (ADR-0029)
-│   ├── features/collections/     # steps 0.5–0.6 — nav, table, URL state
+│   ├── features/collections/     # nav, table, facets, detail, export, URL state
 │   ├── styles/                   # tokens.css (from design/design-tokens.md) + global.css
 │   └── test/setup.ts             # jest-dom matchers for Vitest
 └── (config: vite / tsconfig / eslint / prettier)
@@ -76,5 +78,8 @@ web/
 - **Hippo enrichment:** `hippoSchema` presence is detected as a capability; the richer
   enrichment query (slot kinds beyond GraphQL types) is a Phase-1 follow-on to confirm against
   a live `hippo serve`.
-- **Next:** Phase 1 — the full read loop (facets, FTS, detail view, cross-links, export);
-  see issue #6.
+- **Sort + facet counts:** deliberately absent until Hippo X1 (aggregation) advertises them —
+  the UI never fakes a count or a server sort (ADR-0029).
+- **External xrefs:** `src/config/xrefs.ts` maps field names to URL templates per deployment;
+  empty by default.
+- **Next:** Phase 2 — the write loop (Tier-0 schema-derived forms); see issue #7.

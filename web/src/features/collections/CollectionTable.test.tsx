@@ -79,9 +79,8 @@ describe('CollectionTable states (design-export: loading / empty / error)', () =
 
 describe('pagination (capability-gated, URL-backed)', () => {
   it('pages forward and back, driving offset from URL state', async () => {
-    const client = fakeClient(capableSchema(), (query) => {
-      const offset = /offset: (\d+)/.exec(query);
-      const n = offset ? Number(offset[1]) : 0;
+    const client = fakeClient(capableSchema(), (_query, variables) => {
+      const n = typeof variables['offset'] === 'number' ? variables['offset'] : 0;
       // Full first page (more may exist), short second page (the end).
       return {
         data: { books: n === 0 ? makeRows(PAGE_SIZE) : makeRows(3, n) },

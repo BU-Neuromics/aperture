@@ -6,6 +6,7 @@ import type { EndpointConfig } from './data/endpoint';
 import type { ScopedDataClient } from './data/scopedClient';
 import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
+import { FacetPanel } from './features/collections/FacetPanel';
 
 /**
  * The Phase-0 walking skeleton, end to end: endpoint config → Layer-D
@@ -29,6 +30,7 @@ export function App({ endpoint = resolveEndpoint(), clientFactory }: AppProps) {
           header: <Brand />,
           primaryNav: <CollectionsNav />,
           main: <CollectionMain />,
+          inspector: <FacetPanel />,
         }}
       />
     </DataSourceProvider>
