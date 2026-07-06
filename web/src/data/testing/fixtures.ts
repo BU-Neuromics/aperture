@@ -56,7 +56,7 @@ const listArgs = [
 
 /** A capable, Hippo-like endpoint: pagination, filters, FTS, detail, history, batch write. */
 export function capableSchema(
-  options: { hippoSchema?: boolean; authorDetail?: boolean } = {},
+  options: { hippoSchema?: boolean; authorDetail?: boolean; authorWrite?: boolean } = {},
 ): IntrospectionSchema {
   const queryFields = [
     field('books', nonNull(list(nonNull(object('Book')))), listArgs),
@@ -82,6 +82,16 @@ export function capableSchema(
   if (options.authorDetail) {
     authorFields.push(field('books', list(nonNull(object('Book')))));
   }
+  const mutationExtras: IntrospectionField[] = [];
+  const typeExtras: IntrospectionType[] = [];
+  if (options.authorWrite) {
+    mutationExtras.push(
+      field('createAuthor', object('Author'), [
+        arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'AuthorInput', ofType: null })),
+      ]),
+    );
+    typeExtras.push(inputObjectType('AuthorInput', [arg('name', nonNull(scalar('String')))]));
+  }
   return {
     queryType: { name: 'Query' },
     mutationType: { name: 'Mutation' },
@@ -104,6 +114,7 @@ export function capableSchema(
           arg('id', nonNull(scalar('ID'))),
           arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'BookUpdateInput', ofType: null })),
         ]),
+        ...mutationExtras,
       ]),
       inputObjectType('BookInput', [
         arg('title', nonNull(scalar('String'))),
@@ -165,6 +176,7 @@ export function capableSchema(
       objectType('HippoSchema', [field('version', scalar('String'))]),
       objectType('BatchResult', [field('ok', scalar('Boolean'))]),
       enumType('BookFormat', ['HARDCOVER', 'PAPERBACK', 'EBOOK']),
+      ...typeExtras,
     ],
   };
 }
