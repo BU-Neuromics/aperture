@@ -1,5 +1,7 @@
 import { useDataSource } from '../../data/DataSourceContext';
 import type { CollectionModel } from '../../data/schemaModel';
+import { workflowAvailability } from '../../workflows/engine';
+import { useWorkflows } from '../../workflows/WorkflowsContext';
 import { useCollectionUrlState } from './urlState';
 
 /** Two-letter chip initial derived from the label (design-export nav). */
@@ -17,7 +19,8 @@ function initialFor(label: string): string {
  */
 export function CollectionsNav() {
   const state = useDataSource();
-  const { collection, selectCollection } = useCollectionUrlState();
+  const { collection, workflow, selectCollection, openWorkflow } = useCollectionUrlState();
+  const { workflows, error: workflowsError } = useWorkflows();
 
   if (state.status !== 'ready') {
     return (
@@ -31,7 +34,7 @@ export function CollectionsNav() {
   }
 
   const collections = state.source.collections;
-  const active = collection ?? collections[0]?.id;
+  const active = workflow == null ? (collection ?? collections[0]?.id) : null;
 
   return (
     <>
@@ -51,6 +54,35 @@ export function CollectionsNav() {
           </button>
         ))}
       </div>
+      {(workflows.length > 0 || workflowsError) && (
+        <>
+          <div className="nav-section-label">Workflows</div>
+          {workflowsError && <div className="nav-status">{workflowsError}</div>}
+          <div className="nav-list">
+            {workflows.map((w) => {
+              const availability = workflowAvailability(w, state.source);
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  className="nav-item"
+                  aria-current={w.id === workflow}
+                  disabled={!availability.runnable}
+                  title={
+                    availability.runnable
+                      ? w.description ?? w.label
+                      : `Unavailable: ${availability.reasons.join('; ')}`
+                  }
+                  onClick={() => openWorkflow(w.id)}
+                >
+                  <span className="nav-item-chip">{initialFor(w.label)}</span>
+                  <span className="nav-item-label">{w.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </>
   );
 }

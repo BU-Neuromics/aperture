@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { HippoSource, WriteValues } from '../../data/hippoSource';
-import type { CollectionModel, FormFieldModel } from '../../data/schemaModel';
-import { RefPicker } from './RefPicker';
+import type { HippoSource } from '../../data/hippoSource';
+import type { CollectionModel } from '../../data/schemaModel';
+import type { FormDraft } from './formShared';
+import { clientValidate, FormFieldRow, initialDraft, toWriteValues } from './formShared';
 import { useCollectionUrlState } from './urlState';
 import './collections.css';
 
@@ -15,56 +16,6 @@ import './collections.css';
  * shape is confirmed over GraphQL). Updates are partial-merge: only touched,
  * non-empty fields travel (clearing a field is a later affordance).
  */
-type Draft = Record<string, string | boolean>;
-
-function initialDraft(fields: FormFieldModel[], entity?: Record<string, unknown>): Draft {
-  const draft: Draft = {};
-  for (const field of fields) {
-    if (field.widget === 'checkbox') {
-      draft[field.name] = entity ? Boolean(entity[field.name]) : false;
-    } else if (entity && entity[field.name] != null) {
-      const raw = entity[field.name];
-      // Prefill refs from the resolved relationship's id.
-      draft[field.name] =
-        typeof raw === 'object'
-          ? String((raw as Record<string, unknown>)['id'] ?? Object.values(raw as object)[0] ?? '')
-          : String(raw);
-    } else {
-      draft[field.name] = '';
-    }
-  }
-  return draft;
-}
-
-function toWriteValues(fields: FormFieldModel[], draft: Draft, touched?: Set<string>): WriteValues {
-  const values: WriteValues = {};
-  for (const field of fields) {
-    if (touched && !touched.has(field.name)) continue;
-    const raw = draft[field.name];
-    if (field.widget === 'checkbox') {
-      values[field.name] = Boolean(raw);
-    } else {
-      const text = String(raw ?? '').trim();
-      if (text === '') continue; // optional + empty → omit (partial-merge)
-      values[field.name] = field.widget === 'number' ? Number(text) : text;
-    }
-  }
-  return values;
-}
-
-function clientValidate(fields: FormFieldModel[], draft: Draft): Record<string, string> {
-  const errors: Record<string, string> = {};
-  for (const field of fields) {
-    if (field.widget === 'checkbox') continue;
-    const text = String(draft[field.name] ?? '').trim();
-    if (field.required && text === '') errors[field.name] = 'Required.';
-    else if (field.widget === 'number' && text !== '' && Number.isNaN(Number(text))) {
-      errors[field.name] = 'Must be a number.';
-    }
-  }
-  return errors;
-}
-
 export function EntityForm({
   source,
   collection,
@@ -80,7 +31,7 @@ export function EntityForm({
   const write = mode === 'new' ? collection.write.create : collection.write.update;
   const fields = useMemo(() => write?.form.fields ?? [], [write]);
 
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(fields));
+  const [draft, setDraft] = useState<FormDraft>(() => initialDraft(fields));
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -179,27 +130,14 @@ export function EntityForm({
             </div>
           )}
           {fields.map((field) => (
-            <div key={field.name} className="form-row">
-              <label className="form-label" htmlFor={`field-${field.name}`}>
-                {field.label}
-                {field.required && (
-                  <span className="form-required" aria-hidden="true">
-                    *
-                  </span>
-                )}
-              </label>
-              <div className="form-control">
-                <FieldWidget
-                  field={field}
-                  value={draft[field.name] ?? ''}
-                  source={source}
-                  onChange={(v) => set(field.name, v)}
-                />
-                {fieldErrors[field.name] && (
-                  <div className="form-field-error">{fieldErrors[field.name]}</div>
-                )}
-              </div>
-            </div>
+            <FormFieldRow
+              key={field.name}
+              field={field}
+              value={draft[field.name] ?? ''}
+              error={fieldErrors[field.name]}
+              source={source}
+              onChange={(v) => set(field.name, v)}
+            />
           ))}
           <div className="form-actions">
             <button type="submit" className="form-submit" disabled={phase === 'submitting'}>
@@ -216,67 +154,4 @@ export function EntityForm({
       )}
     </div>
   );
-}
-
-function FieldWidget({
-  field,
-  value,
-  source,
-  onChange,
-}: {
-  field: FormFieldModel;
-  value: string | boolean;
-  source: HippoSource;
-  onChange: (value: string | boolean) => void;
-}) {
-  const id = `field-${field.name}`;
-  switch (field.widget) {
-    case 'checkbox':
-      return (
-        <input
-          id={id}
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-      );
-    case 'select':
-      return (
-        <select
-          id={id}
-          className="form-input"
-          value={String(value)}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="">{field.required ? 'Select…' : '(none)'}</option>
-          {(field.options ?? []).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      );
-    case 'ref':
-      return (
-        <RefPicker
-          inputId={id}
-          source={source}
-          targetType={field.targetType}
-          value={String(value)}
-          onChange={onChange}
-        />
-      );
-    case 'number':
-    case 'date':
-    case 'text':
-      return (
-        <input
-          id={id}
-          type={field.widget === 'number' ? 'number' : field.widget === 'date' ? 'date' : 'text'}
-          className="form-input"
-          value={String(value)}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      );
-  }
 }

@@ -7,6 +7,9 @@ import type { ScopedDataClient } from './data/scopedClient';
 import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
+import type { ResolvedWorkflows } from './workflows/config';
+import { resolveWorkflows } from './workflows/config';
+import { WorkflowsProvider } from './workflows/WorkflowsContext';
 
 /**
  * The Phase-0 walking skeleton, end to end: endpoint config → Layer-D
@@ -19,20 +22,27 @@ interface AppProps {
   /** Test seams; production uses env config + the real network client. */
   endpoint?: EndpointConfig;
   clientFactory?: (url: string) => ScopedDataClient;
+  workflows?: ResolvedWorkflows;
 }
 
-export function App({ endpoint = resolveEndpoint(), clientFactory }: AppProps) {
+export function App({
+  endpoint = resolveEndpoint(),
+  clientFactory,
+  workflows = resolveWorkflows(),
+}: AppProps) {
   return (
     <DataSourceProvider endpoint={endpoint} clientFactory={clientFactory}>
-      <AppShell
-        config={shellConfig}
-        slots={{
-          header: <Brand />,
-          primaryNav: <CollectionsNav />,
-          main: <CollectionMain />,
-          inspector: <FacetPanel />,
-        }}
-      />
+      <WorkflowsProvider value={workflows}>
+        <AppShell
+          config={shellConfig}
+          slots={{
+            header: <Brand />,
+            primaryNav: <CollectionsNav />,
+            main: <CollectionMain />,
+            inspector: <FacetPanel />,
+          }}
+        />
+      </WorkflowsProvider>
     </DataSourceProvider>
   );
 }
