@@ -16,8 +16,8 @@ config-driven **portal** design — now framed as the **substrate** for the AI-n
 (`sec1`–`sec6`) and its implementation were intentionally left behind in `drylims` history and
 are **not** reproduced here.
 
-> **New here (or handing off)?** Start with [`../HANDOFF.md`](../HANDOFF.md) — the repo entry point:
-> status, how to run `web/`, the roadmap (as GitHub issues), and cross-component deps.
+> **New here (or handing off)?** Start with [`../ONBOARDING.md`](../ONBOARDING.md) — the repo entry
+> point: status, how to run `web/`, the roadmap (as GitHub issues), and cross-component deps.
 
 ## Document Map
 
