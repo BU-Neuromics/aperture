@@ -4,23 +4,29 @@
 graph — the substrate for an AI-native explorer (`design/vision.md`). Generic over any schema;
 domain comes from config, not code (ADR-0002).
 
-**Status (2026-07-06):** design **complete and ratified** (Steps 1–6, 31 ADRs). Implementation
-**Phases 0–2 built** — the walking skeleton (issues [#3](https://github.com/BU-Neuromics/aperture/issues/3),
-[#4](https://github.com/BU-Neuromics/aperture/issues/4), [#5](https://github.com/BU-Neuromics/aperture/issues/5)),
+**Status (2026-07-06):** design **complete and ratified** (Steps 1–6, 31 ADRs).
+**All four MVP build phases are implemented** — the walking skeleton (issues
+[#3](https://github.com/BU-Neuromics/aperture/issues/3)/[#4](https://github.com/BU-Neuromics/aperture/issues/4)/[#5](https://github.com/BU-Neuromics/aperture/issues/5)),
 the **read loop** ([#6](https://github.com/BU-Neuromics/aperture/issues/6)): facets + FTS,
 detail with cross-links/pivot/history, CSV+JSON export, query-state ⇄ URL; the **Tier-0
 write loop** ([#7](https://github.com/BU-Neuromics/aperture/issues/7)): mutation-derived
-create/edit forms, client pre-validation with the server as authority, partial-merge
-updates, ref-pickers; and the **Tier-1 guided workflow**
-([#8](https://github.com/BU-Neuromics/aperture/issues/8), ADR-0028): steps-as-data config
-(`VITE_WORKFLOWS`) → stage → continuous dry-run → whole-set validate → **one atomic
-`batchPut`** with intra-batch refs, resumable version-pinned drafts. Facet **counts**/sort
-stay capability-gated off until Hippo X1
-([hippo#96](https://github.com/BU-Neuromics/hippo/issues/96)). Next action: **Phase 4**
-(issue [#9](https://github.com/BU-Neuromics/aperture/issues/9)) — the control plane (saved
-views, drafts, config-as-data persistence). ⚠️ Confirm the assumed Hippo GraphQL shapes
-(`hippoSchema` enrichment, filter SDL, `batchPut` transport — documented in
-`web/src/data/batch.ts`) against a live `hippo serve` before first integration.
+forms, server-authoritative validation, partial-merge updates, ref-pickers; the **Tier-1
+guided workflow** ([#8](https://github.com/BU-Neuromics/aperture/issues/8), ADR-0028):
+stage → continuous dry-run → whole-set validate → one atomic `batchPut` with intra-batch
+refs; and the **control plane** ([#9](https://github.com/BU-Neuromics/aperture/issues/9),
+ADR-0017/N5.4): saved views, cross-browser resumable drafts, and config-as-data (workflows)
+as versioned documents on a LinkML-on-Hippo store (co-located by default,
+`VITE_HIPPO_CONTROL_PLANE_URL` to split; honest localStorage fallback). Facet
+**counts**/sort stay capability-gated off until Hippo X1
+([hippo#96](https://github.com/BU-Neuromics/hippo/issues/96)).
+
+**Next actions:** (1) ⚠️ **integrate against a live `hippo serve`** — confirm the assumed
+GraphQL shapes (`hippoSchema` enrichment, filter SDL, `batchPut` transport per
+`web/src/data/batch.ts`, the Aperture document type for the control plane) and adjust the
+one-module-each seams; (2) apply an Aperture control-plane recipe (document type) to the
+deployment Hippo; (3) post-MVP tracks: embedded schema editing
+([#2](https://github.com/BU-Neuromics/aperture/issues/2)), agentic surfaces (ADR-0026),
+Hippo X1 aggregation lighting up counts/sort.
 
 ---
 

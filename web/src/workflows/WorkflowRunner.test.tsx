@@ -183,17 +183,21 @@ describe('WorkflowRunner (W4.6–W4.9, ADR-0028)', () => {
 
   it('flags schema drift on resume instead of silently breaking (L10)', async () => {
     const { client } = batchClient();
+    // Seed a control-plane draft document (local-fallback key + v1 envelope).
     window.localStorage.setItem(
-      'aperture:workflow-draft:register-work',
+      'aperture:cp:workflowDraft:register-work',
       JSON.stringify({
-        state: {
-          workflowId: 'register-work',
-          workflowVersion: '1',
-          schemaFingerprint: 'stale-fingerprint',
-          currentStep: 1,
-          staged: { 'author-step': { name: 'Old Author' } },
+        v: 1,
+        data: {
+          state: {
+            workflowId: 'register-work',
+            workflowVersion: '1',
+            schemaFingerprint: 'stale-fingerprint',
+            currentStep: 1,
+            staged: { 'author-step': { name: 'Old Author' } },
+          },
+          savedAt: '2026-07-01T00:00:00Z',
         },
-        savedAt: '2026-07-01T00:00:00Z',
       }),
     );
     renderApp(

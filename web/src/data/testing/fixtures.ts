@@ -56,7 +56,13 @@ const listArgs = [
 
 /** A capable, Hippo-like endpoint: pagination, filters, FTS, detail, history, batch write. */
 export function capableSchema(
-  options: { hippoSchema?: boolean; authorDetail?: boolean; authorWrite?: boolean } = {},
+  options: {
+    hippoSchema?: boolean;
+    authorDetail?: boolean;
+    authorWrite?: boolean;
+    /** Adds the Aperture control-plane document collection (Phase 4, N5.4). */
+    documents?: boolean;
+  } = {},
 ): IntrospectionSchema {
   const queryFields = [
     field('books', nonNull(list(nonNull(object('Book')))), listArgs),
@@ -92,11 +98,52 @@ export function capableSchema(
     );
     typeExtras.push(inputObjectType('AuthorInput', [arg('name', nonNull(scalar('String')))]));
   }
+  const queryExtras: IntrospectionField[] = [];
+  if (options.documents) {
+    queryExtras.push(
+      field('apertureDocuments', nonNull(list(nonNull(object('ApertureDocument')))), [
+        arg('filter', { kind: 'INPUT_OBJECT', name: 'ApertureDocumentFilter', ofType: null }),
+        arg('limit', scalar('Int')),
+        arg('offset', scalar('Int')),
+      ]),
+    );
+    mutationExtras.push(
+      field('createApertureDocument', object('ApertureDocument'), [
+        arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'ApertureDocumentInput', ofType: null })),
+      ]),
+      field('updateApertureDocument', object('ApertureDocument'), [
+        arg('id', nonNull(scalar('ID'))),
+        arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'ApertureDocumentUpdateInput', ofType: null })),
+      ]),
+    );
+    typeExtras.push(
+      objectType('ApertureDocument', [
+        field('id', nonNull(scalar('ID'))),
+        field('kind', nonNull(scalar('String'))),
+        field('name', nonNull(scalar('String'))),
+        field('payload', nonNull(scalar('String'))),
+      ]),
+      inputObjectType('ApertureDocumentFilter', [
+        arg('kind', scalar('String')),
+        arg('name', scalar('String')),
+      ]),
+      inputObjectType('ApertureDocumentInput', [
+        arg('kind', nonNull(scalar('String'))),
+        arg('name', nonNull(scalar('String'))),
+        arg('payload', nonNull(scalar('String'))),
+      ]),
+      inputObjectType('ApertureDocumentUpdateInput', [
+        arg('kind', scalar('String')),
+        arg('name', scalar('String')),
+        arg('payload', scalar('String')),
+      ]),
+    );
+  }
   return {
     queryType: { name: 'Query' },
     mutationType: { name: 'Mutation' },
     types: [
-      objectType('Query', queryFields),
+      objectType('Query', [...queryFields, ...queryExtras]),
       objectType('Mutation', [
         // Batch unit-of-work (Hippo #84 shape assumption): ops list + dry-run.
         field('batchPut', nonNull(object('BatchPutResult')), [

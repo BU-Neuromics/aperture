@@ -1,57 +1,59 @@
+import type { ControlPlaneStore } from '../control/store';
+import { openPayload, sealPayload } from '../control/store';
 import type { WorkflowRunState } from './engine';
 
 /**
- * Resumable drafts (W4.8/L10): the run state persists as an INERT draft —
- * nothing enters the domain graph until the atomic commit. Interim home is
- * localStorage; Phase 4 moves drafts into the control-plane store
- * (ADR-0017). The draft pins workflow + schema version via the fields inside
+ * Resumable drafts (W4.8/L10): the run state persists as an INERT
+ * control-plane document — nothing enters the domain graph until the atomic
+ * commit. On a Hippo control plane the draft survives across browsers; on
+ * the local fallback it lives in this browser (the footer says which). The
+ * draft pins workflow + schema version via the fields inside
  * WorkflowRunState, so resume can detect drift instead of silently breaking.
  */
+const DRAFT_VERSION = 1;
+
 export interface WorkflowDraft {
   state: WorkflowRunState;
   savedAt: string;
 }
 
-type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-
-const draftKey = (workflowId: string) => `aperture:workflow-draft:${workflowId}`;
-
-export function saveDraft(
-  state: WorkflowRunState,
-  storage: StorageLike = window.localStorage,
-): void {
-  const draft: WorkflowDraft = { state, savedAt: new Date().toISOString() };
-  storage.setItem(draftKey(state.workflowId), JSON.stringify(draft));
+function isDraftData(data: unknown): data is WorkflowDraft {
+  if (typeof data !== 'object' || data == null) return false;
+  const d = data as Record<string, unknown>;
+  const state = d['state'] as Record<string, unknown> | undefined;
+  return (
+    typeof d['savedAt'] === 'string' &&
+    typeof state === 'object' &&
+    state != null &&
+    typeof state['workflowId'] === 'string' &&
+    typeof state['workflowVersion'] === 'string' &&
+    typeof state['schemaFingerprint'] === 'string' &&
+    typeof state['currentStep'] === 'number' &&
+    typeof state['staged'] === 'object'
+  );
 }
 
-export function loadDraft(
-  workflowId: string,
-  storage: StorageLike = window.localStorage,
-): WorkflowDraft | null {
-  const raw = storage.getItem(draftKey(workflowId));
-  if (raw == null) return null;
-  try {
-    const parsed = JSON.parse(raw) as WorkflowDraft;
-    if (typeof parsed !== 'object' || parsed == null) return null;
-    const state = parsed.state;
-    if (
-      typeof state?.workflowId !== 'string' ||
-      typeof state.workflowVersion !== 'string' ||
-      typeof state.schemaFingerprint !== 'string' ||
-      typeof state.currentStep !== 'number' ||
-      typeof state.staged !== 'object'
-    ) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null; // corrupt draft — treat as absent, never crash resume
-  }
+export async function saveDraft(store: ControlPlaneStore, state: WorkflowRunState): Promise<void> {
+  await store.put({
+    kind: 'workflowDraft',
+    name: state.workflowId,
+    payload: sealPayload(DRAFT_VERSION, {
+      state,
+      savedAt: new Date().toISOString(),
+    } satisfies WorkflowDraft),
+  });
 }
 
-export function clearDraft(
+/** Corrupt/foreign drafts read as absent — resume never crashes. */
+export async function loadDraft(
+  store: ControlPlaneStore,
   workflowId: string,
-  storage: StorageLike = window.localStorage,
-): void {
-  storage.removeItem(draftKey(workflowId));
+): Promise<WorkflowDraft | null> {
+  const document = await store.get('workflowDraft', workflowId);
+  if (document == null) return null;
+  return openPayload(document.payload, DRAFT_VERSION, isDraftData);
+}
+
+export async function clearDraft(store: ControlPlaneStore, workflowId: string): Promise<void> {
+  await store.remove('workflowDraft', workflowId);
 }

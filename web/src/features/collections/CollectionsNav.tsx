@@ -1,6 +1,7 @@
+import { useSavedViews } from '../../control/SavedViewsContext';
 import { useDataSource } from '../../data/DataSourceContext';
 import type { CollectionModel } from '../../data/schemaModel';
-import { workflowAvailability } from '../../workflows/engine';
+import { schemaFingerprint, workflowAvailability } from '../../workflows/engine';
 import { useWorkflows } from '../../workflows/WorkflowsContext';
 import { useCollectionUrlState } from './urlState';
 
@@ -19,8 +20,10 @@ function initialFor(label: string): string {
  */
 export function CollectionsNav() {
   const state = useDataSource();
-  const { collection, workflow, selectCollection, openWorkflow } = useCollectionUrlState();
+  const { collection, workflow, selectCollection, openWorkflow, applyView } =
+    useCollectionUrlState();
   const { workflows, error: workflowsError } = useWorkflows();
+  const savedViews = useSavedViews();
 
   if (state.status !== 'ready') {
     return (
@@ -54,6 +57,32 @@ export function CollectionsNav() {
           </button>
         ))}
       </div>
+      {savedViews.status === 'ready' && savedViews.views.length > 0 && (
+        <>
+          <div className="nav-section-label">Saved views</div>
+          <div className="nav-list">
+            {savedViews.views.map((view) => {
+              const stale = view.schemaFingerprint !== schemaFingerprint(state.source);
+              return (
+                <button
+                  key={view.name}
+                  type="button"
+                  className="nav-item"
+                  title={
+                    stale
+                      ? `${view.name} — saved under an older schema; review filters after opening`
+                      : view.name
+                  }
+                  onClick={() => applyView(view.state)}
+                >
+                  <span className="nav-item-chip">{stale ? '⚠' : initialFor(view.name)}</span>
+                  <span className="nav-item-label">{view.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       {(workflows.length > 0 || workflowsError) && (
         <>
           <div className="nav-section-label">Workflows</div>
