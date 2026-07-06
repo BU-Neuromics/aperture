@@ -35,7 +35,8 @@ export function CollectionTable({
   collection: CollectionModel;
 }) {
   const capabilities = useCapabilities();
-  const { page, setPage, filters, search, clearFilters, openEntity } = useCollectionUrlState();
+  const { page, setPage, filters, search, clearFilters, openEntity, openCreateForm } =
+    useCollectionUrlState();
   const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search);
   const isFiltered = Object.keys(filters).length > 0 || search !== '';
 
@@ -90,13 +91,21 @@ export function CollectionTable({
               : ' '}
           </div>
         </div>
-        <ExportButtons
-          source={source}
-          collection={collection}
-          filters={filters}
-          search={search}
-          disabled={result.status !== 'ready'}
-        />
+        <div className="collection-actions">
+          {/* Gated on the derived create path — never offered unadvertised (W4.3). */}
+          {collection.write.create && (
+            <button type="button" className="action-button action-primary" onClick={openCreateForm}>
+              New {collection.typeName}
+            </button>
+          )}
+          <ExportButtons
+            source={source}
+            collection={collection}
+            filters={filters}
+            search={search}
+            disabled={result.status !== 'ready'}
+          />
+        </div>
       </div>
 
       <div className="collection-card">

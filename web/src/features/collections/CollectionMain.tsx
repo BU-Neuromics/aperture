@@ -2,6 +2,7 @@ import { useDataSource } from '../../data/DataSourceContext';
 import { useCollectionUrlState } from './urlState';
 import { CollectionTable } from './CollectionTable';
 import { EntityDetail } from './EntityDetail';
+import { EntityForm } from './EntityForm';
 import './collections.css';
 
 /**
@@ -12,7 +13,7 @@ import './collections.css';
  */
 export function CollectionMain() {
   const state = useDataSource();
-  const { collection, entity, closeEntity } = useCollectionUrlState();
+  const { collection, entity, form, closeEntity, closeForm } = useCollectionUrlState();
 
   if (state.status === 'unconfigured') {
     return (
@@ -58,6 +59,36 @@ export function CollectionMain() {
   }
 
   const active = collections.find((c) => c.id === collection) ?? collections[0];
+
+  if (form != null) {
+    const path = form === 'new' ? active.write.create : active.write.update;
+    const valid = form === 'new' ? path != null : path != null && entity != null;
+    if (!valid) {
+      // Deep link to a form the endpoint doesn't offer (ADR-0029).
+      return (
+        <div className="main-panel" role="status">
+          <h1 className="main-panel-title">
+            No {form === 'new' ? 'create' : 'edit'} form for {active.label}
+          </h1>
+          <p className="main-panel-detail">
+            The endpoint advertises no matching mutation.{' '}
+            <button type="button" className="detail-link" onClick={closeForm}>
+              Back
+            </button>
+          </p>
+        </div>
+      );
+    }
+    return (
+      <EntityForm
+        key={`${active.id}:${form}:${entity ?? ''}`}
+        source={state.source}
+        collection={active}
+        mode={form}
+        entityId={entity ?? undefined}
+      />
+    );
+  }
 
   if (entity != null) {
     if (!active.detail) {
