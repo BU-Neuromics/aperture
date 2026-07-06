@@ -1,20 +1,36 @@
-import './App.css';
+import { AppShell } from './shell/AppShell';
+import { Brand } from './shell/Brand';
+import { DataSourceProvider } from './data/DataSourceContext';
+import { resolveEndpoint } from './data/endpoint';
+import type { EndpointConfig } from './data/endpoint';
+import type { ScopedDataClient } from './data/scopedClient';
+import { CollectionsNav } from './features/collections/CollectionsNav';
+import { CollectionMain } from './features/collections/CollectionMain';
 
 /**
- * Phase 0.1 placeholder shell. The real app frame — a layout registry + typed
- * slot contract (header / primaryNav / main / inspector?) per ADR-0031 — lands
- * in step 0.1a, translated from design/design-export/. For now this proves the
- * React + tokens + build/test spine works end to end.
+ * The Phase-0 walking skeleton, end to end: endpoint config → Layer-D
+ * adapter → capability negotiation → schema-derived nav + table in the
+ * configured layout's slots, with {collection, page} in the URL.
  */
-export function App() {
+const shellConfig = { layout: 'headerNavMain' };
+
+interface AppProps {
+  /** Test seams; production uses env config + the real network client. */
+  endpoint?: EndpointConfig;
+  clientFactory?: (url: string) => ScopedDataClient;
+}
+
+export function App({ endpoint = resolveEndpoint(), clientFactory }: AppProps) {
   return (
-    <div className="app-frame">
-      <header className="app-header">
-        <span className="app-wordmark">Aperture</span>
-      </header>
-      <main className="app-main">
-        <p className="app-placeholder">Walking skeleton — Phase 0.1</p>
-      </main>
-    </div>
+    <DataSourceProvider endpoint={endpoint} clientFactory={clientFactory}>
+      <AppShell
+        config={shellConfig}
+        slots={{
+          header: <Brand />,
+          primaryNav: <CollectionsNav />,
+          main: <CollectionMain />,
+        }}
+      />
+    </DataSourceProvider>
   );
 }
