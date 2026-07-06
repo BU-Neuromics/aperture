@@ -5,17 +5,20 @@ data explorer over a Hippo (LinkML + GraphQL) endpoint. Stack per **ADR-0030**: 
 TypeScript, urql (GraphQL), TanStack Table, nuqs. Talks to Hippo's GraphQL **directly**
 (ADR-0014/0016).
 
-> **Phases 0–3 built.** The app introspects the endpoint, negotiates capabilities, and derives
-> everything from the schema: collections nav + table (Phase 0); equality facets + FTS, entity
-> detail with cross-links/relationship pivot/change history, CSV/JSON export (Phase 1); Tier-0
-> create/edit forms generated from the mutation input types, with client pre-validation,
-> server-authoritative rejection surfacing, partial-merge updates, and ref-pickers (Phase 2);
-> and the Tier-1 guided workflow (Phase 3, ADR-0028): steps-as-data config interpreted by a
-> pure engine, staging in resumable version-pinned drafts, continuous dry-run, and one atomic
-> batch commit with intra-batch references. The full query state
-> `{collection, page, q, filters, entity, form, workflow}` lives in the URL. See
-> `../design/implementation-plan.md` for the phased build and `../design/design-export/` +
-> `../design/design-tokens.md` for the visual target.
+> **All four MVP phases built.** The app introspects the endpoint, negotiates capabilities,
+> and derives everything from the schema: collections nav + table (Phase 0); equality facets +
+> FTS, entity detail with cross-links/relationship pivot/change history, CSV/JSON export
+> (Phase 1); Tier-0 create/edit forms generated from the mutation input types, with client
+> pre-validation, server-authoritative rejection surfacing, partial-merge updates, and
+> ref-pickers (Phase 2); the Tier-1 guided workflow (Phase 3, ADR-0028): steps-as-data config
+> interpreted by a pure engine, staging in resumable version-pinned drafts, continuous
+> dry-run, and one atomic batch commit with intra-batch references; and the control plane
+> (Phase 4, ADR-0017): saved views, cross-browser drafts, and workflows-config-as-data as
+> versioned documents on a LinkML-on-Hippo store (co-located by default,
+> `VITE_HIPPO_CONTROL_PLANE_URL` to split; localStorage fallback, labeled in the footer).
+> The full query state `{collection, page, q, filters, entity, form, workflow}` lives in the
+> URL. See `../design/implementation-plan.md` for the phased build and
+> `../design/design-export/` + `../design/design-tokens.md` for the visual target.
 
 ## Getting started
 

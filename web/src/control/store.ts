@@ -91,6 +91,7 @@ export function createHippoStore(
       page: 1,
       pageSize: 1,
       filters: { kind, name },
+      fresh: true, // read-after-write correctness over the document cache
     });
     return page.rows[0] ?? null;
   };
@@ -112,6 +113,7 @@ export function createHippoStore(
           page,
           pageSize: 100,
           filters: { kind },
+          fresh: true, // read-after-write correctness over the document cache
         });
         rows.push(...result.rows);
         if (!result.mayHaveMore || page >= 10) break; // 1k docs is plenty for MVP

@@ -22,6 +22,8 @@ export interface ListOptions {
   pageSize: number;
   filters?: FilterValues;
   search?: string;
+  /** Bypass the document cache (read-after-write surfaces, e.g. the control plane). */
+  fresh?: boolean;
 }
 
 export interface EntityPage {
@@ -220,7 +222,9 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       }
 
       const { document, variables } = buildListQuery(collection, options);
-      const listResult = await client.query<Record<string, unknown>>(document, variables);
+      const listResult = await client.query<Record<string, unknown>>(document, variables, {
+        fresh: options.fresh,
+      });
       if (listResult.error || listResult.data == null) {
         throw new Error(
           `Could not list ${collection.label}: ${listResult.error?.message ?? 'empty response'}`,

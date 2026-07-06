@@ -92,3 +92,22 @@ runnable. Start vite with `VITE_WORKFLOWS='[{...steps...}]'`):
 - Atomicity probe (direct POST): a batch with one invalid op returns ok=false and the
   books/authors counts are unchanged.
 - After commit the draft is gone — reopening starts fresh.
+
+Phase-4 control plane (give the stub an `ApertureDocument {id, kind, name, payload}` type with
+`apertureDocuments(filter: {kind, name}, limit, offset)` + create/update mutations; start vite
+WITHOUT `VITE_WORKFLOWS` and seed a `config/workflows` document via direct POST — config-as-data):
+
+- Footer reads "Control plane: LinkML-on-Hippo document store" (or "this browser only" when
+  the document type is absent).
+- Workflows section appears from the seeded config document, no env var.
+- Facet a collection → "Save view" → name it → the document lands server-side and the view
+  appears under a Saved views nav section; reopening applies the full query-state.
+- Stage a workflow step, then close the WHOLE browser context; a brand-new context resumes
+  the draft from the server ("Resumed a saved draft") and sees the saved view too.
+- Commit → the draft document is retired (payload cleared, not deleted — W4.4).
+- Same-name save shows "Overwrite" and updates in place (still one document).
+
+Gotcha (real bug found here): urql's document cache stores an EMPTY list result with no
+typename association, so mutations never invalidate it — control-plane reads must pass
+`fresh: true` (requestPolicy network-only). If saved views don't appear after the first save
+of the session, suspect this class of bug.
