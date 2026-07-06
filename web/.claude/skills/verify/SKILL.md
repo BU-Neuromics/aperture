@@ -73,3 +73,22 @@ page_count):
   (partial-merge); save returns to detail with the new value.
 - Probes: no-mutation collections show no New/Edit buttons and `?form=new` deep links get an
   honest panel; Cancel from a dirty form persists nothing.
+
+Phase-3 guided workflow (give the stub `batchPut(operations: [BatchOperationInput!]!, dryRun:
+Boolean): BatchPutResult` with `input BatchOperationInput {ref, type, data: JSON}`, whole-set
+validation, all-or-nothing commit, and intra-batch ref resolution — a data value equal to
+another op's ref resolves to that entity; plus `createAuthor` so a two-type workflow is
+runnable. Start vite with `VITE_WORKFLOWS='[{...steps...}]'`):
+
+- Nav gains a Workflows section; an unrunnable workflow is disabled with reasons in its title.
+- Step 1 stages via "Stage & continue" (a dry-run batch goes over the wire each stage);
+  a server-invalid value (negative page_count) blocks advancing with the attributed error.
+- Step 2 shows bound fields as locked ("from step … — linked on commit").
+- Close mid-run → reopen → "Resumed a saved draft"; Discard resets; a draft with a stale
+  schemaFingerprint shows the drift warning instead.
+- Review: Commit disabled until "Validate whole set" passes clean; commit → success panel
+  with per-step ids cross-linked to detail; the new book's Author relation resolves to the
+  author committed in the same batch.
+- Atomicity probe (direct POST): a batch with one invalid op returns ok=false and the
+  books/authors counts are unchanged.
+- After commit the draft is gone — reopening starts fresh.

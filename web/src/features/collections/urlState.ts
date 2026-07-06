@@ -73,7 +73,15 @@ export function useCollectionUrlState() {
     closeEntity: () => void setState({ entity: null, form: null }),
     /** Cross-link: open another collection's entity detail (R3.8). */
     openIn: (collection: string, entity: string) =>
-      void setState({ collection, entity, page: 1, q: null, filters: null, form: null }),
+      void setState({
+        collection,
+        entity,
+        page: 1,
+        q: null,
+        filters: null,
+        form: null,
+        workflow: null,
+      }),
     /** Relationship pivot: jump to a related collection filtered by this entity (R3.8). */
     pivotTo: (collection: string, field: string, value: string) =>
       void setState({
@@ -83,6 +91,7 @@ export function useCollectionUrlState() {
         q: null,
         entity: null,
         form: null,
+        workflow: null,
       }),
     /** Write loop (W4): open the generated create/edit form. */
     openCreateForm: () => void setState({ form: 'new', entity: null }),
