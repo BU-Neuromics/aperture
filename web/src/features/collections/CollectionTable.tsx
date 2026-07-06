@@ -34,7 +34,7 @@ export function CollectionTable({
   collection: CollectionModel;
 }) {
   const capabilities = useCapabilities();
-  const { page, setPage, filters, search, clearFilters } = useCollectionUrlState();
+  const { page, setPage, filters, search, clearFilters, openEntity } = useCollectionUrlState();
   const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search);
   const isFiltered = Object.keys(filters).length > 0 || search !== '';
 
@@ -44,11 +44,26 @@ export function CollectionTable({
         columnHelper.accessor((row: Row) => row[model.field], {
           id: model.field,
           header: model.label,
-          cell: (info) => renderCell(model, info.getValue()),
+          cell: (info) => {
+            const value = info.getValue();
+            // The id column links to the detail view when a detail path exists (R3.7).
+            if (model.field === collection.idColumn && collection.detail && value != null) {
+              return (
+                <button
+                  type="button"
+                  className="cell-id cell-id-link"
+                  onClick={() => openEntity(String(value))}
+                >
+                  {String(value)}
+                </button>
+              );
+            }
+            return renderCell(model, value);
+          },
           meta: { align: isRightAligned(model) ? 'right' : 'left' },
         }),
       ),
-    [collection],
+    [collection, openEntity],
   );
 
   const table = useReactTable({

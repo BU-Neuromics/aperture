@@ -53,5 +53,11 @@ export function useCollectionUrlState() {
     clearFilters: () => void setState({ filters: null, q: null, page: 1 }),
     openEntity: (entity: string) => void setState({ entity }),
     closeEntity: () => void setState({ entity: null }),
+    /** Cross-link: open another collection's entity detail (R3.8). */
+    openIn: (collection: string, entity: string) =>
+      void setState({ collection, entity, page: 1, q: null, filters: null }),
+    /** Relationship pivot: jump to a related collection filtered by this entity (R3.8). */
+    pivotTo: (collection: string, field: string, value: string) =>
+      void setState({ collection, filters: { [field]: value }, page: 1, q: null, entity: null }),
   };
 }

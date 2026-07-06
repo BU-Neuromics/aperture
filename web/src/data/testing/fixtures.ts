@@ -55,7 +55,9 @@ const listArgs = [
 ];
 
 /** A capable, Hippo-like endpoint: pagination, filters, FTS, detail, history, batch write. */
-export function capableSchema(options: { hippoSchema?: boolean } = {}): IntrospectionSchema {
+export function capableSchema(
+  options: { hippoSchema?: boolean; authorDetail?: boolean } = {},
+): IntrospectionSchema {
   const queryFields = [
     field('books', nonNull(list(nonNull(object('Book')))), listArgs),
     field(
@@ -72,6 +74,13 @@ export function capableSchema(options: { hippoSchema?: boolean } = {}): Introspe
   ];
   if (options.hippoSchema) {
     queryFields.push(field('hippoSchema', object('HippoSchema')));
+  }
+  if (options.authorDetail) {
+    queryFields.push(field('author', object('Author'), [arg('id', nonNull(scalar('ID')))]));
+  }
+  const authorFields = [field('id', nonNull(scalar('ID'))), field('name', scalar('String'))];
+  if (options.authorDetail) {
+    authorFields.push(field('books', list(nonNull(object('Book')))));
   }
   return {
     queryType: { name: 'Query' },
@@ -101,10 +110,7 @@ export function capableSchema(options: { hippoSchema?: boolean } = {}): Introspe
         field('author', object('Author')),
         field('reviews', list(nonNull(object('Review')))),
       ]),
-      objectType('Author', [
-        field('id', nonNull(scalar('ID'))),
-        field('name', scalar('String')),
-      ]),
+      objectType('Author', authorFields),
       objectType('Review', [field('id', nonNull(scalar('ID'))), field('rating', scalar('Int'))]),
       objectType('HippoSchema', [field('version', scalar('String'))]),
       objectType('BatchResult', [field('ok', scalar('Boolean'))]),
