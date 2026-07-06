@@ -1,4 +1,4 @@
-import { deriveCollections, deriveCapabilities, humanize } from './schemaModel';
+import { deriveCollections, deriveCapabilities, deriveHistory, humanize } from './schemaModel';
 import { bareSchema, capableSchema } from './testing/fixtures';
 
 describe('humanize', () => {
@@ -40,7 +40,7 @@ describe('deriveCollections', () => {
     ]);
   });
 
-  it('records the pagination/filter/search arg names the endpoint advertises', () => {
+  it('records the pagination/filter/search arg names + types the endpoint advertises', () => {
     const [books, authors] = deriveCollections(capableSchema());
     expect(books.args).toEqual({
       limit: 'limit',
@@ -49,13 +49,56 @@ describe('deriveCollections', () => {
       search: 'search',
       orderBy: undefined,
     });
+    expect(books.argTypes).toEqual({
+      limit: 'Int',
+      offset: 'Int',
+      filter: 'BookFilter',
+      search: 'String',
+    });
+    expect(books.idColumn).toBe('id');
     expect(authors.args.filter).toBeUndefined();
     expect(authors.args.limit).toBe('limit');
   });
 
-  it('skips non-list and introspection fields', () => {
+  it('skips non-list, singular-detail, history, and introspection fields', () => {
     const collections = deriveCollections(capableSchema({ hippoSchema: true }));
     expect(collections.map((c) => c.id)).toEqual(['books', 'authors']);
+  });
+
+  it('derives equality facets from the filter input type only (R3.3)', () => {
+    const [books, authors] = deriveCollections(capableSchema());
+    expect(books.facets).toEqual([
+      { field: 'format', label: 'Format', kind: 'enum', options: ['HARDCOVER', 'PAPERBACK', 'EBOOK'] },
+      { field: 'in_print', label: 'In print', kind: 'boolean' },
+      { field: 'author', label: 'Author', kind: 'ref' },
+      // 'title' (plain String) and 'or' (combinator) are not equality facets.
+    ]);
+    expect(authors.facets).toEqual([]); // no filter arg → no facets, gated off
+  });
+
+  it('derives the detail path: singular field preferred, absent when unavailable', () => {
+    const [books, authors] = deriveCollections(capableSchema());
+    expect(books.detail).toEqual({ kind: 'field', field: 'book', argName: 'id', argType: 'ID!' });
+    expect(authors.detail).toBeUndefined();
+  });
+});
+
+describe('deriveHistory (R3.7)', () => {
+  it('derives the entityHistory surface when advertised', () => {
+    expect(deriveHistory(capableSchema())).toEqual({
+      field: 'entityHistory',
+      argName: 'entityId',
+      argType: 'ID!',
+      columns: [
+        { field: 'timestamp', label: 'Timestamp', kind: 'text' },
+        { field: 'action', label: 'Action', kind: 'text' },
+        { field: 'actor', label: 'Actor', kind: 'text' },
+      ],
+    });
+  });
+
+  it('is absent on a bare endpoint', () => {
+    expect(deriveHistory(bareSchema())).toBeUndefined();
   });
 });
 
@@ -71,6 +114,7 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       sort: false, // Hippo X1 not landed — stays off
       aggregation: false, // Hippo X1 not landed — stays off
       relationshipTraversal: true,
+      entityHistory: true,
       batchWrite: true,
     });
   });
@@ -92,6 +136,7 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       sort: false,
       aggregation: false,
       relationshipTraversal: false,
+      entityHistory: false,
       batchWrite: false,
     });
   });

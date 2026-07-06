@@ -19,6 +19,8 @@ export interface Capabilities {
   aggregation: boolean;
   /** Entity types expose resolved relationship fields. */
   relationshipTraversal: boolean;
+  /** An entityHistory-style query is advertised (detail-view history, R3.7). */
+  entityHistory: boolean;
   /** Batch unit-of-work mutations (whole-set dry-run + atomic commit; Hippo #84). */
   batchWrite: boolean;
 }
@@ -31,5 +33,6 @@ export const NO_CAPABILITIES: Capabilities = {
   sort: false,
   aggregation: false,
   relationshipTraversal: false,
+  entityHistory: false,
   batchWrite: false,
 };

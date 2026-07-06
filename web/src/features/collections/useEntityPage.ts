@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { EntityPage, HippoSource } from '../../data/hippoSource';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { EntityPage, FilterValues, HippoSource } from '../../data/hippoSource';
 
 export type EntityPageState =
   | { status: 'loading' }
@@ -12,16 +12,24 @@ export function useEntityPage(
   collectionId: string,
   page: number,
   pageSize: number,
+  filters?: FilterValues,
+  search?: string,
 ): EntityPageState & { retry: () => void } {
   const [state, setState] = useState<EntityPageState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const filtersKey = JSON.stringify(filters ?? {});
+  const stableFilters = useMemo(
+    () => (filters && Object.keys(filters).length > 0 ? filters : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content, not identity
+    [filtersKey],
+  );
 
   useEffect(() => {
     let cancelled = false;
     setState({ status: 'loading' });
     source
-      .listEntities(collectionId, page, pageSize)
+      .listEntities(collectionId, { page, pageSize, filters: stableFilters, search })
       .then((result) => {
         if (!cancelled) setState({ status: 'ready', page: result });
       })
@@ -36,7 +44,7 @@ export function useEntityPage(
     return () => {
       cancelled = true;
     };
-  }, [source, collectionId, page, pageSize, attempt]);
+  }, [source, collectionId, page, pageSize, stableFilters, search, attempt]);
 
   return { ...state, retry };
 }
