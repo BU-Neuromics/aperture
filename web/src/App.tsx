@@ -1,52 +1,36 @@
-import { useState } from 'react';
 import { AppShell } from './shell/AppShell';
 import { Brand } from './shell/Brand';
-import { MOCK_COLLECTIONS } from './dev/mockCollections';
-import './App.css';
+import { DataSourceProvider } from './data/DataSourceContext';
+import { resolveEndpoint } from './data/endpoint';
+import type { EndpointConfig } from './data/endpoint';
+import type { ScopedDataClient } from './data/scopedClient';
+import { CollectionsNav } from './features/collections/CollectionsNav';
+import { CollectionMain } from './features/collections/CollectionMain';
 
 /**
- * Phase 0.1a composition: the portal "config" selects a layout from the
- * registry (trivial with one entry — ADR-0031) and binds content to its
- * slots. primaryNav shows a mock collections list; main is a placeholder.
- * Both bind to live schema-derived data in steps 0.3–0.5.
+ * The Phase-0 walking skeleton, end to end: endpoint config → Layer-D
+ * adapter → capability negotiation → schema-derived nav + table in the
+ * configured layout's slots, with {collection, page} in the URL.
  */
 const shellConfig = { layout: 'headerNavMain' };
 
-export function App() {
-  const [activeCollection, setActiveCollection] = useState(MOCK_COLLECTIONS[0].id);
+interface AppProps {
+  /** Test seams; production uses env config + the real network client. */
+  endpoint?: EndpointConfig;
+  clientFactory?: (url: string) => ScopedDataClient;
+}
 
+export function App({ endpoint = resolveEndpoint(), clientFactory }: AppProps) {
   return (
-    <AppShell
-      config={shellConfig}
-      slots={{
-        header: <Brand />,
-        primaryNav: (
-          <>
-            <div className="nav-section-label">Collections</div>
-            <div className="nav-list">
-              {MOCK_COLLECTIONS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className="nav-item"
-                  aria-current={c.id === activeCollection}
-                  onClick={() => setActiveCollection(c.id)}
-                >
-                  <span className="nav-item-chip">{c.initial}</span>
-                  <span className="nav-item-label">{c.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        ),
-        main: (
-          <div className="main-placeholder">
-            <p className="app-placeholder">
-              Walking skeleton — Phase 0.1a. The schema-derived collection table lands in step 0.5.
-            </p>
-          </div>
-        ),
-      }}
-    />
+    <DataSourceProvider endpoint={endpoint} clientFactory={clientFactory}>
+      <AppShell
+        config={shellConfig}
+        slots={{
+          header: <Brand />,
+          primaryNav: <CollectionsNav />,
+          main: <CollectionMain />,
+        }}
+      />
+    </DataSourceProvider>
   );
 }

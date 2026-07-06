@@ -40,6 +40,10 @@
   --space-5: 18px;
   --space-6: 24px;
 
+  /* Table density (comfortable; a compact set is a follow-on theme toggle) */
+  --row-py: 11px;
+  --cell-px: 16px;
+
   /* Radius */
   --radius-sm: 5px;
   --radius-md: 7px;
