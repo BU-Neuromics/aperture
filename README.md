@@ -37,10 +37,10 @@ contract, and the visualization catalog) is built on top of this foundation.
 
 ```bash
 # REST mode only (talks to a running Hippo REST API):
-pip install bass-aperture
+pip install datahelix-aperture
 
 # Local/in-process mode (pulls in the Hippo SDK):
-pip install "bass-aperture[local]"
+pip install "datahelix-aperture[local]"
 ```
 
 ## Usage
