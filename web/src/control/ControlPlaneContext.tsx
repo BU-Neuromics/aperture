@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { runtimeEnv } from '../config/runtime';
 import { useDataSource } from '../data/DataSourceContext';
 import { connectHippoSource } from '../data/hippoSource';
 import type { ScopedDataClient } from '../data/scopedClient';
@@ -26,7 +27,7 @@ const ControlPlaneContext = createContext<ControlPlaneState>({
 });
 
 export function resolveControlPlaneUrl(
-  env: Record<string, unknown> = import.meta.env,
+  env: Record<string, unknown> = runtimeEnv(),
 ): string | null {
   const raw = env['VITE_HIPPO_CONTROL_PLANE_URL'];
   return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
