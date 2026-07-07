@@ -9,11 +9,11 @@
 
 ---
 
-This repository is a **fresh start** extracted from the `drylims` monorepo (2026-06).
+This repository is a **fresh start** extracted from the `DataHelix` monorepo (2026-06).
 It carries forward the reusable Hippo backend protocol (`src/aperture/backends/`) and the
 config-driven **portal** design — now framed as the **substrate** for the AI-native explorer
 ([`vision.md`](vision.md)), not the product itself. The earlier CLI-first v0.1 specification
-(`sec1`–`sec6`) and its implementation were intentionally left behind in `drylims` history and
+(`sec1`–`sec6`) and its implementation were intentionally left behind in `DataHelix` history and
 are **not** reproduced here.
 
 > **New here (or handing off)?** Start with [`../ONBOARDING.md`](../ONBOARDING.md) — the repo entry
@@ -113,7 +113,7 @@ next code artifact once the runtime/architecture ADRs settle.
 ## Security & Bridge (deferred — see ADR-0016)
 
 Authorization lives in **Bridge** (PEP/PDP), not Aperture or Hippo — full model in the
-platform spec (`drylims/platform/design/sec6_security_model.md`). Aperture is built and demoed
+platform spec (`DataHelix/platform/design/sec6_security_model.md`). Aperture is built and demoed
 **directly against Hippo** for now (ADR-0016); Bridge implementation is deferred. The
 capability-scoped client (ADR-0008) is the seam that makes this free: present from day one as
 a no-op/full-access pass-through locally, swapped for Bridge's enforcing client later with no

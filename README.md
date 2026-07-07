@@ -1,6 +1,6 @@
 # Aperture
 
-**AI-native data & workflow explorer for the [DataHelix](https://github.com/VA-NCPTSDBB-Bioinformatics/drylims) platform.**
+**AI-native data & workflow explorer for the [DataHelix](https://github.com/VA-NCPTSDBB-Bioinformatics/DataHelix) platform.**
 
 Aperture is an **LLM-native interaction layer** over the DataHelix **domain graph** — one typed
 knowledge graph whose runtime is [Hippo](https://github.com/BU-Neuromics/hippo) (the platform's
@@ -13,9 +13,9 @@ behavior is delivered through typed, sandboxed plugins/components rather than a 
 That validated, typed, declarative surface is exactly what makes natural-language control safe and
 reliable. See [`design/vision.md`](design/vision.md) for the north-star framing.
 
-> **Status: fresh start (v0.1).** This repository was seeded from the `drylims` monorepo,
+> **Status: fresh start (v0.1).** This repository was seeded from the `DataHelix` monorepo,
 > carrying forward the reusable Hippo backend protocol and the portal design. The earlier
-> CLI-first v0.1 implementation was intentionally left behind in `drylims` history and is
+> CLI-first v0.1 implementation was intentionally left behind in `DataHelix` history and is
 > not part of this repo. See [`design/vision.md`](design/vision.md) for the north-star vision
 > (AI-native explorer; portal = substrate), [`design/portal-vision-handoff.md`](design/portal-vision-handoff.md)
 > for the original portal brainstorm (historical context), and

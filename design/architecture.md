@@ -70,7 +70,7 @@ same GraphQL contract to Hippo directly (local, no auth) or Bridge (enforcing); 
 variable is the injected capability-scoped client (ADR-0008). **Bridge is deferred**
 (ADR-0016): Aperture is built/demoed against Hippo directly, with the capability-scoped client
 present as a no-op pass-through so Bridge later is a swap, not a retrofit. Full model:
-`drylims/platform/design/sec6_security_model.md`.
+`DataHelix/platform/design/sec6_security_model.md`.
 
 ## Sequencing
 
