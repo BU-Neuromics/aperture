@@ -47,7 +47,7 @@ possible surface.
   content to slots; a slot a layout lacks degrades honestly. The registry seam exists so more
   layouts drop in later without a refactor. *(ADR-0031)*
 - **0.2 — Endpoint config.** A single **active endpoint** (L2) resolved from env/config
-  (`VITE_HIPPO_GRAPHQL_URL`, mirroring the Python side's `BASS_*` convention). One config module;
+  (`VITE_HIPPO_GRAPHQL_URL`, mirroring the Python side's `DATAHELIX_*` convention). One config module;
   no multi-source. *(N5.2)*
 - **0.3 — GraphQL client + Layer-D adapter.** A urql client; a `HippoSource` adapter module that:
   (a) runs `__schema` introspection baseline + Hippo `hippoSchema`/`hippoEntityType` enrichment,

@@ -2,7 +2,7 @@
 
 **Status:** 🔵 North-star vision (2026-06-17). **Reframes** the "config-driven data portal"
 framing: the portal is the *substrate and MVP*, not the product. The product is an **LLM-native
-interaction layer** over the whole BASS platform. Honest companion to
+interaction layer** over the whole DataHelix platform. Honest companion to
 [`prior-art.md`](./prior-art.md), [`gen3-comparison.md`](./gen3-comparison.md), and
 [`../../proposals/bass-vs-gen3-strategic-review.md`](../../proposals/bass-vs-gen3-strategic-review.md)
 — it directly answers that review's crux #1 ("is the deliverable just a faceted explorer?":
@@ -63,7 +63,7 @@ safe* rather than a hallucination engine.
 
 ## Scope expansion: the conversational control plane for the whole platform
 
-Aperture is the LLM-native interface over **all three** BASS domains, via one uniform pattern —
+Aperture is the LLM-native interface over **all three** DataHelix domains, via one uniform pattern —
 each domain exposed as typed, declarative, dry-run-validatable, provenance-tracked artifacts the
 agent composes/modifies under the user's authority:
 

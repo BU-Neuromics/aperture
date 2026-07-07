@@ -1,8 +1,8 @@
 # Aperture
 
-**AI-native data & workflow explorer for the [BASS](https://github.com/VA-NCPTSDBB-Bioinformatics/drylims) platform.**
+**AI-native data & workflow explorer for the [DataHelix](https://github.com/VA-NCPTSDBB-Bioinformatics/drylims) platform.**
 
-Aperture is an **LLM-native interaction layer** over the BASS **domain graph** — one typed
+Aperture is an **LLM-native interaction layer** over the DataHelix **domain graph** — one typed
 knowledge graph whose runtime is [Hippo](https://github.com/BU-Neuromics/hippo) (the platform's
 LinkML runtime / structured domain graph, exposed over GraphQL + REST). Its differentiator is
 the *interaction paradigm*: exploring and transforming scientific data through natural language.
@@ -27,7 +27,7 @@ reliable. See [`design/vision.md`](design/vision.md) for the north-star framing.
   (`HippoSdkBackend` for in-process SDK use, `HippoRestBackend` for the REST API),
   selected via `create_backend(config)`.
 - `src/aperture/config/` — `ApertureConfig`, which resolves Hippo backend settings from
-  config files and `BASS_*` environment variables.
+  config files and `DATAHELIX_*` environment variables.
 - `design/` — the north-star vision (`vision.md`), ADRs, the portal design handoff (historical), and open questions.
 
 The portal application (config-in-Hippo, the agent-driven dev loop, the typed component
@@ -55,9 +55,9 @@ entities = backend.list_entities("Sample", limit=10)
 ```
 
 Configuration sources (lowest → highest precedence): built-in defaults → user config
-(`~/.bass/aperture.yaml`) → project config (`.bass/aperture.yaml`) → explicit config file
-→ `BASS_*` environment variables (`BASS_HIPPO_MODE`, `BASS_HIPPO_URL`,
-`BASS_HIPPO_CONFIG`, `BASS_LOG_LEVEL`).
+(`~/.datahelix/aperture.yaml`) → project config (`.datahelix/aperture.yaml`) → explicit config file
+→ `DATAHELIX_*` environment variables (`DATAHELIX_HIPPO_MODE`, `DATAHELIX_HIPPO_URL`,
+`DATAHELIX_HIPPO_CONFIG`, `DATAHELIX_LOG_LEVEL`).
 
 ## Development
 

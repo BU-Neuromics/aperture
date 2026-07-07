@@ -38,7 +38,7 @@ This doc is the working surface where requirements are drafted and locked step b
 ## Step 1 — Scope & Framing  *(locked 2026-06-25)*
 
 ### What Aperture is (current track)
-A generic, config-driven **data portal** over the BASS domain graph. Its first and primary
+A generic, config-driven **data portal** over the DataHelix domain graph. Its first and primary
 backend is **Hippo** (via GraphQL); **Bridge** provides auth/authorization when present. The
 source endpoint is **pluggable** (one active at a time, L2). The portal supports both **reading**
 (browse/search/detail) and **writing** (data entry / guided workflows), with validation enforced
