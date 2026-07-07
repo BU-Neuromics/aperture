@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCapabilities, useDataSource } from '../../data/DataSourceContext';
 import type { FacetModel } from '../../data/schemaModel';
+import { activeCollection } from '../../nav/config';
+import { useNavView } from '../../nav/NavConfigContext';
 import { useCollectionUrlState } from './urlState';
 import './collections.css';
 
@@ -14,13 +16,13 @@ import './collections.css';
  */
 export function FacetPanel() {
   const state = useDataSource();
+  const view = useNavView();
   const capabilities = useCapabilities();
   const { collection, filters, search, toggleFilter, setSearch, clearFilters } =
     useCollectionUrlState();
 
-  if (state.status !== 'ready') return null;
-  const collections = state.source.collections;
-  const active = collections.find((c) => c.id === collection) ?? collections[0];
+  if (state.status !== 'ready' || view == null) return null;
+  const active = activeCollection(view, collection);
   if (!active) return null;
 
   const searchable = capabilities.fullTextSearch && Boolean(active.args.search);

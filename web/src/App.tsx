@@ -10,6 +10,9 @@ import { SavedViewsProvider } from './control/SavedViewsContext';
 import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
+import type { ResolvedNavConfig } from './nav/config';
+import { resolveNavConfig } from './nav/config';
+import { NavConfigProvider } from './nav/NavConfigContext';
 import type { ResolvedWorkflows } from './workflows/config';
 import { resolveWorkflows } from './workflows/config';
 import { WorkflowsProvider } from './workflows/WorkflowsContext';
@@ -26,6 +29,7 @@ interface AppProps {
   endpoint?: EndpointConfig;
   clientFactory?: (url: string) => ScopedDataClient;
   workflows?: ResolvedWorkflows;
+  nav?: ResolvedNavConfig;
   controlUrl?: string | null;
 }
 
@@ -33,6 +37,7 @@ export function App({
   endpoint = resolveEndpoint(),
   clientFactory,
   workflows = resolveWorkflows(),
+  nav = resolveNavConfig(),
   controlUrl,
 }: AppProps) {
   return (
@@ -40,16 +45,18 @@ export function App({
       <ControlPlaneProvider controlUrl={controlUrl} clientFactory={clientFactory}>
         <SavedViewsProvider>
           <WorkflowsProvider value={workflows}>
-            <AppShell
-              config={shellConfig}
-              slots={{
-                header: <Brand />,
-                primaryNav: <CollectionsNav />,
-                main: <CollectionMain />,
-                inspector: <FacetPanel />,
-                footer: <ControlPlaneStatus />,
-              }}
-            />
+            <NavConfigProvider value={nav}>
+              <AppShell
+                config={shellConfig}
+                slots={{
+                  header: <Brand />,
+                  primaryNav: <CollectionsNav />,
+                  main: <CollectionMain />,
+                  inspector: <FacetPanel />,
+                  footer: <ControlPlaneStatus />,
+                }}
+              />
+            </NavConfigProvider>
           </WorkflowsProvider>
         </SavedViewsProvider>
       </ControlPlaneProvider>

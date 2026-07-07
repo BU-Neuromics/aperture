@@ -47,6 +47,35 @@ also put the variable in an untracked `web/.env.local`.
 
 CI runs typecheck + lint + test + build on changes under `web/` (`.github/workflows/web.yml`).
 
+## Docker image (issue #22, DataHelix P1.4)
+
+`web/Dockerfile` builds the SPA and serves it with nginx. Pushing a `vX.Y.Z` tag publishes a
+digest-addressed image at `ghcr.io/bu-neuromics/aperture` with an `image-digest.json` release
+asset for the DataHelix certification ledger (`.github/workflows/release.yml`; the tag must
+match `web/package.json`'s version).
+
+The published image is **deployment-agnostic**: endpoint config is injected at container
+start, not baked at build. The entrypoint (`docker/40-aperture-config.sh`) writes recognized
+env vars (`VITE_HIPPO_GRAPHQL_URL`, `VITE_HIPPO_CONTROL_PLANE_URL`, `VITE_WORKFLOWS`,
+`VITE_NAV`) into `config.js`, which `index.html` loads before the bundle
+(`src/config/runtime.ts`); runtime values override build-time ones.
+
+```bash
+docker build -t aperture-web web/
+docker run -p 5173:80 -e VITE_HIPPO_GRAPHQL_URL=http://hippo:8001/graphql aperture-web
+```
+
+## Nav composition config (issue #18, R3.1)
+
+The nav derives every collection from introspection (derive-all), then applies a **nav
+config**: a control-plane `config/nav` document (versioned envelope, like `config/workflows`),
+falling back to the `VITE_NAV` env var. The config is data — `{ "order": [...], "labels":
+{id: label}, "hide": [...], "defaultCollection": id }` (`src/nav/config.ts`). Without config,
+the only change from pure derive-all is that Aperture's own control-plane document collection
+is hidden from browse; listing it in `order` opts it back in. Hidden collections stay
+deep-linkable (hidden ≠ inaccessible), and config referencing unknown collection ids is
+surfaced in the nav, never swallowed (ADR-0029).
+
 ## Layout (current)
 
 ```

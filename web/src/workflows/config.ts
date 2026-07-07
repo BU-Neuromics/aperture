@@ -10,6 +10,8 @@
  * default below. Phase 4 moves this into the control-plane store as
  * config-as-data proper (ADR-0003/0004).
  */
+import { runtimeEnv } from '../config/runtime';
+
 export interface WorkflowBinding {
   /** Field on this step's entity that references the prior step's entity. */
   field: string;
@@ -102,7 +104,7 @@ export interface ResolvedWorkflows {
   error?: string;
 }
 
-export function resolveWorkflows(env: Record<string, unknown> = import.meta.env): ResolvedWorkflows {
+export function resolveWorkflows(env: Record<string, unknown> = runtimeEnv()): ResolvedWorkflows {
   const raw = env['VITE_WORKFLOWS'];
   if (typeof raw !== 'string' || raw.trim() === '') return { workflows: DEFAULT_WORKFLOWS };
   try {

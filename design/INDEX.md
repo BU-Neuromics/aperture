@@ -85,6 +85,7 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0031](./decisions/ADR-0031-app-shell-layout-library.md) | App shell = library of fixed layouts selected by config; typed named-slot contract | ✅ Accepted | layout design session |
 | [0032](./decisions/ADR-0032-control-plane-document-store.md) | Control-plane state = versioned `{kind,name,payload}` documents on a structurally-recognized Hippo collection; honest local fallback; retire-not-delete | ✅ Accepted | Phase 4 (PR #14); refines ADR-0017 |
 | [0033](./decisions/ADR-0033-workflow-config-and-engine.md) | Workflow config = steps-as-data interpreted by a pure reducer engine; the draft is the serialized run state | ✅ Accepted | Phase 3 (PR #13); implements ADR-0028 W4.6/W4.8 |
+| [0034](./decisions/ADR-0034-spa-image-runtime-config.md) | SPA image is deployment-agnostic: one digest-addressed artifact, `VITE_*` config injected into `config.js` at container start | ✅ Accepted | issue #22 (DataHelix P1.4); DataHelix ADR-0001 |
 
 ## Decision Queue (open — resolve in dependency order)
 
