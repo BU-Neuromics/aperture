@@ -83,6 +83,8 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0029](./decisions/ADR-0029-capability-gated-honest-degradation.md) | Capability-gated UI, honest degradation (faceting/aggregation/export) | ✅ Accepted | portal-requirements L7/L8 |
 | [0030](./decisions/ADR-0030-frontend-stack.md) | Frontend stack: TS SPA (React + Vite + urql; TanStack Table + nuqs), in-repo, talks to Hippo directly | ✅ Accepted | library-survey; N5.9 |
 | [0031](./decisions/ADR-0031-app-shell-layout-library.md) | App shell = library of fixed layouts selected by config; typed named-slot contract | ✅ Accepted | layout design session |
+| [0032](./decisions/ADR-0032-control-plane-document-store.md) | Control-plane state = versioned `{kind,name,payload}` documents on a structurally-recognized Hippo collection; honest local fallback; retire-not-delete | ✅ Accepted | Phase 4 (PR #14); refines ADR-0017 |
+| [0033](./decisions/ADR-0033-workflow-config-and-engine.md) | Workflow config = steps-as-data interpreted by a pure reducer engine; the draft is the serialized run state | ✅ Accepted | Phase 3 (PR #13); implements ADR-0028 W4.6/W4.8 |
 
 ## Decision Queue (open — resolve in dependency order)
 
