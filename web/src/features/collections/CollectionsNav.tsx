@@ -1,6 +1,7 @@
 import { useSavedViews } from '../../control/SavedViewsContext';
 import { useDataSource } from '../../data/DataSourceContext';
 import type { CollectionModel } from '../../data/schemaModel';
+import { useNavView } from '../../nav/NavConfigContext';
 import { schemaFingerprint, workflowAvailability } from '../../workflows/engine';
 import { useWorkflows } from '../../workflows/WorkflowsContext';
 import { useCollectionUrlState } from './urlState';
@@ -14,18 +15,19 @@ function initialFor(label: string): string {
 }
 
 /**
- * Step 0.5 — the collections nav, derived from endpoint introspection
- * (derive-all; config reorder/relabel/hide is later — R3.1). Bound into the
- * layout's `primaryNav` slot.
+ * Step 0.5 — the collections nav, derived from endpoint introspection with
+ * the `config/nav` overrides applied (derive-all + reorder/relabel/hide,
+ * R3.1). Bound into the layout's `primaryNav` slot.
  */
 export function CollectionsNav() {
   const state = useDataSource();
+  const view = useNavView();
   const { collection, workflow, selectCollection, openWorkflow, applyView } =
     useCollectionUrlState();
   const { workflows, error: workflowsError } = useWorkflows();
   const savedViews = useSavedViews();
 
-  if (state.status !== 'ready') {
+  if (state.status !== 'ready' || view == null) {
     return (
       <>
         <div className="nav-section-label">Collections</div>
@@ -36,14 +38,14 @@ export function CollectionsNav() {
     );
   }
 
-  const collections = state.source.collections;
-  const active = workflow == null ? (collection ?? collections[0]?.id) : null;
+  const active = workflow == null ? (collection ?? view.defaultId) : null;
 
   return (
     <>
       <div className="nav-section-label">Collections</div>
+      {view.error && <div className="nav-status">{view.error}</div>}
       <div className="nav-list">
-        {collections.map((c: CollectionModel) => (
+        {view.visible.map((c: CollectionModel) => (
           <button
             key={c.id}
             type="button"
