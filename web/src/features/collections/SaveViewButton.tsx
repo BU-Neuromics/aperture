@@ -55,7 +55,14 @@ export function SaveViewButton({
             {note}
           </span>
         )}
-        <button type="button" className="action-button" onClick={() => setOpen(true)}>
+        {/* data-testid attributes here and in the open form are the stable
+            certification contract (datahelix golden-path suite; #15). */}
+        <button
+          type="button"
+          className="action-button"
+          data-testid="save-view"
+          onClick={() => setOpen(true)}
+        >
           Save view
         </button>
       </>
@@ -69,6 +76,7 @@ export function SaveViewButton({
         type="text"
         className="form-input save-view-input"
         placeholder="View name…"
+        data-testid="save-view-name"
         aria-label="View name"
         value={name}
         autoFocus
@@ -81,6 +89,7 @@ export function SaveViewButton({
       <button
         type="button"
         className="action-button action-primary"
+        data-testid="save-view-confirm"
         disabled={busy || name.trim() === ''}
         onClick={() => void submit()}
       >

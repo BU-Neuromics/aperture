@@ -133,7 +133,14 @@ export function EntityForm({
           <p className="main-panel-detail">Loading record…</p>
         </div>
       ) : (
-        <form className="entity-form" onSubmit={(e) => void submit(e)} noValidate>
+        // data-testid attributes are the stable certification contract
+        // (datahelix golden-path suite; #15) — keep them.
+        <form
+          className="entity-form"
+          data-testid="entity-form"
+          onSubmit={(e) => void submit(e)}
+          noValidate
+        >
           {serverError && (
             <div className="form-server-error" role="alert">
               <strong>The server rejected the submission.</strong> {serverError}
@@ -150,7 +157,12 @@ export function EntityForm({
             />
           ))}
           <div className="form-actions">
-            <button type="submit" className="form-submit" disabled={phase === 'submitting'}>
+            <button
+              type="submit"
+              className="form-submit"
+              data-testid="form-submit"
+              disabled={phase === 'submitting'}
+            >
               {phase === 'submitting' ? 'Submitting…' : mode === 'new' ? 'Create' : 'Save changes'}
             </button>
             <button type="button" className="state-button" onClick={closeForm}>

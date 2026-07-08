@@ -70,6 +70,8 @@ export function CollectionsNav() {
                   key={view.name}
                   type="button"
                   className="nav-item"
+                  // Stable certification contract (datahelix golden-path suite; #15).
+                  data-testid={`saved-view-${view.name}`}
                   title={
                     stale
                       ? `${view.name} — saved under an older schema; review filters after opening`

@@ -114,7 +114,9 @@ export function CollectionTable({
 
       <div className="collection-card">
         <div className="collection-scroll">
-          <table className="collection-table">
+          {/* data-testid attributes here and below are the stable certification
+              contract (datahelix golden-path suite; #15) — keep them. */}
+          <table className="collection-table" data-testid="collection-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -150,7 +152,7 @@ export function CollectionTable({
                 ))}
               {result.status === 'ready' &&
                 table.getRowModel().rows.map((row) => (
-                  <tr key={row.id}>
+                  <tr key={row.id} data-testid="collection-row">
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}

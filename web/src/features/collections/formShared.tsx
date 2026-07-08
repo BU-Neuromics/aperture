@@ -72,12 +72,15 @@ export function FieldWidget({
   source: HippoSource;
   onChange: (value: string | boolean) => void;
 }) {
+  // `id` doubles as the stable certification testid (field-<input name>,
+  // datahelix golden-path suite; #15) — keep the data-testid attributes.
   const id = `field-${field.name}`;
   switch (field.widget) {
     case 'checkbox':
       return (
         <input
           id={id}
+          data-testid={id}
           type="checkbox"
           checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
@@ -87,6 +90,7 @@ export function FieldWidget({
       return (
         <select
           id={id}
+          data-testid={id}
           className="form-input"
           value={String(value)}
           onChange={(e) => onChange(e.target.value)}
@@ -115,6 +119,7 @@ export function FieldWidget({
       return (
         <input
           id={id}
+          data-testid={id}
           type={field.widget === 'number' ? 'number' : field.widget === 'date' ? 'date' : 'text'}
           className="form-input"
           value={String(value)}

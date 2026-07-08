@@ -32,7 +32,9 @@ export function FacetPanel() {
   const activeCount = Object.keys(filters).length + (search ? 1 : 0);
 
   return (
-    <div className="facet-panel">
+    // data-testid attributes here and on the options below are the stable
+    // certification contract (datahelix golden-path suite; #15) — keep them.
+    <div className="facet-panel" data-testid="facet-panel">
       <div className="facet-panel-header">
         <div className="facet-panel-title-row">
           <span className="facet-panel-title">Filters</span>
@@ -120,6 +122,9 @@ function FacetGroup({
               key={String(option.value)}
               type="button"
               className="facet-option"
+              // Keyed by the filter FIELD identifier (the LinkML slot name the
+              // server filters on) + the option value, e.g. facet-option-in_print-false.
+              data-testid={`facet-option-${facet.field}-${String(option.value)}`}
               aria-pressed={selected}
               onClick={() => onToggle(option.value)}
             >
@@ -164,6 +169,7 @@ function RefFacet({
         type="text"
         className="facet-search-input"
         placeholder="Filter by id…"
+        data-testid={`facet-option-${facet.field}`}
         aria-label={`Filter by ${facet.label}`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
