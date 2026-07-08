@@ -51,11 +51,11 @@ Every agent interaction involves **two distinct credentials** (ADR-0018, ADR-001
 
 | Credential | Scope | Owner | Role |
 |---|---|---|---|
-| **BASS user session** | per-viewer, Bridge-enforced | the user | the agent's *hands* — every effect rides it |
+| **DataHelix user session** | per-viewer, Bridge-enforced | the user | the agent's *hands* — every effect rides it |
 | **LLM provider key** | deployment/admin config | admin-assigned (ADR-0019) | the agent's *brain* — reasoning only |
 
 The agent reasons on the provider key and *acts* on the user session. The provider key
-confers **no** BASS authority; it is never an enforcement backdoor.
+confers **no** DataHelix authority; it is never an enforcement backdoor.
 
 ## Decisions that formalize the actor tensions
 

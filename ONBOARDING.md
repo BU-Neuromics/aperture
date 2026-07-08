@@ -24,8 +24,8 @@ as versioned documents on a LinkML-on-Hippo store (co-located by default,
 
 | # | What | Depends on |
 |---|---|---|
-| [#15](https://github.com/BU-Neuromics/aperture/issues/15) | **Live `hippo serve` integration** — ✅ all assumed GraphQL shapes confirmed/reconciled against live hippo **0.10.3** (read + write; see below); remaining: verify-skill drives against a seeded recipe | — |
-| [#16](https://github.com/BU-Neuromics/aperture/issues/16) | Publish the Aperture→Hippo **contract file** (runs in hippo CI; feeds the drylims certified-frontier ledger) | #15 |
+| [#15](https://github.com/BU-Neuromics/aperture/issues/15) | ⚠️ **Live `hippo serve` integration** — confirm the four assumed GraphQL shapes (the v1.0 gate) | — |
+| [#16](https://github.com/BU-Neuromics/aperture/issues/16) | Publish the Aperture→Hippo **contract file** (runs in hippo CI; feeds the DataHelix certified-frontier ledger) | #15 |
 | [#17](https://github.com/BU-Neuromics/aperture/issues/17) | **Control-plane recipe** (the ApertureDocument type as a Hippo recipe) | #15 |
 | [#18](https://github.com/BU-Neuromics/aperture/issues/18) | **Nav/composition overrides** — derive-all + reorder/relabel/hide as config-as-data (R3.1) | — |
 | [#19](https://github.com/BU-Neuromics/aperture/issues/19) | **Write-loop completeness** — W4.4 availability/supersede affordances, field clearing, saved-view removal | #15 |
@@ -54,7 +54,7 @@ issue comments and the committed introspection capture
 
 Agentic surfaces (ADR-0026) remain deferred post-MVP, unfiled until scoped. The
 cross-component integration-testing strategy (certified-frontier ledger, contract tests,
-backport workflow) is specified in a handoff to the **drylims** monorepo (2026-07-07);
+backport workflow) is specified in a handoff to the **DataHelix** monorepo (2026-07-07);
 aperture's side of it is #16.
 
 ---

@@ -1,3 +1,3 @@
-"""BASS Aperture - Interface layer for the BASS platform."""
+"""DataHelix Aperture - Interface layer for the DataHelix platform."""
 
 __version__ = "0.1.0"

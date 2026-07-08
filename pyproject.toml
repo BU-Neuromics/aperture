@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "bass-aperture"
+name = "datahelix-aperture"
 version = "0.1.0"
-description = "BASS Aperture - AI-native data & workflow explorer over the BASS domain graph (Hippo)"
+description = "DataHelix Aperture - AI-native data & workflow explorer over the DataHelix domain graph (Hippo)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -16,10 +16,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-local = ["bass-hippo"]
+local = ["hippo"]
 dev = ["pytest>=7.0", "pytest-cov"]
 
-# NOTE: no [project.scripts] `bass` entry — the CLI is superseded.
+# NOTE: no [project.scripts] `datahelix` entry — the CLI is superseded.
 # Web/portal + component-runtime deps will be added as the portal is built.
 
 [tool.hatch.build.targets.wheel]

@@ -2,18 +2,18 @@
 ## Design Index
 
 **Codename:** Aperture
-**Component:** Interface Layer — AI-native data & workflow explorer over the BASS domain graph
+**Component:** Interface Layer — AI-native data & workflow explorer over the DataHelix domain graph
 (the config-driven portal is its substrate / MVP, not the product). See
 [`vision.md`](vision.md).
 **Version:** 0.1 — Portal substrate fresh start
 
 ---
 
-This repository is a **fresh start** extracted from the `drylims` monorepo (2026-06).
+This repository is a **fresh start** extracted from the `DataHelix` monorepo (2026-06).
 It carries forward the reusable Hippo backend protocol (`src/aperture/backends/`) and the
 config-driven **portal** design — now framed as the **substrate** for the AI-native explorer
 ([`vision.md`](vision.md)), not the product itself. The earlier CLI-first v0.1 specification
-(`sec1`–`sec6`) and its implementation were intentionally left behind in `drylims` history and
+(`sec1`–`sec6`) and its implementation were intentionally left behind in `DataHelix` history and
 are **not** reproduced here.
 
 > **New here (or handing off)?** Start with [`../ONBOARDING.md`](../ONBOARDING.md) — the repo entry
@@ -28,7 +28,7 @@ are **not** reproduced here.
 | `actors.md` | Actors & personas (orientation) | 🟢 Orientation | The cast Aperture is designed for — researcher, coding agent, admin, schema author; the two-credentials model. Links each tension to its ADR. |
 | `vision.md` | North-star vision (AI-native explorer) | 🔵 Vision | Reframes Aperture from config-driven portal → LLM-native interaction layer over Hippo/Cappella/Canon; the declarative substrate is what makes natural-language control safe. Answers the strategic review's crux #1; sets the agentic keystone probe. |
 | `prior-art.md` | Prior-art survey (2026-06-16) | 🟢 Research | Verified buy-vs-build survey: greenfield verdict; Gen3 + Vega-Lite as prototype references; design lessons mapped to our decisions; the unproven differentiators (capability-scoped client, agent-editable config). |
-| `gen3-comparison.md` | Gen3 deep comparison | 🟢 Research | Service-by-service map of Gen3 to the whole BASS platform (fence+arborist=Bridge, Peregrine=Hippo GraphQL, dictionary=LinkML); explorerConfig ≈ our core-loop config; the two-tier graph+index lesson that answers our aggregation gap. |
+| `gen3-comparison.md` | Gen3 deep comparison | 🟢 Research | Service-by-service map of Gen3 to the whole DataHelix platform (fence+arborist=Bridge, Peregrine=Hippo GraphQL, dictionary=LinkML); explorerConfig ≈ our core-loop config; the two-tier graph+index lesson that answers our aggregation gap. |
 | `library-survey.md` | Implementation library survey (2026-06-25) | 🟢 Research | Package-level buy-vs-build for the complex components (vs. `prior-art.md`'s whole-product altitude). Leads: JSONForms (wizard-as-data), XState (engine, not config), Serverless Workflow DSL (steal the model), TanStack Table, nuqs, FINOS Perspective; runtime introspection-binding confirmed greenfield. Flags open angles: saga/W4.7, durable engines, admin/low-code, sandbox runtime. |
 | `implementation-plan.md` | Implementation plan (working) | 🟠 Working | Sequenced MVP build plan grounded in the ADRs. Phasing: 0 walking-skeleton (current) → read loop → write loop → Tier-1 workflow → control plane. |
 | `claude-design-brief.md` | Claude Design brief (working) | 🟠 Working | Ready-to-paste prompt for claude.ai/design to mock the skeleton UI + the ADR-0031 layout library; grounded in ADR-0002/0029/0030/0031 + core-loop. Feeds Phase 0. |
@@ -114,7 +114,7 @@ next code artifact once the runtime/architecture ADRs settle.
 ## Security & Bridge (deferred — see ADR-0016)
 
 Authorization lives in **Bridge** (PEP/PDP), not Aperture or Hippo — full model in the
-platform spec (`drylims/platform/design/sec6_security_model.md`). Aperture is built and demoed
+platform spec (`DataHelix/platform/design/sec6_security_model.md`). Aperture is built and demoed
 **directly against Hippo** for now (ADR-0016); Bridge implementation is deferred. The
 capability-scoped client (ADR-0008) is the seam that makes this free: present from day one as
 a no-op/full-access pass-through locally, swapped for Bridge's enforcing client later with no

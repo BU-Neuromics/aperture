@@ -22,15 +22,15 @@ def test_config_defaults():
 
 
 def test_env_override(monkeypatch):
-    monkeypatch.setenv("BASS_HIPPO_MODE", "rest")
-    monkeypatch.setenv("BASS_HIPPO_URL", "http://example.test:9000")
+    monkeypatch.setenv("DATAHELIX_HIPPO_MODE", "rest")
+    monkeypatch.setenv("DATAHELIX_HIPPO_URL", "http://example.test:9000")
     config = ApertureConfig()
     assert config.hippo_mode == "rest"
     assert config.hippo_url == "http://example.test:9000"
 
 
 def test_factory_rest_backend(monkeypatch):
-    monkeypatch.setenv("BASS_HIPPO_MODE", "rest")
+    monkeypatch.setenv("DATAHELIX_HIPPO_MODE", "rest")
     backend = create_backend(ApertureConfig())
     assert isinstance(backend, HippoRestBackend)
     # Structural conformance to the protocol.
@@ -38,7 +38,7 @@ def test_factory_rest_backend(monkeypatch):
 
 
 def test_factory_unknown_mode(monkeypatch):
-    monkeypatch.setenv("BASS_HIPPO_MODE", "bogus")
+    monkeypatch.setenv("DATAHELIX_HIPPO_MODE", "bogus")
     with pytest.raises(ValueError, match="Unknown hippo.mode"):
         create_backend(ApertureConfig())
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Component Overview
 
-**Aperture** is the Interface Layer for the BASS platform — an **AI-native data & workflow
+**Aperture** is the Interface Layer for the DataHelix platform — an **AI-native data & workflow
 explorer** over the platform's domain graph; the config-driven **portal** is its substrate / MVP,
 not the product (see `design/vision.md`). See the root `../CLAUDE.md` for repo-wide conventions.
 
