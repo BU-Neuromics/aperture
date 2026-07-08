@@ -1,4 +1,4 @@
-# Aperture — AI-Native Data & Workflow Explorer
+# Aperture — Config-Driven Rendering Portal
 ## Design Index
 
 **Codename:** Aperture
@@ -91,11 +91,14 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 
 Per `portal-open-questions.md`, resolve **ADR-0010 → 0011 → 0012 → 0013**; ADR-0014 follows
 0011 (the runtime/Pyodide weight changes the SSR-vs-SPA tradeoff), and ADR-0015 follows
-0010/0014. The keystone is **ADR-0010**: its survival-curve probe (can a KM-curve be
-expressed as catalog primitives + a stratifying query, or does it need escape-hatch
-rendering?) validates or breaks the whole chain.
+0010/0014. ADR-0010 (the typed view vocabulary) is what the platform **View Contract**
+(`drylims:platform/design/view-contract.md`) now absorbs as a shared rendering standard.
 
-**Next session — first action:** run the ADR-0010 survival-curve probe.
+> **Relocated to Reel (2026-06-22 split).** The agentic **keystone probe** — *"can an LLM drive a
+> typed declarative artifact through a validator to a correct change?"* — and its survival-curve
+> exemplar now belong to **Reel** (`drylims:platform/design/decisions/ADR-0001`); they are no
+> longer Aperture's gating "next action." Aperture's queue is the portal-rendering decisions
+> above.
 
 ## Building against Hippo (current surface)
 
