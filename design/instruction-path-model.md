@@ -3,7 +3,7 @@
 **Status:** 🟠 Working design (2026-06-17). The formal model **underneath**
 [`prefab/data-stories.md`](./prefab/data-stories.md): what a "data story" *is* as a data
 structure, independent of any particular UI. Where `data-stories.md` is the keystone MVP
-(linear, conversational, Hippo-only), this doc is the general structure that MVP is a narrow
+(linear, conversational, Mosaic-only), this doc is the general structure that MVP is a narrow
 slice of. Companion to [`vision.md`](./vision.md) and the platform
 [domain-graph model](../../platform/design/domain-graph.md).
 
@@ -33,7 +33,7 @@ artifacts = the renderings produced along the way
 | **`Instruction`** | A first-class, **source-tagged** event (a chat turn, a UI event, an agent action). Expands to one or more nested, sequential typed **ops** (think tool calls). The unit of rewind. |
 | **`State`** | A typed **subgraph specification** — the selection/predicates that *denote* a subgraph of `Entity`/`Relationship` instances (see §2). Intensional, data-light, replayable. |
 | **`Artifact`** | The **materialization** of work as-of the story's timestamp: an evaluated subgraph (entities + relationships) or a rendered view primitive (table, chart, summary). Immutable, provenance-stamped, cached. |
-| **`DataStory`** | The persisted container: an ordered/linked set of `Instruction`s, a single as-of watermark, and the materialized `Artifact`s. Itself a LinkML artifact stored in Hippo (ADR-0003). |
+| **`DataStory`** | The persisted container: an ordered/linked set of `Instruction`s, a single as-of watermark, and the materialized `Artifact`s. Itself a LinkML artifact stored in Mosaic (ADR-0003). |
 
 This formalizes `data-stories.md`'s "a data story = a sequence of cohort-states + transforms,
 narrated": the **transforms** are promoted to first-class typed `Instruction`s; the
@@ -54,7 +54,7 @@ underlying subgraph stays generic. The grain-agnostic, re-rootable property from
 
 **Intensional, not extensional (the load-bearing distinction).** A State is stored as the
 **specification** that produces the subgraph (the predicates/selections over types and
-relationships), *not* as the materialized objects. Evaluating that spec against Hippo as-of the
+relationships), *not* as the materialized objects. Evaluating that spec against Mosaic as-of the
 story's watermark (§5) yields the concrete subgraph, which is captured as an `Artifact`. Keeping
 State intensional is what preserves reproducibility and the "re-runnable" property and keeps
 stories small.
@@ -131,9 +131,9 @@ adding the set-op op type*, never a migration.
 ## 5. Reproducibility: one as-of watermark per story
 
 **A data story run today must tell the same story whenever it is rerun** — unless the user
-explicitly asks for new data. We get this from Hippo's existing provenance substrate:
+explicitly asks for new data. We get this from Mosaic's existing provenance substrate:
 
-- Hippo has **no hard deletes**; every change is an append-only provenance event with a
+- Mosaic (formerly Hippo) has **no hard deletes**; every change is an append-only provenance event with a
   `state_snapshot` and `previous_state_hash`; `client.state_at(entity_id, timestamp)` already
   reconstructs an entity as-of T; even `schema_version` is derived from the provenance log
   (`hippo/docs/data-model.md`). So **both the data and the type system are recoverable as-of T.**
@@ -147,7 +147,7 @@ explicitly asks for new data. We get this from Hippo's existing provenance subst
 
 **Content-addressed nodes → free memoized recompute.** A node's identity is
 `hash(op, parent-hashes, watermark)`. Editing an instruction recomputes only the reachable
-descendants whose hash changed; unchanged branches are reused. This is the same idea Hippo
+descendants whose hash changed; unchanged branches are reused. This is the same idea Mosaic
 already uses (`previous_state_hash`) — the instruction graph and the provenance graph are the
 same shape for the same reason.
 
@@ -193,7 +193,7 @@ Rungs 2–3 are additive UI + validator relaxations, not rewrites.
 
 ## 8. LinkML sketch (illustrative)
 
-Persists as config-in-Hippo (ADR-0003); this is a shape sketch, not the final schema.
+Persists as config-in-Mosaic (ADR-0003); this is a shape sketch, not the final schema.
 
 ```yaml
 classes:
@@ -218,7 +218,7 @@ slots:
 
 ## 9. New platform requirement this surfaces
 
-Hippo today exposes as-of reconstruction **per entity** (`state_at`). A data story needs
+Mosaic today exposes as-of reconstruction **per entity** (`state_at`). A data story needs
 **graph-level / query-spanning as-of**: "evaluate this whole subgraph query as the graph stood
 at T," resolving every entity, relationship, *and* schema version to T transparently — and over
 the transport Aperture uses (not yet on the GraphQL surface, which is equality-filter +
@@ -241,8 +241,8 @@ the still-`Proposed` keystone ADR-0010 (ratify after the keystone probe runs):
   general `parents`-list schema now, linear-only validator in v1 (§4 discipline).
 - **D-5 → [ADR-0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md)** —
   recompute-with-suspend (not discard) on mid-path edit (§6).
-- **D-4 — Hippo graph-level as-of query** (§9). → a **Hippo** requirement/spec item, not an
-  Aperture ADR; referenced by ADR-0023, to be filed against Hippo.
+- **D-4 — Mosaic graph-level as-of query** (§9). → a **Mosaic** requirement/spec item, not an
+  Aperture ADR; referenced by ADR-0023, to be filed against Mosaic.
 
 ## 11. Explicitly deferred
 

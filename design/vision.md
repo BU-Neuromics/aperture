@@ -10,7 +10,7 @@ interaction layer** over the whole DataHelix platform. Honest companion to
 
 > **Portal-first MVP (ADR-0026).** This is the **north star**, not the MVP scope. The **MVP is the
 > config-driven portal** — read loop + write loop (forms + one guided workflow) over a single
-> Hippo endpoint (see `portal-requirements.md`). The agentic surfaces described below
+> Mosaic (formerly Hippo) endpoint (see `portal-requirements.md`). The agentic surfaces described below
 > (in-app agent/chat, data-stories, per-user keys, conversations-as-provenance) and the in-app
 > schema editor are **deferred from the MVP** (ADR-0026; schema editor → [aperture#2](https://github.com/BU-Neuromics/aperture/issues/2)).
 > The substrate invariants are preserved so this vision is an additive future, not a rewrite.
@@ -33,9 +33,9 @@ we are building a conversational interface for *exploring and transforming* scie
 
 Aperture drives the platform's **domain graph** (see
 [`platform/design/domain-graph.md`](../../platform/design/domain-graph.md)): one typed knowledge
-graph whose type system is the LinkML schema and whose runtime is Hippo — *not* a "metadata
+graph whose type system is the LinkML schema and whose runtime is Mosaic — *not* a "metadata
 store." Every query returns a **knowledge subgraph**; "metadata vs. data" is a query-relative
-*role*, not a storage category. Structured records live in Hippo; bulk payloads live in files
+*role*, not a storage category. Structured records live in Mosaic; bulk payloads live in files
 (Canon/Cappella) and enter the graph as **induced subgraphs unioned at query time** (OBDA/VKG).
 This is why an LLM can drive it coherently: there is *one* uniform, typed graph surface, and the
 substrate mechanics are hidden behind it.
@@ -67,7 +67,7 @@ Aperture is the LLM-native interface over **all three** DataHelix domains, via o
 each domain exposed as typed, declarative, dry-run-validatable, provenance-tracked artifacts the
 agent composes/modifies under the user's authority:
 
-- **Hippo (metadata):** browse, faceted explore, build views, compose data stories.
+- **Mosaic (metadata):** browse, faceted explore, build views, compose data stories.
 - **Cappella (workflows):** compose and modify pipelines by natural language.
 - **Canon (files / reference data):** resolve and bind real tools/inputs into those workflows.
 
@@ -94,7 +94,7 @@ bets the strategic review flagged ("zero verified prior art" for agent-editable 
 a harder one (agentic workflow editing with correctness guarantees). So the review's discipline
 matters **more**, not less:
 
-- **Keep Hippo; do not adopt Gen3 wholesale** — unchanged.
+- **Keep Mosaic; do not adopt Gen3 wholesale** — unchanged.
 - **The keystone probe reframes.** It is no longer "derived binding for a portal." It is: *can an
   LLM reliably drive a typed declarative artifact through a validator to a correct change?* That
   is the whole thesis in one testable question.
@@ -110,7 +110,7 @@ matters **more**, not less:
 ## New platform invariant this implies
 
 Every domain Aperture drives must expose a **typed, introspectable, dry-run-validatable,
-provenance-tracked declarative representation.** Hippo has this (LinkML + GraphQL + PROV-O).
+provenance-tracked declarative representation.** Mosaic has this (LinkML + GraphQL + PROV-O).
 **Cappella and Canon must grow it** for the workflow/file domains — this becomes a first-class
 requirement on those components, not an Aperture-only concern.
 

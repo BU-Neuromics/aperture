@@ -12,12 +12,12 @@ class HippoSdkBackend:
 
     def __init__(self, config_path: str = "./hippo.yaml") -> None:
         # Lazy import to avoid mandatory dependency
-        from hippo import HippoClient
-        from hippo.config.loader import load_hippo_config
+        from mosaic import MosaicClient
+        from mosaic.config.loader import load_mosaic_config
 
-        hippo_config = load_hippo_config(Path(config_path))
-        self._client = HippoClient(
-            schemas=hippo_config.schemas if hasattr(hippo_config, "schemas") else None,
+        mosaic_config = load_mosaic_config(Path(config_path))
+        self._client = MosaicClient(
+            schemas=mosaic_config.schemas if hasattr(mosaic_config, "schemas") else None,
             storage=None,
         )
         self._config_path = config_path
