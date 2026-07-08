@@ -312,9 +312,9 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     expect(caps.fullTextSearch).toBe(true);
     expect(caps.entityHistory).toBe(true);
     expect(caps.sort).toBe(false); // still unadvertised — stays off
-    // ingestBatch drifted from the assumed {ref,type,data} operation shape
-    // (no local-handle field) — the batch surface gates off, never guesses.
-    expect(caps.batchWrite).toBe(false);
+    // The real ingestBatch shape ({entityType, data} entities + dryRun) is
+    // now the derived contract — the batch surface gates ON (#15 write path).
+    expect(caps.batchWrite).toBe(true);
   });
 
   it('gates everything off for a bare endpoint', () => {

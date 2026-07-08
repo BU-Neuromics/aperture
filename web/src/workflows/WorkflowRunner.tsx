@@ -34,6 +34,12 @@ import './workflows.css';
  * staged graph so far (continuous validation), and the review screen runs the
  * final whole-set dry-run before ONE atomic commit. No partial run is ever
  * visible; a rejected batch commits nothing.
+ *
+ * Live semantics (#15, hippo 0.10.3): `ingestBatch(dryRun: true)` is
+ * permissive on partial sets (never a spurious failure), so the continuous
+ * dry-run needs no per-step softening; commit-time constraint violations
+ * (FK/NOT NULL) roll the whole batch back and surface as a thrown transport
+ * error, displayed above the review screen.
  */
 export function WorkflowRunner({ workflowId }: { workflowId: string }) {
   const { workflows, error } = useWorkflows();

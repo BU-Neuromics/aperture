@@ -20,10 +20,11 @@ import realIntrospectionJson from './realIntrospection.json';
 /**
  * The captured `__schema` of a live `hippo serve` (v0.10.3, DataHelix
  * certification fixture schema) — aperture's own INTROSPECTION_QUERY against
- * it. This is the ground truth for the four real read shapes (#15): singular
+ * it. This is the ground truth for the real read shapes (#15) — singular
  * detail fields, `{ items total }` page envelopes, bare-list search twins
- * with required `q`, and the generic `[FilterInput!]` + FilterMode filter
- * pair.
+ * with required `q`, the generic `[FilterInput!]` + FilterMode filter pair —
+ * and the real write shapes: `create<T>(data:)`/`update<T>(id, data:)` plus
+ * the `ingestBatch`/`validateBatch` batch unit-of-work.
  */
 export const realIntrospection = realIntrospectionJson as unknown as IntrospectionSchema;
 
@@ -156,13 +157,24 @@ export function capableSchema(
     types: [
       objectType('Query', [...queryFields, ...queryExtras]),
       objectType('Mutation', [
-        // Batch unit-of-work (Hippo #84 shape assumption): ops list + dry-run.
-        field('batchPut', nonNull(object('BatchPutResult')), [
+        // Batch unit-of-work (Hippo #84, real shape confirmed live — #15):
+        // entity list + optional relationships + dry-run, plus a validate twin.
+        field('ingestBatch', nonNull(object('BatchWriteGraphQLResult')), [
           arg(
-            'operations',
-            nonNull(list(nonNull({ kind: 'INPUT_OBJECT', name: 'BatchOperationInput', ofType: null }))),
+            'entities',
+            nonNull(list(nonNull({ kind: 'INPUT_OBJECT', name: 'BatchEntityInput', ofType: null }))),
           ),
-          arg('dryRun', scalar('Boolean')),
+          arg(
+            'relationships',
+            list(nonNull({ kind: 'INPUT_OBJECT', name: 'BatchRelationshipInput', ofType: null })),
+          ),
+          arg('dryRun', nonNull(scalar('Boolean'))),
+        ]),
+        field('validateBatch', nonNull(object('BatchValidationGraphQLResult')), [
+          arg(
+            'entities',
+            nonNull(list(nonNull({ kind: 'INPUT_OBJECT', name: 'BatchEntityInput', ofType: null }))),
+          ),
         ]),
         // Tier-0 write paths (W4.3): create takes an input; update adds an id.
         field('createBook', object('Book'), [
@@ -203,21 +215,39 @@ export function capableSchema(
         field('action', scalar('String')),
         field('actor', scalar('String')),
       ]),
-      inputObjectType('BatchOperationInput', [
-        arg('ref', nonNull(scalar('String'))),
-        arg('type', nonNull(scalar('String'))),
+      inputObjectType('BatchEntityInput', [
+        arg('entityType', nonNull(scalar('String'))),
         arg('data', nonNull(scalar('JSON'))),
+        arg('operation', nonNull(scalar('String'))), // defaults to "insert" server-side
       ]),
-      objectType('BatchPutResult', [
-        field('ok', nonNull(scalar('Boolean'))),
-        field('results', list(nonNull(object('BatchRef')))),
-        field('errors', list(nonNull(object('BatchError')))),
+      inputObjectType('BatchRelationshipInput', [
+        arg('sourceId', nonNull(scalar('ID'))),
+        arg('targetId', nonNull(scalar('ID'))),
+        arg('relationshipType', nonNull(scalar('String'))),
+        arg('metadata', scalar('JSON')),
       ]),
-      objectType('BatchRef', [field('ref', scalar('String')), field('id', scalar('ID'))]),
-      objectType('BatchError', [
-        field('ref', scalar('String')),
+      objectType('BatchWriteGraphQLResult', [
+        field('committed', nonNull(scalar('Boolean'))),
+        field('dryRun', nonNull(scalar('Boolean'))),
+        field('validation', nonNull(object('BatchValidationGraphQLResult'))),
+        field('entities', nonNull(list(nonNull(scalar('JSON'))))),
+        field('relationships', nonNull(list(nonNull(scalar('JSON'))))),
+      ]),
+      objectType('BatchValidationGraphQLResult', [
+        field('passed', nonNull(scalar('Boolean'))),
+        field('results', nonNull(list(nonNull(object('BatchEntityValidation'))))),
+      ]),
+      objectType('BatchEntityValidation', [
+        field('entityId', scalar('ID')),
+        field('passed', nonNull(scalar('Boolean'))),
+        field('failures', nonNull(list(nonNull(object('ValidationFailureType'))))),
+      ]),
+      objectType('ValidationFailureType', [
+        field('tier', nonNull(scalar('String'))),
+        field('rule', nonNull(scalar('String'))),
+        field('message', nonNull(scalar('String'))),
         field('field', scalar('String')),
-        field('message', scalar('String')),
+        field('details', scalar('JSON')),
       ]),
       objectType('Book', [
         field('id', nonNull(scalar('ID'))),
@@ -232,7 +262,6 @@ export function capableSchema(
       objectType('Author', authorFields),
       objectType('Review', [field('id', nonNull(scalar('ID'))), field('rating', scalar('Int'))]),
       objectType('HippoSchema', [field('version', scalar('String'))]),
-      objectType('BatchResult', [field('ok', scalar('Boolean'))]),
       enumType('BookFormat', ['HARDCOVER', 'PAPERBACK', 'EBOOK']),
       ...typeExtras,
     ],

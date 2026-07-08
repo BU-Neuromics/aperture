@@ -1,6 +1,6 @@
 import type { Capabilities } from './capabilities';
 import type { BatchModel, BatchOperation, BatchResult } from './batch';
-import { buildBatchMutation, deriveBatchModel, normalizeBatchResult } from './batch';
+import { buildIngestBatch, deriveBatchModel, normalizeBatchResult } from './batch';
 import type { IntrospectionData } from './introspection';
 import { INTROSPECTION_QUERY } from './introspection';
 import type { ScopedDataClient } from './scopedClient';
@@ -257,17 +257,19 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
     async runBatch(operations, dryRun) {
       if (!batch) throw new Error('The endpoint does not advertise a batch unit-of-work');
       if (operations.length === 0) throw new Error('Nothing staged to submit');
-      const built = buildBatchMutation(batch, operations, dryRun);
+      const built = buildIngestBatch(batch, operations, dryRun);
       const batchResult = await client.mutate<Record<string, unknown>>(
         built.document,
         built.variables,
       );
       if (batchResult.error || batchResult.data == null) {
+        // Commit-time constraint violations (FK, NOT NULL) surface here as
+        // top-level GraphQL errors — the whole batch rolled back atomically.
         throw new Error(
           `Batch ${dryRun ? 'validation' : 'commit'} failed: ${batchResult.error?.message ?? 'empty response'}`,
         );
       }
-      return normalizeBatchResult(batchResult.data[batch.field]);
+      return normalizeBatchResult(batchResult.data[batch.field], built.clientIds);
     },
 
     async listEntities(collectionId, options) {
