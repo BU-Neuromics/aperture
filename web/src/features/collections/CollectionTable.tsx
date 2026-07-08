@@ -86,9 +86,11 @@ export function CollectionTable({
             <span className="collection-type-chip">type: {collection.typeName}</span>
           </div>
           <div className="collection-count">
-            {/* No aggregation capability yet (Hippo X1) — page-scoped honesty only. */}
+            {/* Real totals only when the page envelope carries one — page-scoped honesty otherwise. */}
             {result.status === 'ready'
-              ? `Page ${page} · ${result.page.rows.length}${result.page.mayHaveMore ? '+' : ''} rows${isFiltered ? ' · filtered' : ''}`
+              ? result.page.total != null
+                ? `Page ${page} · ${result.page.rows.length} of ${result.page.total} rows${isFiltered ? ' · filtered' : ''}`
+                : `Page ${page} · ${result.page.rows.length}${result.page.mayHaveMore ? '+' : ''} rows${isFiltered ? ' · filtered' : ''}`
               : ' '}
           </div>
         </div>

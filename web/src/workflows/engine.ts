@@ -7,7 +7,11 @@ import type { WorkflowConfig, WorkflowStepConfig } from './config';
  * config. State is a plain serializable object — it IS the draft (W4.8), so
  * stop/resume is "reload this document". Nothing here talks to the network;
  * the runner feeds staged state to the batch surface (stage → whole-set
- * dry-run → atomic commit, ADR-0028). XState remains the reference runtime if
+ * dry-run → atomic commit, ADR-0028). Confirmed live (#15, hippo 0.10.3):
+ * a whole-set dry-run of a PARTIAL staged set never fails spuriously —
+ * dry-run validation is permissive (structural echo; constraint checks run
+ * only at commit) — so the continuous whole-set dry-run stands unsoftened.
+ * XState remains the reference runtime if
  * richer step logic ever needs it; this reducer keeps the MVP dependency-free
  * with the same config-in / serializable-state-out contract.
  */
@@ -70,8 +74,10 @@ export function isComplete(workflow: WorkflowConfig, state: WorkflowRunState): b
 
 /**
  * The staged graph as batch operations: op ref = step id, so a binding's
- * field value is simply the referenced step's ref token — resolved to the
- * committed entity's id server-side (intra-batch reference resolution).
+ * field value is simply the referenced step's ref token. The transport
+ * (`buildIngestBatch`) pre-assigns a client id per operation and rewrites
+ * these tokens to the referenced sibling's id — the real hippo intra-batch
+ * mechanism (client-supplied `data.id`; no server-side ref tokens, #15).
  */
 export function buildOperations(
   workflow: WorkflowConfig,

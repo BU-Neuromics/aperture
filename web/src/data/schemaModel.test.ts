@@ -1,5 +1,17 @@
+import type { IntrospectionSchema } from './introspection';
 import { deriveCollections, deriveCapabilities, deriveHistory, humanize } from './schemaModel';
-import { bareSchema, capableSchema } from './testing/fixtures';
+import {
+  arg,
+  bareSchema,
+  capableSchema,
+  field,
+  list,
+  nonNull,
+  object,
+  objectType,
+  realIntrospection,
+  scalar,
+} from './testing/fixtures';
 
 describe('humanize', () => {
   it('turns snake_case and camelCase field names into labels', () => {
@@ -80,6 +92,121 @@ describe('deriveCollections', () => {
     const [books, authors] = deriveCollections(capableSchema());
     expect(books.detail).toEqual({ kind: 'field', field: 'book', argName: 'id', argType: 'ID!' });
     expect(authors.detail).toBeUndefined();
+  });
+
+  it('keeps the stub bare-list shape as the fallback (pageShape/filterShape markers)', () => {
+    const [books, authors] = deriveCollections(capableSchema());
+    expect(books.pageShape).toBe('list');
+    expect(books.filterShape).toBe('inputObject');
+    expect(books.search).toBeUndefined();
+    expect(authors.pageShape).toBe('list');
+    expect(authors.filterShape).toBeUndefined();
+  });
+});
+
+describe('deriveCollections (live Hippo shapes — #15)', () => {
+  const collections = deriveCollections(realIntrospection);
+  const books = collections.find((c) => c.id === 'books')!;
+
+  it('derives exactly the page-envelope collections — no search twins, no hippoSchema', () => {
+    expect(collections.map((c) => c.id)).toEqual([
+      'apertureDocuments',
+      'authors',
+      'books',
+      'externalIds',
+      'reviews',
+    ]);
+    expect(collections.every((c) => c.pageShape === 'envelope')).toBe(true);
+  });
+
+  it('maps the envelope args: limit/offset/filters + the FilterMode combinator', () => {
+    expect(books.typeName).toBe('Book');
+    expect(books.args).toEqual({ limit: 'limit', offset: 'offset', filter: 'filters' });
+    expect(books.argTypes).toEqual({ limit: 'Int!', offset: 'Int!', filter: '[FilterInput!]' });
+    expect(books.filterShape).toBe('filterList');
+    expect(books.filterModeArg).toEqual({ name: 'filterMode', type: 'FilterMode!' });
+    expect(books.idColumn).toBe('id'); // the entity's own id, not the authorId FK rename
+  });
+
+  it('attaches search twins to their base collections instead of deriving them', () => {
+    expect(books.search).toEqual({
+      field: 'searchBooks',
+      argName: 'q',
+      argType: 'String!',
+      limitArg: 'limit',
+      limitArgType: 'Int!',
+      offsetArg: 'offset',
+      offsetArgType: 'Int!',
+    });
+    expect(collections.every((c) => c.search != null)).toBe(true);
+  });
+
+  it('derives the detail path from the singular Query field', () => {
+    expect(books.detail).toEqual({ kind: 'field', field: 'book', argName: 'id', argType: 'ID!' });
+    expect(collections.every((c) => c.detail?.kind === 'field')).toBe(true);
+  });
+
+  it('derives facets from the collection columns, keyed by LinkML slot name', () => {
+    expect(books.facets).toEqual([
+      {
+        field: 'format',
+        label: 'Format',
+        kind: 'enum',
+        options: ['audiobook', 'ebook', 'hardcover', 'paperback'],
+      },
+      { field: 'in_print', label: 'In print', kind: 'boolean' },
+      { field: 'is_available', label: 'Is available', kind: 'boolean' },
+      { field: 'author', label: 'Author', kind: 'ref' },
+    ]);
+  });
+
+  it('filter fields are the slot names of the columns, minus FK renames', () => {
+    expect(books.filterFields).toEqual([
+      'format',
+      'in_print',
+      'title',
+      'year',
+      'id',
+      'is_available',
+      'version',
+      'created_at',
+      'updated_at',
+      'schema_version',
+      'created_by',
+      'updated_by',
+      'superseded_by',
+      'author',
+    ]);
+    // `authorId` is the FK rename of the `author` slot — filtering by it
+    // silently matches nothing on live Hippo, so it must not be offered.
+    expect(books.filterFields).not.toContain('author_id');
+    const documents = collections.find((c) => c.id === 'apertureDocuments')!;
+    expect(documents.filterFields).toEqual(expect.arrayContaining(['kind', 'name']));
+  });
+
+  it('write paths still derive for envelope collections', () => {
+    expect(books.write.create?.field).toBe('createBook');
+    expect(books.write.create?.inputArgName).toBe('data');
+    expect(books.write.create?.inputArgType).toBe('BookCreateInput!');
+    expect(books.write.update?.field).toBe('updateBook');
+    expect(books.write.update?.idArgName).toBe('id');
+  });
+
+  it('a search-shaped bare list with no base collection never derives (required q unsatisfiable)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('searchThings', nonNull(list(nonNull(object('Thing')))), [
+            arg('q', nonNull(scalar('String'))),
+            arg('limit', scalar('Int')),
+          ]),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID'))), field('label', scalar('String'))]),
+      ],
+    };
+    expect(deriveCollections(schema)).toEqual([]);
   });
 });
 
@@ -175,6 +302,19 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     const schema = capableSchema();
     const caps = deriveCapabilities(schema, deriveCollections(schema));
     expect(caps.schemaIntrospection).toBe('graphql');
+  });
+
+  it('negotiates the live Hippo surface (envelope pages + search twins)', () => {
+    const caps = deriveCapabilities(realIntrospection, deriveCollections(realIntrospection));
+    expect(caps.schemaIntrospection).toBe('hippo');
+    expect(caps.offsetPagination).toBe(true);
+    expect(caps.equalityFacets).toBe(true);
+    expect(caps.fullTextSearch).toBe(true);
+    expect(caps.entityHistory).toBe(true);
+    expect(caps.sort).toBe(false); // still unadvertised — stays off
+    // The real ingestBatch shape ({entityType, data} entities + dryRun) is
+    // now the derived contract — the batch surface gates ON (#15 write path).
+    expect(caps.batchWrite).toBe(true);
   });
 
   it('gates everything off for a bare endpoint', () => {

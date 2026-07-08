@@ -25,7 +25,7 @@ export function FacetPanel() {
   const active = activeCollection(view, collection);
   if (!active) return null;
 
-  const searchable = capabilities.fullTextSearch && Boolean(active.args.search);
+  const searchable = capabilities.fullTextSearch && Boolean(active.args.search || active.search);
   const facets = capabilities.equalityFacets ? active.facets : [];
   if (!searchable && facets.length === 0) return null;
 
