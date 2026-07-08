@@ -1,8 +1,8 @@
-# Gen3 — Deep Comparison to BASS / Aperture
+# Gen3 — Deep Comparison to DataHelix / Aperture
 
 **Status:** 🟢 Research findings (2026-06-16, primary sources). Companion to
 [`prior-art.md`](./prior-art.md), which named Gen3 the strongest faceted-portal match. This
-goes deeper: **Gen3 is the closest production analog to the *whole BASS platform*, not just to
+goes deeper: **Gen3 is the closest production analog to the *whole DataHelix platform*, not just to
 Aperture** — and its architecture answers our sharpest open capability question.
 
 ## What Gen3 is
@@ -12,11 +12,11 @@ for building **data commons** — it powers NIH commons like MIDRC, AnVIL, BioDa
 HEAL. It is a stack of microservices around a **config-driven data model (the Data Dictionary)**
 and a **config-driven faceted Data Explorer**. Many independent commons run the *same* codebase
 differentiated by dictionary + portal config — the same "generic engine, per-instance config"
-thesis as BASS/Aperture.
+thesis as DataHelix/Aperture.
 
-## Service-by-service map to BASS
+## Service-by-service map to DataHelix
 
-| Gen3 service | Role | BASS analog |
+| Gen3 service | Role | DataHelix analog |
 |---|---|---|
 | **Data Dictionary** (YAML, one JSON-Schema file per node; nodes + typed properties + links w/ backref, multiplicity, semantic label; Program = graph root) | Config-driven data model | **Hippo LinkML schema** (entities + slots + relationships). LinkML is more expressive/standardized than Gen3's per-node JSON-Schema. |
 | **Sheepdog** | Submission/write into the Postgres graph; validates against the dictionary (rejects `INVALID_LINK`) | Hippo write path + validation |

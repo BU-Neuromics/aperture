@@ -30,7 +30,7 @@ client**. A component never captures or carries its author's credentials or visi
 ## Resolution note (2026-06-15)
 
 The capability-scoped client is no longer a promissory note. The platform security model
-(drylims `platform/sec6_security_model.md`) backs it: **Bridge** is the PEP/PDP; the scoped
+(DataHelix `platform/sec6_security_model.md`) backs it: **Bridge** is the PEP/PDP; the scoped
 client is a `HippoClient` that Bridge builds per request and injects into the GraphQL context,
 auto-applying the viewer's **record-level predicates** and **slot-level field masks**. Same
 interface, full-access/no-op locally, enforcing via Bridge remotely — Aperture's generic

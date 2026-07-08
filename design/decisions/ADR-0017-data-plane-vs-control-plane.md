@@ -27,6 +27,18 @@ points at Canon/Cappella or a third-party GraphQL API.** ADR-0003 therefore read
 config-store port has a reference implementation in LinkML-on-Hippo," not "Aperture requires
 Hippo."
 
+## Amendment (2026-06-30 — MVP narrowing, `portal-requirements.md` L2 / N5.4)
+
+- **One active data-plane endpoint at a time (L2).** The data plane stays *source-agnostic and
+  capability-negotiated*, but the MVP talks to exactly **one** active endpoint at a time
+  (Hippo now; swapping to Bridge or a future Cappella gateway is a **config change, not a
+  refactor**). Cross-source **federation is deferred** and, if ever needed, is a gateway (Bridge)
+  concern, not Aperture's — this narrows the "potentially many heterogeneous sources" framing
+  below to "one swappable source" for the MVP without changing the plane split.
+- **Control plane co-located for MVP (N5.4).** The MVP runs the control-plane store on **a Hippo**
+  (may be the same instance as the data plane). The port abstraction is unchanged; co-location is
+  a deployment stance, reversible.
+
 ## Consequences
 
 - The data-access layer must be a capability-negotiated source adapter (see `architecture.md`

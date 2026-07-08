@@ -2,23 +2,22 @@
 ## Design Index
 
 **Codename:** Aperture
-**Component:** Interface Layer — the config-driven **rendering portal** over the BASS domain
-graph: it renders **View Contract** instances (`drylims:platform/design/view-contract.md`) into a
-usable UI, and is the deployable MVP. The AI-native **data-story engine** was split out into the
-**Reel** component on 2026-06-22 (boundary: `drylims:platform/design/decisions/ADR-0001`; runbook
-`drylims:proposals/reel-split.md`); Aperture now *consumes* Reel's output via the View Contract.
-See [`vision.md`](vision.md) for the north-star — note its AI-native-explorer narrative now
-belongs to Reel; a leaner portal framing of `vision.md` is a follow-up.
+**Component:** Interface Layer — AI-native data & workflow explorer over the DataHelix domain graph
+(the config-driven portal is its substrate / MVP, not the product). See
+[`vision.md`](vision.md).
 **Version:** 0.1 — Portal substrate fresh start
 
 ---
 
-This repository is a **fresh start** extracted from the `drylims` monorepo (2026-06).
+This repository is a **fresh start** extracted from the `DataHelix` monorepo (2026-06).
 It carries forward the reusable Hippo backend protocol (`src/aperture/backends/`) and the
 config-driven **portal** design — now framed as the **substrate** for the AI-native explorer
 ([`vision.md`](vision.md)), not the product itself. The earlier CLI-first v0.1 specification
-(`sec1`–`sec6`) and its implementation were intentionally left behind in `drylims` history and
+(`sec1`–`sec6`) and its implementation were intentionally left behind in `DataHelix` history and
 are **not** reproduced here.
+
+> **New here (or handing off)?** Start with [`../ONBOARDING.md`](../ONBOARDING.md) — the repo entry
+> point: status, how to run `web/`, the roadmap (as GitHub issues), and cross-component deps.
 
 ## Document Map
 
@@ -29,9 +28,14 @@ are **not** reproduced here.
 | `actors.md` | Actors & personas (orientation) | 🟢 Orientation | The cast Aperture is designed for — researcher, coding agent, admin, schema author; the two-credentials model. Links each tension to its ADR. |
 | `vision.md` | North-star vision (AI-native explorer) | 🔵 Vision | Reframes Aperture from config-driven portal → LLM-native interaction layer over Hippo/Cappella/Canon; the declarative substrate is what makes natural-language control safe. Answers the strategic review's crux #1; sets the agentic keystone probe. |
 | `prior-art.md` | Prior-art survey (2026-06-16) | 🟢 Research | Verified buy-vs-build survey: greenfield verdict; Gen3 + Vega-Lite as prototype references; design lessons mapped to our decisions; the unproven differentiators (capability-scoped client, agent-editable config). |
-| `gen3-comparison.md` | Gen3 deep comparison | 🟢 Research | Service-by-service map of Gen3 to the whole BASS platform (fence+arborist=Bridge, Peregrine=Hippo GraphQL, dictionary=LinkML); explorerConfig ≈ our core-loop config; the two-tier graph+index lesson that answers our aggregation gap. |
-| `prefab/` | Prefab portal design (working) | 🟠 Working | Concrete brain-bank portal UX walkthrough (two-tier ladder; core-loop) that defines what the config engine must reproduce. (`data-stories.md` **moved to Reel** — the data-story keystone is Reel's now.) |
-| `instruction-path-model.md` | Instruction-path model → **moved to Reel** | ⤳ Moved | The data-story substrate model moved to the **Reel** component (2026-06-22 split); this file is now a redirect stub. Canonical home: Reel `design/instruction-path-model.md`; its decisions are Reel ADR-0001–0004. |
+| `gen3-comparison.md` | Gen3 deep comparison | 🟢 Research | Service-by-service map of Gen3 to the whole DataHelix platform (fence+arborist=Bridge, Peregrine=Hippo GraphQL, dictionary=LinkML); explorerConfig ≈ our core-loop config; the two-tier graph+index lesson that answers our aggregation gap. |
+| `library-survey.md` | Implementation library survey (2026-06-25) | 🟢 Research | Package-level buy-vs-build for the complex components (vs. `prior-art.md`'s whole-product altitude). Leads: JSONForms (wizard-as-data), XState (engine, not config), Serverless Workflow DSL (steal the model), TanStack Table, nuqs, FINOS Perspective; runtime introspection-binding confirmed greenfield. Flags open angles: saga/W4.7, durable engines, admin/low-code, sandbox runtime. |
+| `implementation-plan.md` | Implementation plan (working) | 🟠 Working | Sequenced MVP build plan grounded in the ADRs. Phasing: 0 walking-skeleton (current) → read loop → write loop → Tier-1 workflow → control plane. |
+| `claude-design-brief.md` | Claude Design brief (working) | 🟠 Working | Ready-to-paste prompt for claude.ai/design to mock the skeleton UI + the ADR-0031 layout library; grounded in ADR-0002/0029/0030/0031 + core-loop. Feeds Phase 0. |
+| `design-export/` | Claude Design export (reference) | 🟢 Reference | The `.dc` prototype returned by Claude Design from the brief: all 3 layouts + 6 collections + table states. Visual source of truth for Phase 0; see its `README.md`. |
+| `design-tokens.md` | Design tokens (seed) | 🟠 Working | Framework-neutral token/type/spacing/radius set extracted from the export → seeds the `web/` theme. |
+| `prefab/` | Prefab portal design (working) | 🟠 Working | Concrete brain-bank portal UX walkthrough (two-tier ladder; core-loop) that defines what the config engine must reproduce. |
+| `instruction-path-model.md` | Instruction-path model (working) | 🟠 Working | The formal data structure under `prefab/data-stories.md`: a data story as a path of source-tagged typed instructions producing intensional subgraph **states** + materialized **artifacts**. Topology (linear/tree/DAG) as a data property; reproducibility via one as-of watermark; UI modes as topology slices. Open decisions D-1–D-5 (ADR-0022–0025 + a Hippo requirement). |
 | `portal-vision-handoff.md` | Portal vision | 🟢 Historical vision / context | The original config-driven portal brainstorm: problem statement, settled decisions (§2), open questions (§9), invariants checklist (§10). Read for narrative context; **cite ADRs for decisions** — §2 is backfilled as ADR-0002–0009, §9 as Proposed ADR-0010–0013. |
 | `portal-open-questions.md` | Portal §9 working notes | 🟡 Working notes | Proposed resolutions to the §9 open questions, carried into the corresponding Proposed ADRs as their recommended Decision + rationale. |
 
@@ -60,20 +64,28 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0010](./decisions/ADR-0010-view-description-vocabulary.md) | View vocabulary is a typed noun-catalog **(keystone)** | 🟡 Proposed | handoff §9.2 (Q2) |
 | [0011](./decisions/ADR-0011-component-execution-runtime.md) | Component runtime/language: client-side Web Worker + Pyodide escape hatch | 🟡 Proposed | handoff §9.1 (Q1) + tech |
 | [0012](./decisions/ADR-0012-config-layering.md) | Layered config → one validated instance; layer-attributed resolution | 🟡 Proposed | handoff §9.4 (Q4) |
-| [0013](./decisions/ADR-0013-agent-loop-local-vs-remote.md) | One API-based agent loop; component source is the only file artifact | 🟡 Proposed | handoff §9.3 (Q3) |
-| [0014](./decisions/ADR-0014-application-architecture.md) | Application architecture: server-rendered vs client-side shell | 🟡 Proposed | raised 2026-06-13 |
+| [0013](./decisions/ADR-0013-agent-loop-local-vs-remote.md) | One API-based agent loop; component source is the only file artifact | ⛔ Deferred (MVP) | handoff §9.3 (Q3) |
+| [0014](./decisions/ADR-0014-application-architecture.md) | Application architecture: server-rendered vs client-side shell | ✅ Accepted | raised 2026-06-13 |
 | [0015](./decisions/ADR-0015-composability-and-cross-links.md) | Composability + cross-links (hrefs) | 🟡 Proposed | raised 2026-06-13 |
 | [0016](./decisions/ADR-0016-defer-bridge-build-aperture-first.md) | Defer Bridge impl; build/demo Aperture against Hippo via no-op capability-scoped client | ✅ Accepted | 2026-06-15 |
-| [0017](./decisions/ADR-0017-data-plane-vs-control-plane.md) | Separate data plane (browsed sources) from control plane (config/state store) | ✅ Accepted | 2026-06-15 |
-| [0018](./decisions/ADR-0018-agents-act-with-user-delegated-authority.md) | Agents act with the invoking user's delegated authority (not a separate principal) | ✅ Accepted | 2026-06-16 |
-| [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ✅ Accepted | 2026-06-16 |
-| [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ✅ Accepted | 2026-06-16 |
-| [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ✅ Accepted | 2026-06-16 |
-| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | ⤳ Superseded → [Reel ADR-0001](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0001-data-story-is-an-instruction-path.md) | moved to Reel (2026-06-22 split) |
-| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | ⤳ Superseded → [Reel ADR-0002](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0002-data-story-reproducibility-as-of-watermark.md) | moved to Reel (2026-06-22 split) |
-| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | ⤳ Superseded → [Reel ADR-0003](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0003-instruction-path-linear-first-general-schema.md) | moved to Reel (2026-06-22 split) |
-| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | ⤳ Superseded → [Reel ADR-0004](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0004-mid-path-edit-recompute-with-suspend.md) | moved to Reel (2026-06-22 split) |
-| [0026](./decisions/ADR-0026-headless-core-thin-shell.md) | Headless interaction core + thin replaceable shell; embeddability via 3 injection seams | ⤳ Superseded → [Reel ADR-0005](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0005-headless-core-thin-shell.md) | moved to Reel (2026-06-22 split) |
+| [0017](./decisions/ADR-0017-data-plane-vs-control-plane.md) | Separate data plane (browsed sources) from control plane (config/state store) | ✅ Accepted (amended L2) | 2026-06-15 |
+| [0018](./decisions/ADR-0018-agents-act-with-user-delegated-authority.md) | Agents act with the invoking user's delegated authority (not a separate principal) | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ⛔ Deferred (MVP) | 2026-06-16 |
+| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | ⛔ Deferred (MVP) | instruction-path-model.md (D-1) |
+| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | ⛔ Deferred (MVP) | instruction-path-model.md (D-2) |
+| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | ⛔ Deferred (MVP) | instruction-path-model.md (D-3) |
+| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | ⛔ Deferred (MVP) | instruction-path-model.md (D-5) |
+| [0026](./decisions/ADR-0026-portal-first-mvp-defer-agentic-surfaces.md) | Portal-first MVP; defer agentic, agent-assist & schema-editing surfaces | ✅ Accepted | portal-requirements L1/L13/L14 |
+| [0027](./decisions/ADR-0027-read-and-write-portal.md) | Read *and* write portal; v1 write boundary = Tier 0 forms + one Tier 1 workflow | ✅ Accepted | portal-requirements L3/L4 |
+| [0028](./decisions/ADR-0028-workflow-atomicity-staged-batch.md) | Workflow atomicity: stage → whole-set dry-run validate → atomic commit (Hippo #84); saga fallback | ✅ Accepted | portal-requirements L9/L10 |
+| [0029](./decisions/ADR-0029-capability-gated-honest-degradation.md) | Capability-gated UI, honest degradation (faceting/aggregation/export) | ✅ Accepted | portal-requirements L7/L8 |
+| [0030](./decisions/ADR-0030-frontend-stack.md) | Frontend stack: TS SPA (React + Vite + urql; TanStack Table + nuqs), in-repo, talks to Hippo directly | ✅ Accepted | library-survey; N5.9 |
+| [0031](./decisions/ADR-0031-app-shell-layout-library.md) | App shell = library of fixed layouts selected by config; typed named-slot contract | ✅ Accepted | layout design session |
+| [0032](./decisions/ADR-0032-control-plane-document-store.md) | Control-plane state = versioned `{kind,name,payload}` documents on a structurally-recognized Hippo collection; honest local fallback; retire-not-delete | ✅ Accepted | Phase 4 (PR #14); refines ADR-0017 |
+| [0033](./decisions/ADR-0033-workflow-config-and-engine.md) | Workflow config = steps-as-data interpreted by a pure reducer engine; the draft is the serialized run state | ✅ Accepted | Phase 3 (PR #13); implements ADR-0028 W4.6/W4.8 |
+| [0034](./decisions/ADR-0034-spa-image-runtime-config.md) | SPA image is deployment-agnostic: one digest-addressed artifact, `VITE_*` config injected into `config.js` at container start | ✅ Accepted | issue #22 (DataHelix P1.4); DataHelix ADR-0001 |
 
 ## Decision Queue (open — resolve in dependency order)
 
@@ -105,7 +117,7 @@ next code artifact once the runtime/architecture ADRs settle.
 ## Security & Bridge (deferred — see ADR-0016)
 
 Authorization lives in **Bridge** (PEP/PDP), not Aperture or Hippo — full model in the
-platform spec (`drylims/platform/design/sec6_security_model.md`). Aperture is built and demoed
+platform spec (`DataHelix/platform/design/sec6_security_model.md`). Aperture is built and demoed
 **directly against Hippo** for now (ADR-0016); Bridge implementation is deferred. The
 capability-scoped client (ADR-0008) is the seam that makes this free: present from day one as
 a no-op/full-access pass-through locally, swapped for Bridge's enforcing client later with no

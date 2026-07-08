@@ -1,9 +1,9 @@
 # ADR-0014: Application architecture — server-rendered vs client-side app shell
 
-- **Status:** Proposed
-- **Date:** 2026-06-13
-- **Deciders:** —
-- **Related:** raised 2026-06-13 ("architecture: server vs client side app"); distinct from but informed by ADR-0011; depends on ADR-0009
+- **Status:** Accepted
+- **Date:** 2026-06-30 (ratified — MVP = client-side SPA)
+- **Deciders:** labadorf, design session
+- **Related:** ADR-0026 (portal-first MVP), ADR-0011, ADR-0009, ADR-0016 (Bridge BFF deferred); `portal-requirements.md` N5.9
 
 ## Context
 
@@ -18,9 +18,18 @@ in Web Workers (ADR-0011), or ship a pure SPA that hosts the same workers. The r
 view-description (ADR-0009) has to be turned into pixels *somewhere* — that "somewhere" is
 this decision.
 
-## Decision (proposed)
+## Decision
 
-*To be decided in a design session.* Candidate framing:
+**Ratified (2026-06-30, MVP — `portal-requirements.md` N5.9): a pure client-side SPA.** The MVP
+ships a browser app that talks to the active endpoint's GraphQL/REST directly (Hippo now), with a
+thin Aperture API; component view-specs run in client-side Web Workers (ADR-0011). This is the
+simplest deployment story and aligns with the capability-scoped client (ADR-0008) and Bridge-as-BFF
+deferral (ADR-0016) — auth/capability enforcement is server-side (Bridge) when present, a no-op
+pass-through locally. SSR / hybrid is **not** an MVP requirement; revisit if first-load weight
+(esp. a bundled Pyodide escape hatch) or deep-link/SEO needs demand it. The original candidate
+framing is retained below.
+
+*Candidate framing (pre-ratification):*
 
 - **Pure client-side SPA** — browser app talks to Hippo GraphQL/REST directly; Aperture's own
   API is thin. Simplest deployment story; aligns with ADR-0013's "always talk to a running

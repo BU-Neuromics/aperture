@@ -28,9 +28,9 @@ DEFAULT_CONFIG: dict = {
     },
 }
 
-USER_CONFIG_DIR = Path.home() / ".bass"
+USER_CONFIG_DIR = Path.home() / ".datahelix"
 USER_CONFIG_FILE = USER_CONFIG_DIR / "aperture.yaml"
-PROJECT_CONFIG_FILE = Path(".bass") / "aperture.yaml"
+PROJECT_CONFIG_FILE = Path(".datahelix") / "aperture.yaml"
 
 
 def _deep_merge(base: dict, override: dict) -> dict:
@@ -54,12 +54,12 @@ def _load_yaml(path: Path) -> dict:
 
 
 def _apply_env_vars(config: dict) -> dict:
-    """Override config values from BASS_* environment variables."""
+    """Override config values from DATAHELIX_* environment variables."""
     env_map = {
-        "BASS_HIPPO_MODE": ("hippo", "mode"),
-        "BASS_HIPPO_URL": ("hippo", "url"),
-        "BASS_HIPPO_CONFIG": ("hippo", "config"),
-        "BASS_LOG_LEVEL": ("logging", "level"),
+        "DATAHELIX_HIPPO_MODE": ("hippo", "mode"),
+        "DATAHELIX_HIPPO_URL": ("hippo", "url"),
+        "DATAHELIX_HIPPO_CONFIG": ("hippo", "config"),
+        "DATAHELIX_LOG_LEVEL": ("logging", "level"),
     }
     for env_var, key_path in env_map.items():
         value = os.environ.get(env_var)

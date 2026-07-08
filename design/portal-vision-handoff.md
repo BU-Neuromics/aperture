@@ -1,7 +1,7 @@
 > **Reframe note (added 2026-06-17):** The top-level framing in this handoff —
 > Aperture as a *"config-driven data portal"* — is **superseded by
 > [`vision.md`](./vision.md)**. Aperture is now an **AI-native data & workflow
-> explorer** over the BASS **domain graph**; the config-driven portal is its
+> explorer** over the DataHelix **domain graph**; the config-driven portal is its
 > **substrate / MVP, not the product**. This document is retained verbatim as a
 > captured artifact — read it for narrative context, but take the lead framing
 > from `vision.md` and the platform [`domain-graph.md`](../../platform/design/domain-graph.md).
@@ -29,7 +29,7 @@
 
 # Aperture — Design Handoff
 
-**Component:** `aperture` (the interface layer of the `drylims` / BASS platform)
+**Component:** `aperture` (the interface layer of the DataHelix platform)
 **Status:** Architecture brainstorm complete; pre-implementation.
 **Audience:** A coding agent (and human reviewer) picking up the next steps.
 **Backing services:** `hippo` (LinkML runtime, GraphQL + REST APIs) is the data and config store.

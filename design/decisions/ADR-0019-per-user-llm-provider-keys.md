@@ -1,6 +1,6 @@
 # ADR-0019: Per-user LLM provider key management
 
-- **Status:** Accepted (approach ratified; LinkML shape is an open sub-question)
+- **Status:** Accepted (approach ratified; LinkML shape is an open sub-question)  — ⛔ **Deferred from MVP** (ADR-0026)
 - **Date:** 2026-06-16
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0003 (config-as-LinkML-in-Hippo), ADR-0005, ADR-0017 (control plane), ADR-0018, ADR-0020, ADR-0021
@@ -27,8 +27,8 @@ rules:
   manager), **never raw secrets** — mirroring Bridge's `${...}` convention. Raw keys never
   enter the provenance-tracked config store.
 - **Assignment is admin config** (admin authority per ADR-0018).
-- The provider key is **distinct from the BASS user session** (ADR-0018) and never conflated:
-  the key is the agent's *brain*, the session its *hands*. The key confers no BASS authority.
+- The provider key is **distinct from the DataHelix user session** (ADR-0018) and never conflated:
+  the key is the agent's *brain*, the session its *hands*. The key confers no DataHelix authority.
 
 ## Consequences
 
