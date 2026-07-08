@@ -7,6 +7,7 @@ import type {
   TypeRef,
 } from '../introspection';
 import type { GraphQLResult, ScopedDataClient } from '../scopedClient';
+import realIntrospectionJson from './realIntrospection.json';
 
 /**
  * Introspection fixtures for adapter unit tests. Deliberately generic
@@ -15,6 +16,16 @@ import type { GraphQLResult, ScopedDataClient } from '../scopedClient';
  * filter/limit/offset/search args, enum + relationship fields, a batch
  * mutation.
  */
+
+/**
+ * The captured `__schema` of a live `hippo serve` (v0.10.3, DataHelix
+ * certification fixture schema) — aperture's own INTROSPECTION_QUERY against
+ * it. This is the ground truth for the four real read shapes (#15): singular
+ * detail fields, `{ items total }` page envelopes, bare-list search twins
+ * with required `q`, and the generic `[FilterInput!]` + FilterMode filter
+ * pair.
+ */
+export const realIntrospection = realIntrospectionJson as unknown as IntrospectionSchema;
 
 export const scalar = (name: string): TypeRef => ({ kind: 'SCALAR', name, ofType: null });
 export const enumRef = (name: string): TypeRef => ({ kind: 'ENUM', name, ofType: null });

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { DataSourceProvider, useCapabilities, useDataSource } from './DataSourceContext';
-import { capableSchema, fakeClient } from './testing/fixtures';
+import { capableSchema, fakeClient, realIntrospection } from './testing/fixtures';
 
 /** A feature gated on a negotiated capability (the ADR-0029 seam in action). */
 function Probe() {
@@ -30,6 +30,19 @@ describe('DataSourceProvider / useCapabilities (step 0.4)', () => {
       <DataSourceProvider
         endpoint={{ url: 'http://example.test/graphql' }}
         clientFactory={() => fakeClient(capableSchema())}
+      >
+        <Probe />
+      </DataSourceProvider>,
+    );
+    expect(await screen.findByTestId('status')).toHaveTextContent('ready');
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
+  });
+
+  it('reaches ready against the live-captured Hippo schema (#15)', async () => {
+    render(
+      <DataSourceProvider
+        endpoint={{ url: 'http://example.test/graphql' }}
+        clientFactory={() => fakeClient(realIntrospection)}
       >
         <Probe />
       </DataSourceProvider>,

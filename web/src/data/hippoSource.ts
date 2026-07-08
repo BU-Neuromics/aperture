@@ -28,8 +28,10 @@ export interface ListOptions {
 
 export interface EntityPage {
   rows: Record<string, unknown>[];
-  /** True when the page is full — a next page may exist (no totalCount until X1). */
+  /** True when a next page may exist (from `total` when the page envelope carries one). */
   mayHaveMore: boolean;
+  /** The server-reported total for the filtered set (envelope pages only). */
+  total?: number;
 }
 
 export interface HistoryEntry {
@@ -74,43 +76,98 @@ export interface BuiltQuery {
   variables: Record<string, unknown>;
 }
 
+export interface BuiltListQuery extends BuiltQuery {
+  /** The Query field the rows come back under (the search twin when searching). */
+  rootField: string;
+  /** True when rows arrive inside an `{ items total }` page envelope. */
+  envelope: boolean;
+}
+
+class QueryBuilder {
+  varDefs: string[] = [];
+  argList: string[] = [];
+  variables: Record<string, unknown> = {};
+
+  add(arg: string | undefined, type: string | undefined, name: string, value: unknown) {
+    if (!arg || !type || value === undefined) return;
+    this.varDefs.push(`$${name}: ${type}`);
+    this.argList.push(`${arg}: $${name}`);
+    this.variables[name] = value;
+  }
+
+  document(rootField: string, selections: string) {
+    const defs = this.varDefs.length > 0 ? `(${this.varDefs.join(', ')})` : '';
+    const args = this.argList.length > 0 ? `(${this.argList.join(', ')})` : '';
+    return `query ApertureList${defs} { ${rootField}${args} { ${selections} } }`;
+  }
+}
+
 /**
  * Builds the list query for one collection from its derived column model,
  * passing paging/filter/search through typed variables (types come from the
  * introspected arg types, so the document always matches the endpoint).
+ *
+ * Envelope collections (live Hippo, #15) select `{ items { … } total }` and
+ * pass filters as the generic `[{field, value}]` list (AND). An active search
+ * term routes to the attached search twin instead — a bare list whose `q` the
+ * server requires; search takes no filters, so it replaces them for the query
+ * (mirroring the flat search-over-filters UI semantics).
  */
-export function buildListQuery(collection: CollectionModel, options: ListOptions): BuiltQuery {
-  const varDefs: string[] = [];
-  const argList: string[] = [];
-  const variables: Record<string, unknown> = {};
+export function buildListQuery(collection: CollectionModel, options: ListOptions): BuiltListQuery {
+  const builder = new QueryBuilder();
+  const offset = (options.page - 1) * options.pageSize;
 
-  const addArg = (arg: string | undefined, type: string | undefined, name: string, value: unknown) => {
-    if (!arg || !type || value === undefined) return;
-    varDefs.push(`$${name}: ${type}`);
-    argList.push(`${arg}: $${name}`);
-    variables[name] = value;
-  };
+  if (collection.pageShape === 'envelope' && options.search && collection.search) {
+    const twin = collection.search;
+    builder.add(twin.argName, twin.argType, 'q', options.search);
+    builder.add(twin.limitArg, twin.limitArgType, 'limit', options.pageSize);
+    builder.add(twin.offsetArg, twin.offsetArgType, 'offset', offset);
+    return {
+      document: builder.document(twin.field, selectionSet(collection.columns)),
+      variables: builder.variables,
+      rootField: twin.field,
+      envelope: false,
+    };
+  }
 
-  addArg(collection.args.limit, collection.argTypes.limit, 'limit', options.pageSize);
-  addArg(
-    collection.args.offset,
-    collection.argTypes.offset,
-    'offset',
-    (options.page - 1) * options.pageSize,
-  );
-  addArg(
-    collection.args.filter,
-    collection.argTypes.filter,
-    'filter',
-    options.filters && Object.keys(options.filters).length > 0 ? options.filters : undefined,
-  );
-  addArg(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
+  builder.add(collection.args.limit, collection.argTypes.limit, 'limit', options.pageSize);
+  builder.add(collection.args.offset, collection.argTypes.offset, 'offset', offset);
 
-  const defs = varDefs.length > 0 ? `(${varDefs.join(', ')})` : '';
-  const args = argList.length > 0 ? `(${argList.join(', ')})` : '';
+  const hasFilters = options.filters && Object.keys(options.filters).length > 0;
+  if (collection.filterShape === 'filterList') {
+    builder.add(
+      collection.args.filter,
+      collection.argTypes.filter,
+      'filters',
+      hasFilters
+        ? Object.entries(options.filters!).map(([field, value]) => ({ field, value }))
+        : undefined,
+    );
+    builder.add(
+      collection.filterModeArg?.name,
+      collection.filterModeArg?.type,
+      'filterMode',
+      hasFilters ? 'AND' : undefined,
+    );
+  } else {
+    builder.add(
+      collection.args.filter,
+      collection.argTypes.filter,
+      'filter',
+      hasFilters ? options.filters : undefined,
+    );
+  }
+  builder.add(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
+
+  const envelope = collection.pageShape === 'envelope';
+  const selections = envelope
+    ? `items { ${selectionSet(collection.columns)} } total`
+    : selectionSet(collection.columns);
   return {
-    document: `query ApertureList${defs} { ${collection.id}${args} { ${selectionSet(collection.columns)} } }`,
-    variables,
+    document: builder.document(collection.id, selections),
+    variables: builder.variables,
+    rootField: collection.id,
+    envelope,
   };
 }
 
@@ -221,7 +278,7 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
         throw new Error(`Invalid page size ${pageSize}`);
       }
 
-      const { document, variables } = buildListQuery(collection, options);
+      const { document, variables, rootField, envelope } = buildListQuery(collection, options);
       const listResult = await client.query<Record<string, unknown>>(document, variables, {
         fresh: options.fresh,
       });
@@ -230,7 +287,24 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
           `Could not list ${collection.label}: ${listResult.error?.message ?? 'empty response'}`,
         );
       }
-      const rows = (listResult.data[collection.id] ?? []) as Record<string, unknown>[];
+      if (envelope) {
+        const envelopePage = (listResult.data[rootField] ?? {}) as {
+          items?: Record<string, unknown>[];
+          total?: number;
+        };
+        const rows = envelopePage.items ?? [];
+        const total = envelopePage.total;
+        return {
+          rows,
+          total,
+          mayHaveMore:
+            total != null
+              ? (page - 1) * pageSize + rows.length < total
+              : rows.length === pageSize,
+        };
+      }
+      // Bare lists carry no total — a full page means a next page may exist.
+      const rows = (listResult.data[rootField] ?? []) as Record<string, unknown>[];
       return { rows, mayHaveMore: rows.length === pageSize };
     },
 
