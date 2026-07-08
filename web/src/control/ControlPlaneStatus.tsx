@@ -6,9 +6,13 @@ import { useControlPlane } from './ControlPlaneContext';
  */
 export function ControlPlaneStatus() {
   const { status, store } = useControlPlane();
-  if (status !== 'ready') return <span>Control plane: resolving…</span>;
+  // data-testid is the stable certification contract (datahelix golden-path
+  // suite; #15) — the scenario asserts the Hippo-backed store is reported.
+  if (status !== 'ready') {
+    return <span data-testid="control-plane-status">Control plane: resolving…</span>;
+  }
   return (
-    <span>
+    <span data-testid="control-plane-status">
       Control plane:{' '}
       {store.backend === 'hippo'
         ? 'LinkML-on-Hippo document store'

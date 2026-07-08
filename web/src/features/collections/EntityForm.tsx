@@ -92,11 +92,21 @@ export function EntityForm({
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setServerError(message);
-      // Field attribution heuristic: mark fields the server names.
+      // Field attribution heuristic: mark fields the server names. Confirmed
+      // live (#15, hippo 0.10.3): rejections are plain GraphQL error messages
+      // — input-coercion names the field ("Field 'title' of required type…"),
+      // NOT NULL names the column ("NOT NULL constraint failed: Author.name").
       const attributed: Record<string, string> = {};
       for (const field of fields) {
         if (message.toLowerCase().includes(field.name.toLowerCase())) {
           attributed[field.name] = 'See server message above.';
+        }
+      }
+      // A bare "FOREIGN KEY constraint failed" names no field (verified live)
+      // — attribute it to the form's reference fields.
+      if (Object.keys(attributed).length === 0 && /foreign key/i.test(message)) {
+        for (const field of fields) {
+          if (field.widget === 'ref') attributed[field.name] = 'See server message above.';
         }
       }
       setFieldErrors(attributed);
@@ -123,7 +133,14 @@ export function EntityForm({
           <p className="main-panel-detail">Loading record…</p>
         </div>
       ) : (
-        <form className="entity-form" onSubmit={(e) => void submit(e)} noValidate>
+        // data-testid attributes are the stable certification contract
+        // (datahelix golden-path suite; #15) — keep them.
+        <form
+          className="entity-form"
+          data-testid="entity-form"
+          onSubmit={(e) => void submit(e)}
+          noValidate
+        >
           {serverError && (
             <div className="form-server-error" role="alert">
               <strong>The server rejected the submission.</strong> {serverError}
@@ -140,7 +157,12 @@ export function EntityForm({
             />
           ))}
           <div className="form-actions">
-            <button type="submit" className="form-submit" disabled={phase === 'submitting'}>
+            <button
+              type="submit"
+              className="form-submit"
+              data-testid="form-submit"
+              disabled={phase === 'submitting'}
+            >
               {phase === 'submitting' ? 'Submitting…' : mode === 'new' ? 'Create' : 'Save changes'}
             </button>
             <button type="button" className="state-button" onClick={closeForm}>

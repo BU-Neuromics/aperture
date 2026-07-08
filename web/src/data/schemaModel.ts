@@ -1,5 +1,6 @@
 import type {
   IntrospectionField,
+  IntrospectionInputValue,
   IntrospectionSchema,
   IntrospectionType,
 } from './introspection';
@@ -56,6 +57,23 @@ export type DetailPath =
   | { kind: 'field'; field: string; argName: string; argType: string }
   | { kind: 'filter'; filterField: string };
 
+/**
+ * A search twin (live Hippo shape, #15): a bare-list Query field for the same
+ * entity type taking a required search string (e.g. `searchBooks(q: String!)`).
+ * It attaches to the base collection as its search capability rather than
+ * deriving as a standalone collection — its required arg is only satisfiable
+ * when a search term is active.
+ */
+export interface SearchTwinModel {
+  field: string;
+  argName: string;
+  argType: string;
+  limitArg?: string;
+  limitArgType?: string;
+  offsetArg?: string;
+  offsetArgType?: string;
+}
+
 export interface CollectionModel {
   /** The Query list field, e.g. `subjects` — doubles as the URL collection id. */
   id: string;
@@ -69,6 +87,22 @@ export interface CollectionModel {
   detailColumns: ColumnModel[];
   /** The field identifying an entity in links/detail (the first id-ish column). */
   idColumn?: string;
+  /**
+   * How the list field pages (live Hippo shape, #15): 'envelope' = an object
+   * page `{ items: [T!]! total: Int! }`; 'list' = a bare list of T (the stub
+   * shape, kept as the fallback).
+   */
+  pageShape: 'envelope' | 'list';
+  /**
+   * How equality filters travel: 'inputObject' = a per-type filter input
+   * (stub shape); 'filterList' = the generic `[FilterInput!]` + FilterMode
+   * pair (live Hippo shape).
+   */
+  filterShape?: 'inputObject' | 'filterList';
+  /** For 'filterList': the AND/OR combinator arg, when advertised. */
+  filterModeArg?: { name: string; type: string };
+  /** The attached search twin, when the endpoint advertises one. */
+  search?: SearchTwinModel;
   /** Introspected arg names, present only when the endpoint advertises them. */
   args: {
     limit?: string;
@@ -215,6 +249,50 @@ function columnFor(
 
 /** Combinator/meta input fields that are not equality facets. */
 const COMBINATOR_FIELDS = new Set(['and', 'or', 'not', 'AND', 'OR', 'NOT']);
+
+/**
+ * Hippo's generic FilterInput takes LinkML slot names, while the GraphQL
+ * output fields are their camelCase renames — filtering by `inPrint` silently
+ * matches nothing; `in_print` works (verified against hippo v0.10.3).
+ */
+function slotName(field: string): string {
+  return field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+}
+
+/**
+ * For 'filterList' collections there is no per-type filter input to derive
+ * from — the filterable surface is the entity's own columns (#15): enum →
+ * single-select facet, boolean → true/false, resolved refs → id equality.
+ * FK-rename scalars (e.g. `authorId` beside `author`) are excluded: the
+ * filter slot is the relationship name, not the rename.
+ */
+function deriveColumnFacets(columns: ColumnModel[]): FacetModel[] {
+  const facets: FacetModel[] = [];
+  for (const column of columns) {
+    if (column.kind === 'enum') {
+      facets.push({
+        field: slotName(column.field),
+        label: column.label,
+        kind: 'enum',
+        options: column.enumValues ?? [],
+      });
+    } else if (column.kind === 'boolean') {
+      facets.push({ field: slotName(column.field), label: column.label, kind: 'boolean' });
+    } else if (column.kind === 'ref') {
+      facets.push({ field: slotName(column.field), label: column.label, kind: 'ref' });
+    }
+  }
+  return facets;
+}
+
+/** The equality-filterable field (slot) names for a 'filterList' collection. */
+function deriveColumnFilterFields(columns: ColumnModel[]): string[] {
+  const refFields = new Set(columns.filter((c) => c.kind === 'ref').map((c) => c.field));
+  return columns
+    .filter((c) => c.kind !== 'refList')
+    .filter((c) => !(c.kind === 'id' && refFields.has(c.field.replace(/Id$/, ''))))
+    .map((c) => slotName(c.field));
+}
 
 /**
  * Equality facets derive from the filter input type's own fields (R3.3):
@@ -393,16 +471,140 @@ function deriveWriteModel(
   return write;
 }
 
+/** The derivable column set of an entity type (detail-budgeted). */
+function deriveColumns(
+  schema: IntrospectionSchema,
+  entityType: IntrospectionType,
+): ColumnModel[] {
+  const detailColumns: ColumnModel[] = [];
+  for (const entityField of entityType.fields ?? []) {
+    if (detailColumns.length >= MAX_DETAIL_COLUMNS) break;
+    const column = columnFor(entityField, schema);
+    if (column) detailColumns.push(column);
+  }
+  return detailColumns;
+}
+
+/** Prefer the entity's own id-named column over other ID-typed fields (FK renames). */
+function pickIdColumn(columns: ColumnModel[]): string {
+  return (
+    columns.find((c) => ID_FIELD_NAMES.has(c.field)) ??
+    columns.find((c) => c.kind === 'id') ??
+    columns[0]
+  ).field;
+}
+
 /**
- * A Query field is a browsable collection when it returns a list of OBJECTs.
- * Nav derives all of them (derive-all; config reorder/relabel/hide is later —
- * R3.1).
+ * The page-envelope shape (live Hippo, #15): a non-list Query field returning
+ * an OBJECT with `items: [T!]` (list of OBJECT) and `total: Int`.
+ */
+function pageEnvelope(
+  schema: IntrospectionSchema,
+  field: IntrospectionField,
+): IntrospectionType | undefined {
+  if (isListType(field.type)) return undefined;
+  const pageType = findType(schema, namedType(field.type).name);
+  if (pageType?.kind !== 'OBJECT') return undefined;
+  const items = (pageType.fields ?? []).find((f) => f.name === 'items');
+  const total = (pageType.fields ?? []).find((f) => f.name === 'total');
+  if (!items || !total || !isListType(items.type) || isListType(total.type)) return undefined;
+  if (namedType(total.type).name !== 'Int') return undefined;
+  const itemNamed = namedType(items.type);
+  if (itemNamed.kind !== 'OBJECT' || itemNamed.name == null || itemNamed.name.startsWith('__')) {
+    return undefined;
+  }
+  const entityType = findType(schema, itemNamed.name);
+  return entityType?.fields?.length ? entityType : undefined;
+}
+
+/** Never derive a query surface whose required args we can't supply (ADR-0029). */
+function requiredArgsSatisfiable(field: IntrospectionField, supplied: Set<string>): boolean {
+  return field.args.every((a) => a.type.kind !== 'NON_NULL' || supplied.has(a.name));
+}
+
+/** The search-twin arg: a required search string (`q(uery)`/`search`: String!). */
+function searchTwinArg(field: IntrospectionField): IntrospectionInputValue | undefined {
+  return field.args.find(
+    (a) =>
+      /^(q|query|search)$/i.test(a.name) &&
+      a.type.kind === 'NON_NULL' &&
+      namedType(a.type).name === 'String',
+  );
+}
+
+/**
+ * A Query field is a browsable collection when it pages entities — either a
+ * page envelope `{ items total }` (live Hippo, #15) or a bare list of OBJECTs
+ * (the stub shape, kept as the fallback). Nav derives all of them
+ * (derive-all; config reorder/relabel/hide is later — R3.1).
  */
 export function deriveCollections(schema: IntrospectionSchema): CollectionModel[] {
   const queryType = findType(schema, schema.queryType.name);
   const queryFields = queryType?.fields ?? [];
   const collections: CollectionModel[] = [];
 
+  // Pass 1 — page envelopes.
+  for (const field of queryFields) {
+    const entityType = pageEnvelope(schema, field);
+    if (!entityType) continue;
+
+    const args = {
+      limit: argNamed(field, 'limit', 'first'),
+      offset: argNamed(field, 'offset', 'skip'),
+      filter: argNamed(field, 'filter', 'where', 'filters'),
+      filterMode: argNamed(field, 'filterMode'),
+      orderBy: argNamed(field, 'orderBy', 'order_by', 'sort'),
+    };
+    const supplied = new Set(
+      [args.limit, args.offset, args.filter, args.filterMode].flatMap((a) =>
+        a ? [a.name] : [],
+      ),
+    );
+    if (!requiredArgsSatisfiable(field, supplied)) continue;
+
+    const detailColumns = deriveColumns(schema, entityType);
+    if (detailColumns.length === 0) continue;
+    const columns = detailColumns.slice(0, MAX_COLUMNS);
+    const idColumn = pickIdColumn(columns);
+
+    collections.push({
+      id: field.name,
+      label: humanize(field.name),
+      typeName: entityType.name,
+      columns,
+      detailColumns,
+      idColumn,
+      pageShape: 'envelope',
+      filterShape: args.filter ? 'filterList' : undefined,
+      filterModeArg: args.filterMode && {
+        name: args.filterMode.name,
+        type: typeRefToSDL(args.filterMode.type),
+      },
+      args: {
+        limit: args.limit?.name,
+        offset: args.offset?.name,
+        filter: args.filter?.name,
+        orderBy: args.orderBy?.name,
+      },
+      argTypes: {
+        limit: args.limit && typeRefToSDL(args.limit.type),
+        offset: args.offset && typeRefToSDL(args.offset.type),
+        filter: args.filter && typeRefToSDL(args.filter.type),
+      },
+      facets: args.filter ? deriveColumnFacets(detailColumns) : [],
+      filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
+      detail: deriveDetailPath(queryFields, entityType.name, undefined, idColumn),
+      write: deriveWriteModel(schema, entityType.name, detailColumns),
+    });
+  }
+
+  // An endpoint that advertises page envelopes is envelope-shaped: its bare
+  // lists are auxiliary surfaces (search twins, hippoSchema, …), never
+  // standalone collections.
+  const envelopeMode = collections.length > 0;
+
+  // Pass 2 — bare lists: search twins attach; the rest derive only in stub
+  // (list) mode.
   for (const field of queryFields) {
     if (!isListType(field.type)) continue;
     // History is a per-entity query surface (R3.7), not a browsable collection.
@@ -414,15 +616,28 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     // Introspection meta types are filtered by the server; skip defensively.
     if (named.name.startsWith('__')) continue;
 
-    const detailColumns: ColumnModel[] = [];
-    for (const entityField of entityType.fields) {
-      if (detailColumns.length >= MAX_DETAIL_COLUMNS) break;
-      const column = columnFor(entityField, schema);
-      if (column) detailColumns.push(column);
+    const twinArg = searchTwinArg(field);
+    const base = collections.find(
+      (c) => c.pageShape === 'envelope' && c.typeName === named.name,
+    );
+    if (twinArg && base) {
+      const limit = argNamed(field, 'limit', 'first');
+      const offset = argNamed(field, 'offset', 'skip');
+      if (!requiredArgsSatisfiable(field, new Set([twinArg.name, limit?.name ?? '', offset?.name ?? '']))) {
+        continue;
+      }
+      base.search ??= {
+        field: field.name,
+        argName: twinArg.name,
+        argType: typeRefToSDL(twinArg.type),
+        limitArg: limit?.name,
+        limitArgType: limit && typeRefToSDL(limit.type),
+        offsetArg: offset?.name,
+        offsetArgType: offset && typeRefToSDL(offset.type),
+      };
+      continue;
     }
-    if (detailColumns.length === 0) continue;
-    const columns = detailColumns.slice(0, MAX_COLUMNS);
-    const idColumn = (columns.find((c) => c.kind === 'id') ?? columns[0]).field;
+    if (envelopeMode) continue;
 
     const args = {
       limit: argNamed(field, 'limit', 'first'),
@@ -431,6 +646,15 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       search: argNamed(field, 'search', 'q', 'fts', 'query'),
       orderBy: argNamed(field, 'orderBy', 'order_by', 'sort'),
     };
+    // A bare list with required args we don't send (e.g. an unmatched search
+    // twin's `q`) can never be queried as a collection — skip it (ADR-0029).
+    const supplied = new Set([args.limit, args.offset].flatMap((a) => (a ? [a.name] : [])));
+    if (!requiredArgsSatisfiable(field, supplied)) continue;
+
+    const detailColumns = deriveColumns(schema, entityType);
+    if (detailColumns.length === 0) continue;
+    const columns = detailColumns.slice(0, MAX_COLUMNS);
+    const idColumn = pickIdColumn(columns);
     const filterTypeName = args.filter ? namedType(args.filter.type).name : null;
     const filterType = findType(schema, filterTypeName);
 
@@ -441,6 +665,8 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       columns,
       detailColumns,
       idColumn,
+      pageShape: 'list',
+      filterShape: filterType?.kind === 'INPUT_OBJECT' ? 'inputObject' : undefined,
       args: {
         limit: args.limit?.name,
         offset: args.offset?.name,
@@ -522,7 +748,7 @@ export function deriveCapabilities(
     offsetPagination: some((c) => c.args.limit && c.args.offset),
     equalityFacets: some((c) => c.args.filter),
     fullTextSearch:
-      some((c) => c.args.search) ||
+      some((c) => c.args.search || c.search) ||
       (queryType?.fields ?? []).some((f) => /^search/i.test(f.name)),
     sort: some((c) => c.args.orderBy),
     aggregation: (queryType?.fields ?? []).some((f) => /aggregate|count/i.test(f.name)),

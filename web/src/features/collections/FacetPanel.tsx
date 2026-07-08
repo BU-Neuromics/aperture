@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCapabilities, useDataSource } from '../../data/DataSourceContext';
 import type { FacetModel } from '../../data/schemaModel';
+import { activeCollection } from '../../nav/config';
+import { useNavView } from '../../nav/NavConfigContext';
 import { useCollectionUrlState } from './urlState';
 import './collections.css';
 
@@ -14,23 +16,25 @@ import './collections.css';
  */
 export function FacetPanel() {
   const state = useDataSource();
+  const view = useNavView();
   const capabilities = useCapabilities();
   const { collection, filters, search, toggleFilter, setSearch, clearFilters } =
     useCollectionUrlState();
 
-  if (state.status !== 'ready') return null;
-  const collections = state.source.collections;
-  const active = collections.find((c) => c.id === collection) ?? collections[0];
+  if (state.status !== 'ready' || view == null) return null;
+  const active = activeCollection(view, collection);
   if (!active) return null;
 
-  const searchable = capabilities.fullTextSearch && Boolean(active.args.search);
+  const searchable = capabilities.fullTextSearch && Boolean(active.args.search || active.search);
   const facets = capabilities.equalityFacets ? active.facets : [];
   if (!searchable && facets.length === 0) return null;
 
   const activeCount = Object.keys(filters).length + (search ? 1 : 0);
 
   return (
-    <div className="facet-panel">
+    // data-testid attributes here and on the options below are the stable
+    // certification contract (datahelix golden-path suite; #15) — keep them.
+    <div className="facet-panel" data-testid="facet-panel">
       <div className="facet-panel-header">
         <div className="facet-panel-title-row">
           <span className="facet-panel-title">Filters</span>
@@ -118,6 +122,9 @@ function FacetGroup({
               key={String(option.value)}
               type="button"
               className="facet-option"
+              // Keyed by the filter FIELD identifier (the LinkML slot name the
+              // server filters on) + the option value, e.g. facet-option-in_print-false.
+              data-testid={`facet-option-${facet.field}-${String(option.value)}`}
               aria-pressed={selected}
               onClick={() => onToggle(option.value)}
             >
@@ -162,6 +169,7 @@ function RefFacet({
         type="text"
         className="facet-search-input"
         placeholder="Filter by id…"
+        data-testid={`facet-option-${facet.field}`}
         aria-label={`Filter by ${facet.label}`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

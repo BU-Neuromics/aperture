@@ -34,6 +34,12 @@ import './workflows.css';
  * staged graph so far (continuous validation), and the review screen runs the
  * final whole-set dry-run before ONE atomic commit. No partial run is ever
  * visible; a rejected batch commits nothing.
+ *
+ * Live semantics (#15, hippo 0.10.3): `ingestBatch(dryRun: true)` is
+ * permissive on partial sets (never a spurious failure), so the continuous
+ * dry-run needs no per-step softening; commit-time constraint violations
+ * (FK/NOT NULL) roll the whole batch back and surface as a thrown transport
+ * error, displayed above the review screen.
  */
 export function WorkflowRunner({ workflowId }: { workflowId: string }) {
   const { workflows, error } = useWorkflows();
@@ -196,7 +202,10 @@ function Runner({ workflow, source }: { workflow: WorkflowConfig; source: HippoS
   const currentStep = atReview ? null : workflow.steps[run.currentStep];
 
   return (
-    <div className="wf-runner">
+    // data-testid attributes on the runner, its step/commit buttons, and the
+    // success panel are the stable certification contract (datahelix
+    // golden-path suite; #15) — keep them.
+    <div className="wf-runner" data-testid="workflow-runner">
       <div className="detail-header">
         <button type="button" className="detail-back" onClick={closeWorkflow}>
           ← Close (draft saved)
@@ -401,7 +410,7 @@ function StepForm({
         />
       ))}
       <div className="form-actions">
-        <button type="submit" className="form-submit" disabled={busy}>
+        <button type="submit" className="form-submit" data-testid="workflow-next" disabled={busy}>
           {busy ? 'Validating…' : 'Stage & continue'}
         </button>
         <span className="form-footnote">
@@ -488,6 +497,7 @@ function ReviewScreen({
         <button
           type="button"
           className="state-button"
+          data-testid="workflow-validate"
           disabled={busy}
           onClick={() => {
             setValidated(true);
@@ -496,7 +506,13 @@ function ReviewScreen({
         >
           {busy ? 'Validating…' : 'Validate whole set'}
         </button>
-        <button type="button" className="form-submit" disabled={busy || !clean} onClick={onCommit}>
+        <button
+          type="button"
+          className="form-submit"
+          data-testid="workflow-commit"
+          disabled={busy || !clean}
+          onClick={onCommit}
+        >
           {busy ? 'Working…' : 'Commit atomically'}
         </button>
         {!clean && (
@@ -521,7 +537,7 @@ function SuccessPanel({
   openIn: (collection: string, entity: string) => void;
 }) {
   return (
-    <div className="main-panel" role="status">
+    <div className="main-panel" role="status" data-testid="workflow-success">
       <h1 className="main-panel-title">“{workflow.label}” committed atomically</h1>
       <p className="main-panel-detail">All staged entities entered the graph in one transaction:</p>
       <ul className="wf-committed-list">

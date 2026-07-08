@@ -25,36 +25,50 @@ const REGISTER: WorkflowConfig = {
   ],
 };
 
-interface Op {
-  ref: string;
-  type: string;
+interface BatchEntity {
+  entityType: string;
   data: Record<string, unknown>;
 }
 
-/** A batch endpoint with real all-or-nothing semantics for the tests. */
+/** An ingestBatch endpoint with real all-or-nothing semantics for the tests. */
 function batchClient() {
-  const committed: Op[][] = [];
+  const committed: BatchEntity[][] = [];
   const client = fakeClient(capableSchema({ authorWrite: true }), (query, variables) => {
     if (!query.includes('ApertureBatch')) {
       return { data: { books: [], authors: [] }, error: null } as GraphQLResult<unknown>;
     }
-    const ops = variables['operations'] as Op[];
+    const entities = variables['entities'] as BatchEntity[];
     const dryRun = variables['dryRun'] === true;
-    const errors: { ref: string; field: string; message: string }[] = [];
-    for (const op of ops) {
-      if (op.type === 'Book' && typeof op.data['page_count'] === 'number' && (op.data['page_count'] as number) < 0) {
-        errors.push({ ref: op.ref, field: 'page_count', message: 'must be non-negative' });
-      }
-    }
-    if (errors.length > 0) return { data: { batchPut: { ok: false, results: [], errors } }, error: null };
-    if (dryRun) return { data: { batchPut: { ok: true, results: [], errors: [] } }, error: null };
-    committed.push(ops);
+    const results = entities.map((e) => {
+      const failures =
+        e.entityType === 'Book' &&
+        typeof e.data['page_count'] === 'number' &&
+        (e.data['page_count'] as number) < 0
+          ? [
+              {
+                tier: 'schema',
+                rule: 'minimum_value',
+                message: 'must be non-negative',
+                field: 'page_count',
+                details: null,
+              },
+            ]
+          : [];
+      return { entityId: e.data['id'], passed: failures.length === 0, failures };
+    });
+    const passed = results.every((r) => r.passed);
+    const commits = !dryRun && passed;
+    if (commits) committed.push(entities);
     return {
       data: {
-        batchPut: {
-          ok: true,
-          results: ops.map((op, i) => ({ ref: op.ref, id: `NEW-${i + 1}` })),
-          errors: [],
+        ingestBatch: {
+          committed: commits,
+          dryRun,
+          validation: { passed, results },
+          entities: commits
+            ? entities.map((e) => ({ id: e.data['id'], entity_type: e.entityType, operation: 'insert' }))
+            : [],
+          relationships: [],
         },
       },
       error: null,
@@ -117,19 +131,21 @@ describe('WorkflowRunner (W4.6–W4.9, ADR-0028)', () => {
     await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Commit atomically' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Commit atomically' }));
 
-    // Success: one atomic commit, intra-batch ref token on the wire, ids listed.
+    // Success: one atomic commit, client-id staging on the wire, ids listed.
     expect(await screen.findByText(/committed atomically/)).toBeInTheDocument();
     expect(committed).toHaveLength(1);
-    expect(committed[0]).toEqual([
-      { ref: 'author-step', type: 'Author', data: { name: 'New Author' } },
-      {
-        ref: 'book-step',
-        type: 'Book',
-        // checkbox widgets are explicit booleans; the bound field carries the ref token
-        data: { title: 'The Linked Book', in_print: false, author: 'author-step' },
-      },
-    ]);
-    expect(screen.getByRole('button', { name: 'NEW-2' })).toBeInTheDocument(); // book has a detail path
+    const [author, book] = committed[0];
+    expect(author.entityType).toBe('Author');
+    expect(author.data['name']).toBe('New Author');
+    expect(author.data['id']).toMatch(/^[0-9a-f-]{36}$/); // pre-assigned client id
+    expect(book.entityType).toBe('Book');
+    // checkbox widgets are explicit booleans; the bound field carries the
+    // sibling's pre-assigned client id (the real intra-batch mechanism).
+    expect(book.data['title']).toBe('The Linked Book');
+    expect(book.data['in_print']).toBe(false);
+    expect(book.data['author']).toBe(author.data['id']);
+    // book has a detail path → its committed (client) id links out.
+    expect(screen.getByRole('button', { name: book.data['id'] as string })).toBeInTheDocument();
     // Draft cleared after commit.
     expect(window.localStorage.getItem('aperture:workflow-draft:register-work')).toBeNull();
   });

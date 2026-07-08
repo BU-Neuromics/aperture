@@ -6,7 +6,9 @@ import {
   connectHippoSource,
 } from './hippoSource';
 import { deriveCollections } from './schemaModel';
-import { bareSchema, capableSchema, fakeClient } from './testing/fixtures';
+import { bareSchema, capableSchema, fakeClient, realIntrospection } from './testing/fixtures';
+
+const BOOK_COLUMNS = 'authorId format inPrint title year id isAvailable version';
 
 describe('buildListQuery', () => {
   it('builds an offset page with typed variables (refs select their id field)', () => {
@@ -48,6 +50,74 @@ describe('buildListQuery', () => {
     });
     expect(document).toBe('query ApertureList { things { label } }');
     expect(variables).toEqual({});
+  });
+});
+
+describe('buildListQuery (live Hippo shapes — #15)', () => {
+  const books = deriveCollections(realIntrospection).find((c) => c.id === 'books')!;
+
+  // These document strings are VERIFIED against a live `hippo serve` v0.10.3
+  // (certification fixture schema): 5 Books, total=5.
+  it('selects the { items total } page envelope with required Int! paging', () => {
+    const { document, variables, rootField, envelope } = buildListQuery(books, {
+      page: 1,
+      pageSize: 25,
+    });
+    expect(document).toBe(
+      'query ApertureList($limit: Int!, $offset: Int!) { books(limit: $limit, offset: $offset) ' +
+        `{ items { ${BOOK_COLUMNS} } total } }`,
+    );
+    expect(variables).toEqual({ limit: 25, offset: 0 });
+    expect(rootField).toBe('books');
+    expect(envelope).toBe(true);
+  });
+
+  it('passes filters as the generic [{field, value}] list, combined with AND', () => {
+    const { document, variables } = buildListQuery(books, {
+      page: 1,
+      pageSize: 25,
+      filters: { format: 'paperback', in_print: true },
+    });
+    expect(document).toBe(
+      'query ApertureList($limit: Int!, $offset: Int!, $filters: [FilterInput!], $filterMode: FilterMode!) ' +
+        '{ books(limit: $limit, offset: $offset, filters: $filters, filterMode: $filterMode) ' +
+        `{ items { ${BOOK_COLUMNS} } total } }`,
+    );
+    expect(variables).toEqual({
+      limit: 25,
+      offset: 0,
+      filters: [
+        { field: 'format', value: 'paperback' },
+        { field: 'in_print', value: true },
+      ],
+      filterMode: 'AND',
+    });
+  });
+
+  it('routes an active search to the twin — a bare list, so search replaces filters', () => {
+    const { document, variables, rootField, envelope } = buildListQuery(books, {
+      page: 2,
+      pageSize: 25,
+      filters: { format: 'paperback' },
+      search: 'Le Guin',
+    });
+    expect(document).toBe(
+      'query ApertureList($q: String!, $limit: Int!, $offset: Int!) ' +
+        `{ searchBooks(q: $q, limit: $limit, offset: $offset) { ${BOOK_COLUMNS} } }`,
+    );
+    // The twin takes no filters — they must not leak into the variables.
+    expect(variables).toEqual({ q: 'Le Guin', limit: 25, offset: 25 });
+    expect(rootField).toBe('searchBooks');
+    expect(envelope).toBe(false);
+  });
+
+  it('detail rides the singular field with the full column set', () => {
+    const built = buildDetailQuery(books, 'book-left-hand')!;
+    expect(built.document).toBe(
+      'query ApertureDetail($id: ID!) { book(id: $id) ' +
+        `{ ${BOOK_COLUMNS} createdAt updatedAt schemaVersion createdBy updatedBy supersededBy author { id } } }`,
+    );
+    expect(built.variables).toEqual({ id: 'book-left-hand' });
   });
 });
 
@@ -129,6 +199,48 @@ describe('connectHippoSource', () => {
 
     const short = await source.listEntities('books', { page: 1, pageSize: 10 });
     expect(short.mayHaveMore).toBe(false); // 2 rows < pageSize 10
+  });
+
+  it('unwraps envelope pages and paginates from the server-reported total', async () => {
+    const items = [{ id: 'b1' }, { id: 'b2' }];
+    const client = fakeClient(realIntrospection, (query) =>
+      query.includes('searchBooks')
+        ? { data: { searchBooks: items }, error: null }
+        : { data: { books: { items, total: 5 } }, error: null },
+    );
+    const source = await connectHippoSource(client);
+    expect(source.collections.map((c) => c.id)).toEqual([
+      'apertureDocuments',
+      'authors',
+      'books',
+      'externalIds',
+      'reviews',
+    ]);
+
+    const first = await source.listEntities('books', { page: 1, pageSize: 2 });
+    expect(first.rows).toEqual(items);
+    expect(first.total).toBe(5);
+    expect(first.mayHaveMore).toBe(true); // 2 of 5
+
+    const last = await source.listEntities('books', { page: 2, pageSize: 3 });
+    expect(last.mayHaveMore).toBe(false); // 3 + 2 = 5 of 5
+
+    // Search rides the bare-list twin: no total → page-scoped honesty again.
+    const searched = await source.listEntities('books', { page: 1, pageSize: 2, search: 'x' });
+    expect(searched.rows).toEqual(items);
+    expect(searched.total).toBeUndefined();
+    expect(searched.mayHaveMore).toBe(true); // full page — a next page may exist
+  });
+
+  it('fetches an envelope entity along the singular detail field', async () => {
+    const entity = { id: 'book-emma', title: 'Emma' };
+    const client = fakeClient(realIntrospection, (query) =>
+      query.includes('ApertureDetail')
+        ? { data: { book: entity }, error: null }
+        : { data: {}, error: null },
+    );
+    const source = await connectHippoSource(client);
+    expect(await source.getEntity('books', 'book-emma')).toEqual(entity);
   });
 
   it('fetches a single entity along the detail path', async () => {

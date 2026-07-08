@@ -1,4 +1,6 @@
 import { useDataSource } from '../../data/DataSourceContext';
+import { activeCollection } from '../../nav/config';
+import { useNavView } from '../../nav/NavConfigContext';
 import { useCollectionUrlState } from './urlState';
 import { WorkflowRunner } from '../../workflows/WorkflowRunner';
 import { CollectionTable } from './CollectionTable';
@@ -10,10 +12,13 @@ import './collections.css';
  * The `main`-slot content: routes the data-source state to honest panels
  * (unconfigured / connecting / error — ADR-0029) and renders the active
  * collection's table once the source is ready. The active collection comes
- * from the URL (step 0.6), defaulting to the first derived collection.
+ * from the URL (step 0.6), defaulting to the nav config's default collection
+ * (or the first visible one). Deep links resolve against ALL derived
+ * collections — nav-hidden ≠ inaccessible (R3.1, ADR-0029).
  */
 export function CollectionMain() {
   const state = useDataSource();
+  const view = useNavView();
   const { collection, entity, form, workflow, closeEntity, closeForm } = useCollectionUrlState();
 
   // The guided workflow runner owns main when a workflow is open (W4.6).
@@ -52,8 +57,8 @@ export function CollectionMain() {
     );
   }
 
-  const collections = state.source.collections;
-  if (collections.length === 0) {
+  const active = view != null ? activeCollection(view, collection) : undefined;
+  if (active == null) {
     return (
       <div className="main-panel" role="status">
         <h1 className="main-panel-title">No browsable collections</h1>
@@ -63,8 +68,6 @@ export function CollectionMain() {
       </div>
     );
   }
-
-  const active = collections.find((c) => c.id === collection) ?? collections[0];
 
   if (form != null) {
     const path = form === 'new' ? active.write.create : active.write.update;

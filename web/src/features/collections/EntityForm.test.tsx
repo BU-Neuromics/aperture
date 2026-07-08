@@ -138,6 +138,30 @@ describe('EntityForm (W4.1–W4.5)', () => {
     expect(screen.getByText('See server message above.')).toBeInTheDocument();
   });
 
+  it('attributes a bare FOREIGN KEY rejection to the reference fields (live hippo shape, #15)', async () => {
+    const user = userEvent.setup();
+    // Verified live: a bad reference id fails at commit with a message that
+    // names no field — the heuristic falls back to the ref widgets.
+    const client = fakeClient(capableSchema(), (query) =>
+      query.includes('ApertureCreate')
+        ? { data: null, error: new Error('FOREIGN KEY constraint failed') }
+        : respond(query),
+    );
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+
+    await user.click(await screen.findByRole('button', { name: 'New Book' }));
+    await user.type(await screen.findByLabelText(/Title/), 'T');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/FOREIGN KEY constraint failed/);
+    const authorRow = screen.getByLabelText('Author').closest('.form-row')!;
+    expect(within(authorRow as HTMLElement).getByText('See server message above.')).toBeInTheDocument();
+    // Non-ref fields stay unattributed.
+    const titleRow = screen.getByLabelText(/Title/).closest('.form-row')!;
+    expect(within(titleRow as HTMLElement).queryByText(/server message/)).not.toBeInTheDocument();
+  });
+
   it('edit prefills from the entity and submits only touched fields (partial-merge)', async () => {
     const user = userEvent.setup();
     const client = fakeClient(capableSchema(), respond);

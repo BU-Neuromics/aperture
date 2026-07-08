@@ -1,0 +1,5783 @@
+{
+ "queryType": {
+  "name": "Query"
+ },
+ "mutationType": {
+  "name": "Mutation"
+ },
+ "types": [
+  {
+   "kind": "OBJECT",
+   "name": "Query",
+   "description": null,
+   "fields": [
+    {
+     "name": "apertureDocument",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "ApertureDocument",
+      "ofType": null
+     }
+    },
+    {
+     "name": "apertureDocuments",
+     "description": null,
+     "args": [
+      {
+       "name": "filters",
+       "type": {
+        "kind": "LIST",
+        "name": null,
+        "ofType": {
+         "kind": "NON_NULL",
+         "name": null,
+         "ofType": {
+          "kind": "INPUT_OBJECT",
+          "name": "FilterInput",
+          "ofType": null
+         }
+        }
+       }
+      },
+      {
+       "name": "filterMode",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "ENUM",
+         "name": "FilterMode",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "asOf",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ApertureDocumentPage",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "searchApertureDocuments",
+     "description": null,
+     "args": [
+      {
+       "name": "q",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "ApertureDocument",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "author",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "Author",
+      "ofType": null
+     }
+    },
+    {
+     "name": "authors",
+     "description": null,
+     "args": [
+      {
+       "name": "filters",
+       "type": {
+        "kind": "LIST",
+        "name": null,
+        "ofType": {
+         "kind": "NON_NULL",
+         "name": null,
+         "ofType": {
+          "kind": "INPUT_OBJECT",
+          "name": "FilterInput",
+          "ofType": null
+         }
+        }
+       }
+      },
+      {
+       "name": "filterMode",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "ENUM",
+         "name": "FilterMode",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "asOf",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "AuthorPage",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "searchAuthors",
+     "description": null,
+     "args": [
+      {
+       "name": "q",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "Author",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "book",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "Book",
+      "ofType": null
+     }
+    },
+    {
+     "name": "books",
+     "description": null,
+     "args": [
+      {
+       "name": "filters",
+       "type": {
+        "kind": "LIST",
+        "name": null,
+        "ofType": {
+         "kind": "NON_NULL",
+         "name": null,
+         "ofType": {
+          "kind": "INPUT_OBJECT",
+          "name": "FilterInput",
+          "ofType": null
+         }
+        }
+       }
+      },
+      {
+       "name": "filterMode",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "ENUM",
+         "name": "FilterMode",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "asOf",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BookPage",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "searchBooks",
+     "description": null,
+     "args": [
+      {
+       "name": "q",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "Book",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "externalId",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "ExternalID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "externalIds",
+     "description": null,
+     "args": [
+      {
+       "name": "filters",
+       "type": {
+        "kind": "LIST",
+        "name": null,
+        "ofType": {
+         "kind": "NON_NULL",
+         "name": null,
+         "ofType": {
+          "kind": "INPUT_OBJECT",
+          "name": "FilterInput",
+          "ofType": null
+         }
+        }
+       }
+      },
+      {
+       "name": "filterMode",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "ENUM",
+         "name": "FilterMode",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "asOf",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ExternalIDPage",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "searchExternalIds",
+     "description": null,
+     "args": [
+      {
+       "name": "q",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "ExternalID",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "review",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "Review",
+      "ofType": null
+     }
+    },
+    {
+     "name": "reviews",
+     "description": null,
+     "args": [
+      {
+       "name": "filters",
+       "type": {
+        "kind": "LIST",
+        "name": null,
+        "ofType": {
+         "kind": "NON_NULL",
+         "name": null,
+         "ofType": {
+          "kind": "INPUT_OBJECT",
+          "name": "FilterInput",
+          "ofType": null
+         }
+        }
+       }
+      },
+      {
+       "name": "filterMode",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "ENUM",
+         "name": "FilterMode",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "asOf",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ReviewPage",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "searchReviews",
+     "description": null,
+     "args": [
+      {
+       "name": "q",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "limit",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "offset",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Int",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "Review",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "entityHistory",
+     "description": null,
+     "args": [
+      {
+       "name": "entityId",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "ProvenanceEntry",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "SupersessionInfo",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "findByXref",
+     "description": null,
+     "args": [
+      {
+       "name": "system",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "value",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "XrefMatch",
+      "ofType": null
+     }
+    },
+    {
+     "name": "hippoSchema",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "HippoEntityTypeInfo",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "hippoEntityType",
+     "description": null,
+     "args": [
+      {
+       "name": "name",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "OBJECT",
+      "name": "HippoEntityTypeInfo",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ApertureDocument",
+   "description": "A single control-plane document. Upserted by (kind, name). `kind` is one of Aperture's document kinds (savedView | workflowDraft | config); `name` is the document key (view name / workflowId / config key); `payload` is the JSON-string versioned envelope.",
+   "fields": [
+    {
+     "name": "kind",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "payload",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "id",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isAvailable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "version",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "schemaVersion",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "SCALAR",
+   "name": "String",
+   "description": "The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "SCALAR",
+   "name": "ID",
+   "description": "The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `\"4\"`) or integer (such as `4`) input value will be accepted as an ID.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "SCALAR",
+   "name": "Boolean",
+   "description": "The `Boolean` scalar type represents `true` or `false`.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "SCALAR",
+   "name": "Int",
+   "description": "The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "SCALAR",
+   "name": "DateTime",
+   "description": "ISO-8601 datetime string (UTC).",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ApertureDocumentPage",
+   "description": "Offset-paginated ApertureDocument result set (mirrors the SDK's PaginatedResult).",
+   "fields": [
+    {
+     "name": "items",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "ApertureDocument",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "total",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "limit",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "offset",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "FilterInput",
+   "description": "Field/value equality filter (SDK query filter).",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "field",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "value",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "JSON",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "SCALAR",
+   "name": "JSON",
+   "description": "The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "ENUM",
+   "name": "FilterMode",
+   "description": "How multiple filters compose (SDK filter_mode).",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": [
+    {
+     "name": "AND"
+    },
+    {
+     "name": "OR"
+    }
+   ]
+  },
+  {
+   "kind": "OBJECT",
+   "name": "Author",
+   "description": "A person who writes Books. `name` is full-text searchable; the write loop creates an Author, and the atomic-workflow loop creates an Author and its Books in one batch (intra-batch reference: the Book's `author` points at the not-yet-committed Author by its batch ref).",
+   "fields": [
+    {
+     "name": "bio",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "id",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isAvailable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "version",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "schemaVersion",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "AuthorPage",
+   "description": "Offset-paginated Author result set (mirrors the SDK's PaginatedResult).",
+   "fields": [
+    {
+     "name": "items",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "Author",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "total",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "limit",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "offset",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "Book",
+   "description": "A published work. `format` (enum) and `in_print` (boolean) drive facets; `author` is a typed reference used for cross-links and batch resolution.",
+   "fields": [
+    {
+     "name": "authorId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "format",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "ENUM",
+      "name": "BookFormat",
+      "ofType": null
+     }
+    },
+    {
+     "name": "inPrint",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    },
+    {
+     "name": "title",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "year",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isAvailable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "version",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "schemaVersion",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "author",
+     "description": "Resolved Author for `author` (graph traversal; batched per request).",
+     "args": [],
+     "type": {
+      "kind": "OBJECT",
+      "name": "Author",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "ENUM",
+   "name": "BookFormat",
+   "description": "Physical/digital form of a Book — drives an enum facet in browse/filter.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": [
+    {
+     "name": "audiobook"
+    },
+    {
+     "name": "ebook"
+    },
+    {
+     "name": "hardcover"
+    },
+    {
+     "name": "paperback"
+    }
+   ]
+  },
+  {
+   "kind": "OBJECT",
+   "name": "BookPage",
+   "description": "Offset-paginated Book result set (mirrors the SDK's PaginatedResult).",
+   "fields": [
+    {
+     "name": "items",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "Book",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "total",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "limit",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "offset",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ExternalID",
+   "description": "DEPRECATED (since 0.6.0, issue #48): use the `ExternalReference` value type on a domain slot (optionally annotated `hippo_external_xref` for reverse lookup) instead. ExternalID remains for backward compatibility only and will be removed from hippo_core in a future major release; the SDK methods (`register_external_id`, `get_by_external_id`, `list_external_ids`, mapping-level `supersede`) and the `/external-ids` REST endpoints emit DeprecationWarning / are marked deprecated in OpenAPI.\nA stable cross-system identifier linking a Hippo entity to an ID managed by an external source system (e.g., STARLIMS barcode, HALO sample ID, Donor DB donor number). Lifecycle-tracked: each ExternalID instance is created, superseded, and retired via the normal entity machinery — same write path, same provenance, same query semantics as any other entity class. See sec3 §3.4 and the β-refactor handoff (sec9 PR 1.1) for context.\nNote on lifecycle flags: `is_available` (inherited from Entity) is the standard entity-lifecycle flag that reflects soft-delete / supersede / archived state. `is_active` is a narrower flag meaning \"this external-system mapping is currently in use\". An ExternalID may be `is_available: true` (entity-level: not deleted) but `is_active: false` (mapping-level: superseded by a newer mapping).\n`(source_system, value)` must be unique within active records (`is_active = true`). The uniqueness constraint is declared here as a logical `unique_keys` block; the partial-index enforcement against `is_active = true` is wired in the DDL wrapper (PR 1.2).",
+   "fields": [
+    {
+     "name": "value",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "sourceSystem",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "entity",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isActive",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isAvailable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "version",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "schemaVersion",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ExternalIDPage",
+   "description": "Offset-paginated ExternalID result set (mirrors the SDK's PaginatedResult).",
+   "fields": [
+    {
+     "name": "items",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "ExternalID",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "total",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "limit",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "offset",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "Review",
+   "description": "A review of a Book. Third entity in the atomic-workflow batch (Author → Book → Review), so the golden path stages a three-node linked set and commits it all-or-nothing.",
+   "fields": [
+    {
+     "name": "body",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "bookId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "rating",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "id",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isAvailable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "version",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "schemaVersion",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "book",
+     "description": "Resolved Book for `book` (graph traversal; batched per request).",
+     "args": [],
+     "type": {
+      "kind": "OBJECT",
+      "name": "Book",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ReviewPage",
+   "description": "Offset-paginated Review result set (mirrors the SDK's PaginatedResult).",
+   "fields": [
+    {
+     "name": "items",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "Review",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "total",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "limit",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "offset",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ProvenanceEntry",
+   "description": "One provenance log entry for an entity (append-only audit trail; see sec6/sec9 §9.6).",
+   "fields": [
+    {
+     "name": "operationId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "entityType",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "operation",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "timestamp",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "actorId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "patch",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "JSON",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "SupersessionInfo",
+   "description": "Entity-level supersession state (mirrors REST GET /entities/{id}/superseded). `supersededBy` is the direct replacement (null when the entity is current); `chain` follows replacement links forward to the terminal replacement.",
+   "fields": [
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "chain",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "XrefMatch",
+   "description": "Entity resolved from an external reference (system, value) pair via the hippo_external_xref reverse-lookup index (issue #48). Generic envelope shape — the matching entity type is only known at query time, so `data` carries the typed payload as JSON; use `entityType` with the per-type queries for typed traversal.",
+   "fields": [
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "entityType",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "data",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "JSON",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "version",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "createdAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    },
+    {
+     "name": "updatedAt",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "DateTime",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "HippoEntityTypeInfo",
+   "description": "One exposed entity type from the deployment's merged LinkML schema (mirrors REST GET /schemas). This is Hippo's *domain* schema introspection — the LinkML type model the GraphQL surface itself is generated from.",
+   "fields": [
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "accessorName",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "fields",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "HippoSlotInfo",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "relationships",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "HippoReferenceInfo",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "HippoSlotInfo",
+   "description": "One slot of an entity type, as classified by the shared LinkML type model (hippo.core.schema_typing).",
+   "fields": [
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "kind",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "range",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "role",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "required",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "multivalued",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "identifier",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "targetEntityType",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "enumName",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "enumValues",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "String",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "HippoReferenceInfo",
+   "description": "One relationship of an entity type (mirrors REST GET /schemas/{type}/references).",
+   "fields": [
+    {
+     "name": "field",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "targetEntityType",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "Mutation",
+   "description": null,
+   "fields": [
+    {
+     "name": "createApertureDocument",
+     "description": null,
+     "args": [
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "ApertureDocumentCreateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ApertureDocument",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "updateApertureDocument",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "ApertureDocumentUpdateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ApertureDocument",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setApertureDocumentAvailability",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "AvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setApertureDocumentAvailabilityBulk",
+     "description": null,
+     "args": [
+      {
+       "name": "ids",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "SCALAR",
+           "name": "ID",
+           "ofType": null
+          }
+         }
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BulkAvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersedeApertureDocument",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "replacementId",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "SupersedeResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "createAuthor",
+     "description": null,
+     "args": [
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "AuthorCreateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "Author",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "updateAuthor",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "AuthorUpdateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "Author",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setAuthorAvailability",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "AvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setAuthorAvailabilityBulk",
+     "description": null,
+     "args": [
+      {
+       "name": "ids",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "SCALAR",
+           "name": "ID",
+           "ofType": null
+          }
+         }
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BulkAvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersedeAuthor",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "replacementId",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "SupersedeResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "createBook",
+     "description": null,
+     "args": [
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "BookCreateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "Book",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "updateBook",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "BookUpdateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "Book",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setBookAvailability",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "AvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setBookAvailabilityBulk",
+     "description": null,
+     "args": [
+      {
+       "name": "ids",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "SCALAR",
+           "name": "ID",
+           "ofType": null
+          }
+         }
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BulkAvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersedeBook",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "replacementId",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "SupersedeResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "createExternalId",
+     "description": null,
+     "args": [
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "ExternalIDCreateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ExternalID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "updateExternalId",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "ExternalIDUpdateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "ExternalID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setExternalIdAvailability",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "AvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setExternalIdAvailabilityBulk",
+     "description": null,
+     "args": [
+      {
+       "name": "ids",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "SCALAR",
+           "name": "ID",
+           "ofType": null
+          }
+         }
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BulkAvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersedeExternalId",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "replacementId",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "SupersedeResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "createReview",
+     "description": null,
+     "args": [
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "ReviewCreateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "Review",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "updateReview",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "data",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "INPUT_OBJECT",
+         "name": "ReviewUpdateInput",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "Review",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setReviewAvailability",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "AvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "setReviewAvailabilityBulk",
+     "description": null,
+     "args": [
+      {
+       "name": "ids",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "SCALAR",
+           "name": "ID",
+           "ofType": null
+          }
+         }
+        }
+       }
+      },
+      {
+       "name": "isAvailable",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BulkAvailabilityResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersedeReview",
+     "description": null,
+     "args": [
+      {
+       "name": "id",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "replacementId",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "ID",
+         "ofType": null
+        }
+       }
+      },
+      {
+       "name": "reason",
+       "type": {
+        "kind": "SCALAR",
+        "name": "String",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "SupersedeResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "ingestBatch",
+     "description": null,
+     "args": [
+      {
+       "name": "entities",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "INPUT_OBJECT",
+           "name": "BatchEntityInput",
+           "ofType": null
+          }
+         }
+        }
+       }
+      },
+      {
+       "name": "relationships",
+       "type": {
+        "kind": "LIST",
+        "name": null,
+        "ofType": {
+         "kind": "NON_NULL",
+         "name": null,
+         "ofType": {
+          "kind": "INPUT_OBJECT",
+          "name": "BatchRelationshipInput",
+          "ofType": null
+         }
+        }
+       }
+      },
+      {
+       "name": "dryRun",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BatchWriteGraphQLResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "validateBatch",
+     "description": null,
+     "args": [
+      {
+       "name": "entities",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "LIST",
+         "name": null,
+         "ofType": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+           "kind": "INPUT_OBJECT",
+           "name": "BatchEntityInput",
+           "ofType": null
+          }
+         }
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BatchValidationGraphQLResult",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "ApertureDocumentCreateInput",
+   "description": "Create payload for ApertureDocument. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "kind",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "name",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "payload",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "ApertureDocumentUpdateInput",
+   "description": "Update payload for ApertureDocument. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "kind",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "name",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "payload",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "AvailabilityResult",
+   "description": "Result of an availability transition. Hippo never hard-deletes; lifecycle status drivers (active/archived/superseded/deleted/distributed/removed) are recorded in provenance (sec3, sec9 §9.5).",
+   "fields": [
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isAvailable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "BulkAvailabilityResult",
+   "description": "Summary of a bulk availability change (mirrors REST POST /entities/{type}/bulk-availability): per-record error isolation — failures never roll back sibling successes.",
+   "fields": [
+    {
+     "name": "total",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "succeeded",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "failed",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "successes",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "AvailabilityResult",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "failures",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "BulkAvailabilityFailure",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "BulkAvailabilityFailure",
+   "description": "One per-entity failure from a bulk availability change.",
+   "fields": [
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "error",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "SupersedeResult",
+   "description": "Result of a supersede operation.",
+   "fields": [
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "supersededBy",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "AuthorCreateInput",
+   "description": "Create payload for Author. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "name",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "bio",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "AuthorUpdateInput",
+   "description": "Update payload for Author. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "bio",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "name",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "BookCreateInput",
+   "description": "Create payload for Book. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "author",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "title",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "format",
+     "type": {
+      "kind": "ENUM",
+      "name": "BookFormat",
+      "ofType": null
+     }
+    },
+    {
+     "name": "inPrint",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    },
+    {
+     "name": "year",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "BookUpdateInput",
+   "description": "Update payload for Book. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "author",
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "format",
+     "type": {
+      "kind": "ENUM",
+      "name": "BookFormat",
+      "ofType": null
+     }
+    },
+    {
+     "name": "inPrint",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    },
+    {
+     "name": "title",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "year",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "ExternalIDCreateInput",
+   "description": "Create payload for ExternalID. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "value",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "sourceSystem",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "entity",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isActive",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "ExternalIDUpdateInput",
+   "description": "Update payload for ExternalID. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "value",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "sourceSystem",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "entity",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isActive",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "ReviewCreateInput",
+   "description": "Create payload for Review. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "book",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "rating",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Int",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "body",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "ReviewUpdateInput",
+   "description": "Update payload for Review. Relationship fields take the target entity UUID.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "body",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "book",
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "rating",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Int",
+      "ofType": null
+     }
+    },
+    {
+     "name": "id",
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isAvailable",
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "BatchWriteGraphQLResult",
+   "description": "Result of an atomic multi-entity write (HippoClient.batch_put). The set commits all-or-nothing; `entities`/`relationships` carry the written (or, on a dry run, planned) payloads as JSON.",
+   "fields": [
+    {
+     "name": "committed",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "dryRun",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "validation",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "BatchValidationGraphQLResult",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "entities",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "JSON",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "relationships",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "JSON",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "BatchValidationGraphQLResult",
+   "description": "Whole-set dry-run validation result (HippoClient.validate_batch); aggregated per-entity, no writes.",
+   "fields": [
+    {
+     "name": "passed",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "results",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "BatchEntityValidation",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "BatchEntityValidation",
+   "description": "Per-entity validation outcome within a batch.",
+   "fields": [
+    {
+     "name": "entityId",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "ID",
+      "ofType": null
+     }
+    },
+    {
+     "name": "passed",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "failures",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "ValidationFailureType",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "ValidationFailureType",
+   "description": "One tier-annotated validation failure (sec9 §9.9).",
+   "fields": [
+    {
+     "name": "tier",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "rule",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "message",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "field",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "details",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "JSON",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "BatchEntityInput",
+   "description": "One entity in a batch validate/write request.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "entityType",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "data",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "JSON",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "operation",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "INPUT_OBJECT",
+   "name": "BatchRelationshipInput",
+   "description": "One intra-batch relationship edge, created after the entities within the same atomic transaction. Source/target may reference entities created earlier in the same batch.",
+   "fields": null,
+   "inputFields": [
+    {
+     "name": "sourceId",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "targetId",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "ID",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "relationshipType",
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "metadata",
+     "type": {
+      "kind": "SCALAR",
+      "name": "JSON",
+      "ofType": null
+     }
+    }
+   ],
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "__Schema",
+   "description": "A GraphQL Schema defines the capabilities of a GraphQL server. It exposes all available types and directives on the server, as well as the entry points for query, mutation, and subscription operations.",
+   "fields": [
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "types",
+     "description": "A list of all types supported by this server.",
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "__Type",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "queryType",
+     "description": "The type that query operations will be rooted at.",
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "__Type",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "mutationType",
+     "description": "If this server supports mutation, the type that mutation operations will be rooted at.",
+     "args": [],
+     "type": {
+      "kind": "OBJECT",
+      "name": "__Type",
+      "ofType": null
+     }
+    },
+    {
+     "name": "subscriptionType",
+     "description": "If this server supports subscription, the type that subscription operations will be rooted at.",
+     "args": [],
+     "type": {
+      "kind": "OBJECT",
+      "name": "__Type",
+      "ofType": null
+     }
+    },
+    {
+     "name": "directives",
+     "description": "A list of all directives supported by this server.",
+     "args": [
+      {
+       "name": "includeDeprecated",
+       "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "SCALAR",
+         "name": "Boolean",
+         "ofType": null
+        }
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "__Directive",
+         "ofType": null
+        }
+       }
+      }
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "__Type",
+   "description": "The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the `__TypeKind` enum.\n\nDepending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name, description and optional `specifiedByURL`, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.",
+   "fields": [
+    {
+     "name": "kind",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "ENUM",
+       "name": "__TypeKind",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "specifiedByURL",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "fields",
+     "description": null,
+     "args": [
+      {
+       "name": "includeDeprecated",
+       "type": {
+        "kind": "SCALAR",
+        "name": "Boolean",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "LIST",
+      "name": null,
+      "ofType": {
+       "kind": "NON_NULL",
+       "name": null,
+       "ofType": {
+        "kind": "OBJECT",
+        "name": "__Field",
+        "ofType": null
+       }
+      }
+     }
+    },
+    {
+     "name": "interfaces",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "LIST",
+      "name": null,
+      "ofType": {
+       "kind": "NON_NULL",
+       "name": null,
+       "ofType": {
+        "kind": "OBJECT",
+        "name": "__Type",
+        "ofType": null
+       }
+      }
+     }
+    },
+    {
+     "name": "possibleTypes",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "LIST",
+      "name": null,
+      "ofType": {
+       "kind": "NON_NULL",
+       "name": null,
+       "ofType": {
+        "kind": "OBJECT",
+        "name": "__Type",
+        "ofType": null
+       }
+      }
+     }
+    },
+    {
+     "name": "enumValues",
+     "description": null,
+     "args": [
+      {
+       "name": "includeDeprecated",
+       "type": {
+        "kind": "SCALAR",
+        "name": "Boolean",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "LIST",
+      "name": null,
+      "ofType": {
+       "kind": "NON_NULL",
+       "name": null,
+       "ofType": {
+        "kind": "OBJECT",
+        "name": "__EnumValue",
+        "ofType": null
+       }
+      }
+     }
+    },
+    {
+     "name": "inputFields",
+     "description": null,
+     "args": [
+      {
+       "name": "includeDeprecated",
+       "type": {
+        "kind": "SCALAR",
+        "name": "Boolean",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "LIST",
+      "name": null,
+      "ofType": {
+       "kind": "NON_NULL",
+       "name": null,
+       "ofType": {
+        "kind": "OBJECT",
+        "name": "__InputValue",
+        "ofType": null
+       }
+      }
+     }
+    },
+    {
+     "name": "ofType",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "OBJECT",
+      "name": "__Type",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isOneOf",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "Boolean",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "ENUM",
+   "name": "__TypeKind",
+   "description": "An enum describing what kind of type a given `__Type` is.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": [
+    {
+     "name": "SCALAR"
+    },
+    {
+     "name": "OBJECT"
+    },
+    {
+     "name": "INTERFACE"
+    },
+    {
+     "name": "UNION"
+    },
+    {
+     "name": "ENUM"
+    },
+    {
+     "name": "INPUT_OBJECT"
+    },
+    {
+     "name": "LIST"
+    },
+    {
+     "name": "NON_NULL"
+    }
+   ]
+  },
+  {
+   "kind": "OBJECT",
+   "name": "__Field",
+   "description": "Object and Interface types are described by a list of Fields, each of which has a name, potentially a list of arguments, and a return type.",
+   "fields": [
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "args",
+     "description": null,
+     "args": [
+      {
+       "name": "includeDeprecated",
+       "type": {
+        "kind": "SCALAR",
+        "name": "Boolean",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "__InputValue",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "type",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "__Type",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "isDeprecated",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "deprecationReason",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "__InputValue",
+   "description": "Arguments provided to Fields or Directives and the input fields of an InputObject are represented as Input Values which describe their type and optionally a default value.",
+   "fields": [
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "type",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "OBJECT",
+       "name": "__Type",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "defaultValue",
+     "description": "A GraphQL-formatted string representing the default value for this input value.",
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isDeprecated",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "deprecationReason",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "__EnumValue",
+   "description": "One possible value for a given Enum. Enum values are unique values, not a placeholder for a string or numeric value. However an Enum value is returned in a JSON response as a string.",
+   "fields": [
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isDeprecated",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "deprecationReason",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "OBJECT",
+   "name": "__Directive",
+   "description": "A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.\n\nIn some cases, you need to provide options to alter GraphQL's execution behavior in ways field arguments will not suffice, such as conditionally including or skipping a field. Directives provide this by describing additional information to the executor.",
+   "fields": [
+    {
+     "name": "name",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "String",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "description",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    },
+    {
+     "name": "isRepeatable",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "locations",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "ENUM",
+         "name": "__DirectiveLocation",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "args",
+     "description": null,
+     "args": [
+      {
+       "name": "includeDeprecated",
+       "type": {
+        "kind": "SCALAR",
+        "name": "Boolean",
+        "ofType": null
+       }
+      }
+     ],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "LIST",
+       "name": null,
+       "ofType": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+         "kind": "OBJECT",
+         "name": "__InputValue",
+         "ofType": null
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "isDeprecated",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "deprecationReason",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
+     }
+    }
+   ],
+   "inputFields": null,
+   "enumValues": null
+  },
+  {
+   "kind": "ENUM",
+   "name": "__DirectiveLocation",
+   "description": "A Directive can be adjacent to many parts of the GraphQL language, a __DirectiveLocation describes one such possible adjacencies.",
+   "fields": null,
+   "inputFields": null,
+   "enumValues": [
+    {
+     "name": "QUERY"
+    },
+    {
+     "name": "MUTATION"
+    },
+    {
+     "name": "SUBSCRIPTION"
+    },
+    {
+     "name": "FIELD"
+    },
+    {
+     "name": "FRAGMENT_DEFINITION"
+    },
+    {
+     "name": "FRAGMENT_SPREAD"
+    },
+    {
+     "name": "INLINE_FRAGMENT"
+    },
+    {
+     "name": "VARIABLE_DEFINITION"
+    },
+    {
+     "name": "SCHEMA"
+    },
+    {
+     "name": "SCALAR"
+    },
+    {
+     "name": "OBJECT"
+    },
+    {
+     "name": "FIELD_DEFINITION"
+    },
+    {
+     "name": "ARGUMENT_DEFINITION"
+    },
+    {
+     "name": "INTERFACE"
+    },
+    {
+     "name": "UNION"
+    },
+    {
+     "name": "ENUM"
+    },
+    {
+     "name": "ENUM_VALUE"
+    },
+    {
+     "name": "INPUT_OBJECT"
+    },
+    {
+     "name": "INPUT_FIELD_DEFINITION"
+    },
+    {
+     "name": "DIRECTIVE_DEFINITION"
+    }
+   ]
+  }
+ ]
+}

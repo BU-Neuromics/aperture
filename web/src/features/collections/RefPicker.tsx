@@ -68,6 +68,7 @@ export function RefPicker({
     return (
       <input
         id={inputId}
+        data-testid={inputId}
         type="text"
         className="form-input"
         placeholder={`${targetType ?? 'entity'} id`}
@@ -84,6 +85,7 @@ export function RefPicker({
     <div className="ref-picker">
       <input
         id={inputId}
+        data-testid={inputId}
         type="text"
         className="form-input"
         placeholder={`Search ${target.label.toLowerCase()}…`}
