@@ -1,9 +1,16 @@
 # ADR-0023: Data-story reproducibility via one as-of watermark per story-version
 
-- **Status:** Proposed  — ⛔ **Deferred from MVP** (ADR-0026)
+- **Status:** Superseded by Reel ADR-0002 (2026-06-22 data-story-engine split)
 - **Date:** 2026-06-17
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0022 (instruction-path model), ADR-0020 (provenance events), ADR-0017 (data plane vs control plane); `instruction-path-model.md` §5; Hippo `docs/data-model.md` (provenance & history, `state_at`)
+
+> **⤳ Superseded — moved to Reel (2026-06-22).** This decision moved to the **Reel** component
+> when the AI-native data-story engine was split out of Aperture (boundary:
+> `drylims:platform/design/decisions/ADR-0001`; runbook `drylims:proposals/reel-split.md`). Its
+> canonical home is now **Reel [ADR-0002](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0002-data-story-reproducibility-as-of-watermark.md)**
+> (renumbered from this ADR). Kept here as a tombstone per the never-delete convention — **do not
+> edit; edit the Reel ADR.** The body below is the original Aperture text, preserved for history.
 
 ## Context
 

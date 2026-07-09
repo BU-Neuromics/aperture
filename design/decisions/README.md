@@ -23,4 +23,4 @@ one is a status flip from `Proposed` → `Accepted`, not a new document.
 | `INDEX.md` Decision Log | **The index.** One scannable row per ADR; the entry point. |
 | `portal-vision-handoff.md` | **Historical vision / context.** The original brainstorm. Its §2 "settled decisions" are backfilled here as `Accepted` ADRs; its §9 open questions are `Proposed` ADRs. Read it for narrative context, cite ADRs for decisions. |
 | `portal-open-questions.md` | **Working notes.** Proposed resolutions to §9, carried into the corresponding `Proposed` ADRs as their recommended Decision + rationale. |
-| `instruction-path-model.md` | **Working design.** The data-story substrate model; its open decisions D-1–D-5 are recorded as ADR-0022–0025 (+ a Hippo requirement). |
+| `instruction-path-model.md` | **Moved to Reel** (2026-06-22 split). Was the data-story substrate model (decisions D-1–D-5 → now Reel ADR-0001–0004); this file is a redirect stub. The local ADR-0022–0026 are superseded tombstones pointing to their Reel homes. |
