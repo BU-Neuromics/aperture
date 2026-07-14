@@ -61,8 +61,11 @@ describe('App — the Phase-0 walking skeleton end to end', () => {
 
     // Table header derives from the column model.
     expect(await screen.findByRole('columnheader', { name: 'Title' })).toBeInTheDocument();
-    // Rows render through the slot-kind renderers.
-    expect(screen.getByText('BK-0001')).toBeInTheDocument(); // id → mono
+    // Rows render through the slot-kind renderers. Await the first cell:
+    // the column headers derive from introspection and can render while the
+    // row query is still in flight (skeleton rows), so a sync getByText here
+    // is a CI-timing flake. Once one cell is in, the whole row rendered.
+    expect(await screen.findByText('BK-0001')).toBeInTheDocument(); // id → mono
     expect(screen.getByText('1,024')).toBeInTheDocument(); // number → formatted
     expect(screen.getByText('AU-01')).toBeInTheDocument(); // ref → target id field
     expect(screen.getByText('3')).toBeInTheDocument(); // refList → count badge

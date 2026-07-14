@@ -23,4 +23,15 @@ describe('runtime config overlay (issue #22)', () => {
     (globalThis as ConfigWindow).__APERTURE_CONFIG__ = 'not-an-object';
     expect(resolveEndpoint(runtimeEnv())).toEqual({ url: null });
   });
+
+  it('passes a relative (same-origin) endpoint through untouched', () => {
+    // Same-origin deployments (e.g. the DataHelix solo recipe) reverse-proxy
+    // the GraphQL endpoint next to the SPA and inject a path-only URL; the
+    // browser's fetch resolves it against the page origin. resolveEndpoint
+    // must not require an absolute URL.
+    (globalThis as ConfigWindow).__APERTURE_CONFIG__ = {
+      VITE_HIPPO_GRAPHQL_URL: '/graphql',
+    };
+    expect(resolveEndpoint(runtimeEnv())).toEqual({ url: '/graphql' });
+  });
 });

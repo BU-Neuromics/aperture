@@ -65,6 +65,11 @@ docker build -t aperture-web web/
 docker run -p 5173:80 -e VITE_HIPPO_GRAPHQL_URL=http://hippo:8001/graphql aperture-web
 ```
 
+`VITE_HIPPO_GRAPHQL_URL` may also be a **relative path** (e.g. `/graphql`): the SPA hands it
+to `fetch`, which resolves it against the page origin. Same-origin deployments that
+reverse-proxy the GraphQL endpoint next to the SPA (the DataHelix `solo` recipe) use this to
+avoid CORS configuration entirely.
+
 ## Nav composition config (issue #18, R3.1)
 
 The nav derives every collection from introspection (derive-all), then applies a **nav

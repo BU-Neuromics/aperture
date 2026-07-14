@@ -5,6 +5,11 @@ import { runtimeEnv } from '../config/runtime';
  * resolved from env (build-time VITE_* overlaid by the image's runtime
  * config — see `config/runtime.ts`). Swapping the source (Hippo →
  * Bridge/Cappella) is a config change, never a refactor (ADR-0017).
+ *
+ * The value may be absolute (`http://hippo:8001/graphql`) or relative
+ * (`/graphql`) — a relative path resolves against the page origin in the
+ * browser, which is how same-origin reverse-proxy deployments (DataHelix
+ * `solo` recipe) avoid CORS entirely.
  */
 export interface EndpointConfig {
   /** GraphQL endpoint URL, or null when unconfigured (degrade honestly). */
