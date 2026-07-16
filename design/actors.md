@@ -41,7 +41,7 @@ management is admin-only). Upstream of the data plane (ADR-0017) but a first-cla
 capability, not just a precondition.
 
 ### 6. (Boundary) Bridge / permissions owner
-Where roles, user→role mapping, and enforcement live — **not** Aperture or Hippo (ADR-0008,
+Where roles, user→role mapping, and enforcement live — **not** Aperture or Mosaic (ADR-0008,
 ADR-0016; platform `sec6_security_model.md`). Deferred (ADR-0016); local deployments give the
 local user maximum permissions.
 

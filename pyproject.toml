@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "datahelix-aperture"
 version = "0.1.0"
-description = "DataHelix Aperture - AI-native data & workflow explorer over the DataHelix domain graph (Hippo)"
+description = "DataHelix Aperture - AI-native data & workflow explorer over the DataHelix domain graph (Mosaic)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-local = ["hippo"]
+local = ["datahelix-mosaic"]
 dev = ["pytest>=7.0", "pytest-cov"]
 
 # NOTE: no [project.scripts] `datahelix` entry — the CLI is superseded.

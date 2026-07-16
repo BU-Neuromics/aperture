@@ -25,11 +25,11 @@ working-design docs (`vision.md`, `architecture.md`, `actors.md`, `instruction-p
   flip. Decisions are never deleted — reversals `Supersede` with a forward pointer.
 - When an Aperture ADR imposes a requirement on another component, cross-reference that
   component's ADR / spec section so the dependency is legible from both sides (e.g. ADR-0023 ↔
-  Hippo ADR-0001 for graph-level as-of).
+  Mosaic (formerly Hippo) ADR-0001 for graph-level as-of).
 
 ## Writing Guidelines
 
 - Keep the platform's **SDK-first** principle and the **typed/declarative substrate** invariants
-  (config-as-LinkML-in-Hippo, no middle scripting layer, view-descriptions-not-DOM,
+  (config-as-LinkML-in-Mosaic, no middle scripting layer, view-descriptions-not-DOM,
   dry-run-validatable) consistent across design docs.
 - Aperture source is **generic** — no domain (e.g. brain-bank) nouns in source (ADR-0002).

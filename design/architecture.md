@@ -22,10 +22,10 @@ sandboxed components (ADR-0009). Read this for orientation; cite the ADRs for de
 ├──────────────────────────────────────────────────────────────────┤
 │ D. Data access: capability-negotiated GraphQL source adapter(s)    │
 │      generic __schema introspection + per-source enrichment        │
-│      ── data plane: N sources; Hippo now, Canon/Cappella later ──  │
+│      ── data plane: N sources; Mosaic now, Canon/Cappella later ──  │
 │      capability-scoped client seam (ADR-0008) lives here           │
 ├──────────────────────────────────────────────────────────────────┤
-│ E. Config & state store (control plane)   LinkML-on-Hippo (ADR-0003)│
+│ E. Config & state store (control plane)   LinkML-on-Mosaic (ADR-0003)│
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,17 +36,17 @@ over any GraphQL" + multi-source is **D** (ADR-0002, ADR-0017).
 ## Data plane vs. control plane (ADR-0017)
 
 - **Data plane** — the GraphQL endpoint(s) Aperture *browses*; many, heterogeneous,
-  introspection-driven. Hippo first.
-- **Control plane** — Aperture's *own* config + user state; one store, LinkML-on-Hippo
+  introspection-driven. Mosaic (formerly Hippo) first.
+- **Control plane** — Aperture's *own* config + user state; one store, LinkML-on-Mosaic
   reference impl (a port, not a hard dependency).
-- Hippo can be the control-plane store even when the data plane points elsewhere.
+- Mosaic can be the control-plane store even when the data plane points elsewhere.
 
 ## Layer D: capability-negotiated source adapter
 
 To be generic over "any GraphQL endpoint," the adapter **declares capabilities** (faceting,
 full-text, cursor pagination, relationship traversal, aggregation) and the UI **gates
-features** accordingly — the same pattern Hippo uses for its own TUI backends. Baseline =
-standard `__schema` introspection; per-source enrichment = Hippo's `hippoSchema` /
+features** accordingly — the same pattern Mosaic uses for its own TUI backends. Baseline =
+standard `__schema` introspection; per-source enrichment = Mosaic's `hippoSchema` /
 `hippoEntityType`, or a Canon/Cappella adapter later. This is the natural next code artifact
 (a GraphQL backend alongside the kept SDK/REST `backends/`). Internal cross-links come from
 resolved relationship fields; external hrefs from a `system → URL-template` map (ADR-0015).
@@ -59,22 +59,22 @@ WASM is not one decision. Three roles, three verdicts:
 |---|---|---|
 | **Language for components** | Pyodide = CPython-in-WASM ⇒ "Python components" *is* WASM | Escape hatch, not baseline. JS/TS default; load Pyodide-in-Worker only when a component declares it needs Python. |
 | **Sandbox boundary itself** | Components as WASM modules for memory isolation | Overkill as baseline — a Web Worker already gives no-DOM + no-ambient-network + the `postMessage` capability boundary. Let WASM live *inside* the Worker. |
-| **Client-side compute engine** | DuckDB-WASM / Polars-WASM for in-browser aggregation | Attractive given Hippo's thin GraphQL — but it belongs in the layer-D adapter (compensating for a thin source), hidden behind the capability protocol, **never** exposed as user config/scripting (preserves ADR-0004's "no middle layer"). |
+| **Client-side compute engine** | DuckDB-WASM / Polars-WASM for in-browser aggregation | Attractive given Mosaic's thin GraphQL — but it belongs in the layer-D adapter (compensating for a thin source), hidden behind the capability protocol, **never** exposed as user config/scripting (preserves ADR-0004's "no middle layer"). |
 
 ## Security & the BFF (platform sec6, ADR-0016)
 
-Authorization lives in **Bridge** (PEP/PDP), not Aperture or Hippo. The "thin BFF in front of
-Hippo" that a multi-source, per-viewer model wants **is Bridge** — same component as the auth
+Authorization lives in **Bridge** (PEP/PDP), not Aperture or Mosaic. The "thin BFF in front of
+Mosaic" that a multi-source, per-viewer model wants **is Bridge** — same component as the auth
 gateway (so app-architecture decision ADR-0014's BFF candidate = Bridge). Aperture talks the
-same GraphQL contract to Hippo directly (local, no auth) or Bridge (enforcing); the only
+same GraphQL contract to Mosaic directly (local, no auth) or Bridge (enforcing); the only
 variable is the injected capability-scoped client (ADR-0008). **Bridge is deferred**
-(ADR-0016): Aperture is built/demoed against Hippo directly, with the capability-scoped client
+(ADR-0016): Aperture is built/demoed against Mosaic directly, with the capability-scoped client
 present as a no-op pass-through so Bridge later is a swap, not a retrofit. Full model:
 `DataHelix/platform/design/sec6_security_model.md`.
 
 ## Sequencing
 
-Per handoff §8 and ADR-0016: schema-derived browse + faceted search against Hippo first
+Per handoff §8 and ADR-0016: schema-derived browse + faceted search against Mosaic first
 (highest-visibility, demonstrable), then the dry-run validator + Type-A agent loop, then the
 typed component contract. Bridge enforcement drops in later without changing Aperture.
 Keystone open decision: **ADR-0010** (view-vocabulary noun-catalog) — its survival-curve probe
