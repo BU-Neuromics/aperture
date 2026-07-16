@@ -1,4 +1,4 @@
-"""Backend protocol for Hippo integration."""
+"""Backend protocol for Mosaic integration."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
-class HippoBackend(Protocol):
-    """Structural typing protocol for Hippo backend adapters."""
+class MosaicBackend(Protocol):
+    """Structural typing protocol for Mosaic backend adapters."""
 
     def list_entities(
         self,
