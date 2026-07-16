@@ -1,4 +1,4 @@
-"""Local SDK backend adapter for Hippo."""
+"""Local SDK backend adapter for Mosaic."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 
-class HippoSdkBackend:
-    """Backend that uses the Hippo SDK directly for local mode."""
+class MosaicSdkBackend:
+    """Backend that uses the Mosaic SDK directly for local mode."""
 
     def __init__(self, config_path: str = "./hippo.yaml") -> None:
         # Lazy import to avoid mandatory dependency

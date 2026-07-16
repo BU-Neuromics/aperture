@@ -1,4 +1,4 @@
-"""Remote REST backend adapter for Hippo."""
+"""Remote REST backend adapter for Mosaic."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from typing import Any
 import httpx
 
 
-class HippoRestBackend:
-    """Backend that calls the Hippo REST API via httpx."""
+class MosaicRestBackend:
+    """Backend that calls the Mosaic REST API via httpx."""
 
     def __init__(self, base_url: str = "http://localhost:8000") -> None:
         self._base_url = base_url.rstrip("/")
