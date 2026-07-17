@@ -593,6 +593,21 @@
   font-weight: 500;
 }
 
+.cell-ref-link {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+
+.cell-ref-link:hover {
+  text-decoration: underline;
+}
+
 .detail-xref {
   color: var(--accent);
   font-size: 12.5px;

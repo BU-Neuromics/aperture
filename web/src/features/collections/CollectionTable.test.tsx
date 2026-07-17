@@ -120,3 +120,38 @@ describe('pagination (capability-gated, URL-backed)', () => {
     expect(screen.queryByRole('button', { name: 'Prev' })).not.toBeInTheDocument();
   });
 });
+
+describe('CollectionTable reference cross-links (R3.8)', () => {
+  it('links a reference column to the referenced entity in ITS OWN collection', async () => {
+    const user = userEvent.setup();
+    const author = { id: 'AU-01', name: 'Ada' };
+    const client = fakeClient(capableSchema({ authorDetail: true }), (query) => {
+      if (query.includes('author(id: $id)')) return { data: { author }, error: null };
+      if (query.includes('ApertureHistory')) return { data: { entityHistory: [] }, error: null };
+      if (query.includes('books')) return { data: { books: makeRows(1) }, error: null };
+      return { data: { authors: [author] }, error: null };
+    });
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?collection=books');
+
+    // The author reference renders as a link (not dead text) — click it.
+    await user.click(await screen.findByRole('button', { name: 'AU-01' }));
+
+    // It navigates to the AUTHORS collection (resolved by target type), NOT the
+    // current books collection — the referenced entity's own detail loads.
+    expect(await screen.findByText('Ada')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '← Authors' })).toBeInTheDocument();
+  });
+
+  it('leaves a reference as plain text when its target has no detail path', async () => {
+    const client = fakeClient(capableSchema(), (query) => {
+      if (query.includes('books')) return { data: { books: makeRows(1) }, error: null };
+      return { data: { authors: [{ id: 'AU-01', name: 'Ada' }] }, error: null };
+    });
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?collection=books');
+
+    // Author has no detail path here → honest gating: the ref id shows, but not
+    // as a link (no button for it).
+    expect(await screen.findByText('AU-01')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'AU-01' })).not.toBeInTheDocument();
+  });
+});
