@@ -110,8 +110,8 @@ multivalued slots don't persist in the v0.1 SQLite adapter (resolved lists retur
 (additive-only tolerance). Internal cross-links come from resolved relationship fields;
 external hrefs from `ExternalReference` + `hippo_external_xref` reverse lookup (issue #48).
 
-The kept `src/aperture/backends/` protocol has `HippoSdkBackend` (in-process) and
-`HippoRestBackend` (REST); a **GraphQL backend is not yet implemented** and is the natural
+The kept `src/aperture/backends/` protocol has `MosaicSdkBackend` (in-process) and
+`MosaicRestBackend` (REST); a **GraphQL backend is not yet implemented** and is the natural
 next code artifact once the runtime/architecture ADRs settle.
 
 ## Security & Bridge (deferred — see ADR-0016)

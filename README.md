@@ -23,10 +23,10 @@ reliable. See [`design/vision.md`](design/vision.md) for the north-star framing.
 
 ## What's here today
 
-- `src/aperture/backends/` — the `HippoBackend` protocol and two adapters
-  (`HippoSdkBackend` for in-process SDK use, `HippoRestBackend` for the REST API),
+- `src/aperture/backends/` — the `MosaicBackend` protocol and two adapters
+  (`MosaicSdkBackend` for in-process SDK use, `MosaicRestBackend` for the REST API),
   selected via `create_backend(config)`.
-- `src/aperture/config/` — `ApertureConfig`, which resolves Hippo backend settings from
+- `src/aperture/config/` — `ApertureConfig`, which resolves Mosaic backend settings from
   config files and `DATAHELIX_*` environment variables.
 - `design/` — the north-star vision (`vision.md`), ADRs, the portal design handoff (historical), and open questions.
 
@@ -49,15 +49,15 @@ pip install "datahelix-aperture[local]"
 from aperture.config.settings import ApertureConfig
 from aperture.backends import create_backend
 
-config = ApertureConfig()          # resolves hippo.mode / hippo.url / hippo.config
-backend = create_backend(config)   # HippoSdkBackend or HippoRestBackend
+config = ApertureConfig()          # resolves mosaic.mode / mosaic.url / mosaic.config
+backend = create_backend(config)   # MosaicSdkBackend or MosaicRestBackend
 entities = backend.list_entities("Sample", limit=10)
 ```
 
 Configuration sources (lowest → highest precedence): built-in defaults → user config
 (`~/.datahelix/aperture.yaml`) → project config (`.datahelix/aperture.yaml`) → explicit config file
-→ `DATAHELIX_*` environment variables (`DATAHELIX_HIPPO_MODE`, `DATAHELIX_HIPPO_URL`,
-`DATAHELIX_HIPPO_CONFIG`, `DATAHELIX_LOG_LEVEL`).
+→ `DATAHELIX_*` environment variables (`DATAHELIX_MOSAIC_MODE`, `DATAHELIX_MOSAIC_URL`,
+`DATAHELIX_MOSAIC_CONFIG`, `DATAHELIX_LOG_LEVEL`).
 
 ## Development
 

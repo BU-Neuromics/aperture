@@ -116,7 +116,7 @@ class MosaicSdkBackend:
     def status(self) -> dict:
         entity_types = self.list_entity_types()
         return {
-            "component": "hippo",
+            "component": "mosaic",
             "mode": "sdk",
             "path": self._config_path,
             "status": "healthy",

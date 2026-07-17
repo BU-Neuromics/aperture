@@ -1,8 +1,8 @@
 """Configuration loading and resolution for Aperture.
 
 Resolution order: explicit config file > env vars > project config > user config
-> defaults. Scoped to what the Hippo backends need (`hippo.mode`, `hippo.url`,
-`hippo.config`, plus `logging.level`); the CLI-era output/format settings were
+> defaults. Scoped to what the Mosaic backends need (`mosaic.mode`, `mosaic.url`,
+`mosaic.config`, plus `logging.level`); the CLI-era output/format settings were
 dropped in the portal fresh-start.
 """
 
@@ -18,7 +18,7 @@ import yaml
 # Defaults are declared inline here (formerly in a separate CLI-era module) so the
 # backends carry no dependency on the dropped CLI tree.
 DEFAULT_CONFIG: dict = {
-    "hippo": {
+    "mosaic": {
         "mode": "sdk",
         "config": "./hippo.yaml",
         "url": "http://localhost:8000",
@@ -56,9 +56,9 @@ def _load_yaml(path: Path) -> dict:
 def _apply_env_vars(config: dict) -> dict:
     """Override config values from DATAHELIX_* environment variables."""
     env_map = {
-        "DATAHELIX_HIPPO_MODE": ("hippo", "mode"),
-        "DATAHELIX_HIPPO_URL": ("hippo", "url"),
-        "DATAHELIX_HIPPO_CONFIG": ("hippo", "config"),
+        "DATAHELIX_MOSAIC_MODE": ("mosaic", "mode"),
+        "DATAHELIX_MOSAIC_URL": ("mosaic", "url"),
+        "DATAHELIX_MOSAIC_CONFIG": ("mosaic", "config"),
         "DATAHELIX_LOG_LEVEL": ("logging", "level"),
     }
     for env_var, key_path in env_map.items():
@@ -71,7 +71,7 @@ def _apply_env_vars(config: dict) -> dict:
 
 
 class ApertureConfig:
-    """Resolved Aperture configuration (Hippo backend selection)."""
+    """Resolved Aperture configuration (Mosaic backend selection)."""
 
     def __init__(self, config_path: Path | None = None) -> None:
         self._raw = self._resolve(config_path)
@@ -96,7 +96,7 @@ class ApertureConfig:
         return config
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Get a dot-separated config key (e.g. 'hippo.mode')."""
+        """Get a dot-separated config key (e.g. 'mosaic.mode')."""
         parts = key.split(".")
         value: Any = self._raw
         for part in parts:
@@ -130,13 +130,13 @@ class ApertureConfig:
         return deepcopy(self._raw)
 
     @property
-    def hippo_mode(self) -> str:
-        return self.get("hippo.mode", "sdk")
+    def mosaic_mode(self) -> str:
+        return self.get("mosaic.mode", "sdk")
 
     @property
-    def hippo_url(self) -> str:
-        return self.get("hippo.url", "http://localhost:8000")
+    def mosaic_url(self) -> str:
+        return self.get("mosaic.url", "http://localhost:8000")
 
     @property
-    def hippo_config_path(self) -> str:
-        return self.get("hippo.config", "./hippo.yaml")
+    def mosaic_config(self) -> str:
+        return self.get("mosaic.config", "./hippo.yaml")
