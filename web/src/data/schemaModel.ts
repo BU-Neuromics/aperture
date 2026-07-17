@@ -487,9 +487,18 @@ function deriveColumns(
 
 /** Prefer the entity's own id-named column over other ID-typed fields (FK renames). */
 function pickIdColumn(columns: ColumnModel[]): string {
+  // FK-rename scalars (e.g. `donorId` beside a `donor` ref) are NOT the
+  // entity's own identity. Excluding them keeps the id-column link from
+  // pointing a foreign key at the *current* collection (the wrong-collection
+  // bug) — those resolve through their reference edge instead. Same exclusion
+  // as `deriveColumnFilterFields`.
+  const refFields = new Set(columns.filter((c) => c.kind === 'ref').map((c) => c.field));
+  const isForeignKey = (c: ColumnModel) =>
+    c.kind === 'id' && refFields.has(c.field.replace(/Id$/, ''));
   return (
     columns.find((c) => ID_FIELD_NAMES.has(c.field)) ??
-    columns.find((c) => c.kind === 'id') ??
+    columns.find((c) => c.kind === 'id' && !isForeignKey(c)) ??
+    columns.find((c) => !isForeignKey(c)) ??
     columns[0]
   ).field;
 }

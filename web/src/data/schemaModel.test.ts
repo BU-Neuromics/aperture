@@ -333,3 +333,33 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     });
   });
 });
+
+describe('pickIdColumn (id-column selection)', () => {
+  // An entity whose own identifier is NOT named `id`, next to a `donor`
+  // reference and its FK-rename scalar `donorId`, with the FK ordered first.
+  function rnaSchema(): IntrospectionSchema {
+    return {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [field('rnas', list(object('Rna')))]),
+        objectType('Rna', [
+          field('donor', object('Donor')),
+          field('donorId', scalar('ID')),
+          field('accession', scalar('ID')),
+          field('name', scalar('String')),
+        ]),
+        objectType('Donor', [field('id', scalar('ID')), field('name', scalar('String'))]),
+      ],
+    };
+  }
+
+  it('does not pick an FK-rename scalar as the id column', () => {
+    const [rnas] = deriveCollections(rnaSchema());
+    // `donorId` is the foreign key of the `donor` ref, not Rna's own identity —
+    // picking it would make the id-column link point a donor id at the rnas
+    // collection (the wrong-collection bug). The entity's own id-typed field wins.
+    expect(rnas.idColumn).toBe('accession');
+    expect(rnas.idColumn).not.toBe('donorId');
+  });
+});

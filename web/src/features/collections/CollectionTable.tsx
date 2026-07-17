@@ -36,7 +36,7 @@ export function CollectionTable({
   collection: CollectionModel;
 }) {
   const capabilities = useCapabilities();
-  const { page, setPage, filters, search, clearFilters, openEntity, openCreateForm } =
+  const { page, setPage, filters, search, clearFilters, openEntity, openIn, openCreateForm } =
     useCollectionUrlState();
   const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search);
   const isFiltered = Object.keys(filters).length > 0 || search !== '';
@@ -49,7 +49,7 @@ export function CollectionTable({
           header: model.label,
           cell: (info) => {
             const value = info.getValue();
-            // The id column links to the detail view when a detail path exists (R3.7).
+            // The id column links to THIS entity's own detail (R3.7).
             if (model.field === collection.idColumn && collection.detail && value != null) {
               return (
                 <button
@@ -61,12 +61,33 @@ export function CollectionTable({
                 </button>
               );
             }
+            // A single reference cross-links to the REFERENCED entity's detail
+            // in *its own* collection (R3.8) — resolved by the reference's
+            // target type, not the current collection. The detail view's
+            // RelationRow already does this; the table did not (references were
+            // dead text, and the only link — the id column — assumed the
+            // current collection, so a mis-picked FK linked to the wrong one).
+            if (model.kind === 'ref' && value != null) {
+              const target = source.collections.find((c) => c.typeName === model.targetType);
+              const refId = (value as Record<string, unknown>)[model.targetIdField ?? ''];
+              if (target?.detail != null && refId != null) {
+                return (
+                  <button
+                    type="button"
+                    className="cell-ref cell-ref-link"
+                    onClick={() => openIn(target.id, String(refId))}
+                  >
+                    {String(refId)}
+                  </button>
+                );
+              }
+            }
             return renderCell(model, value);
           },
           meta: { align: isRightAligned(model) ? 'right' : 'left' },
         }),
       ),
-    [collection, openEntity],
+    [collection, source, openEntity, openIn],
   );
 
   const table = useReactTable({
