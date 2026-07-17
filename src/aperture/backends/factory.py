@@ -8,17 +8,17 @@ from aperture.config.settings import ApertureConfig
 
 def create_backend(config: ApertureConfig) -> MosaicBackend:
     """Create the appropriate backend based on configuration."""
-    mode = config.hippo_mode
+    mode = config.mosaic_mode
 
     if mode == "sdk":
         from aperture.backends.mosaic_sdk import MosaicSdkBackend
 
-        return MosaicSdkBackend(config_path=config.hippo_config_path)
+        return MosaicSdkBackend(config_path=config.mosaic_config)
     elif mode == "rest":
         from aperture.backends.mosaic_rest import MosaicRestBackend
 
-        return MosaicRestBackend(base_url=config.hippo_url)
+        return MosaicRestBackend(base_url=config.mosaic_url)
     else:
         raise ValueError(
-            f"Unknown hippo.mode '{mode}'. Expected 'sdk' or 'rest'."
+            f"Unknown mosaic.mode '{mode}'. Expected 'sdk' or 'rest'."
         )

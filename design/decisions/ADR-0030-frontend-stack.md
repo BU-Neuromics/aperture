@@ -9,7 +9,7 @@
 
 ADR-0014 ratified the MVP as a **client-side SPA** talking to the active endpoint's GraphQL
 directly (Hippo now), with Bridge as the deferred BFF (ADR-0016). The repo today is **Python**
-(`src/aperture/` — the `HippoBackend` protocol + config, carried from the CLI era), but the SPA is
+(`src/aperture/` — the `MosaicBackend` protocol + config, carried from the CLI era), but the SPA is
 a TypeScript app. `library-survey.md` evaluated the component libraries and flagged the concrete
 framework/client selection as warranting its own ADR. This ADR locks the stack so the walking
 skeleton can begin.
@@ -28,7 +28,7 @@ package, that talks to Hippo's GraphQL **directly** via the Layer-D capability-n
 - **Data grid:** **TanStack Table** (headless, framework-agnostic) — `library-survey.md`.
 - **URL / query-state:** **nuqs** — shareable query state (R3.9) — `library-survey.md`.
 
-The Python `src/aperture/` (`HippoBackend` protocol + config) is **retained as a separate,
+The Python `src/aperture/` (`MosaicBackend` protocol + config) is **retained as a separate,
 optional Python client** for programmatic/SDK use; it is **not on the SPA's data path** (the SPA
 talks to Hippo directly). No Python BFF for MVP — the BFF role is Bridge (ADR-0016, deferred).
 
@@ -51,7 +51,7 @@ talks to Hippo directly). No Python BFF for MVP — the BFF role is Bridge (ADR-
   generic-over-any-endpoint. Rejected for MVP; reconsider if urql's cache proves limiting.
 - **Solid / Svelte / Vue.** Lighter or ergonomic, but nuqs/JSONForms/RJSF are React-first → more
   custom work for the write loop. Rejected on ecosystem fit.
-- **Thin Python BFF reusing `HippoBackend`.** Adds a service to run and contradicts ADR-0016
+- **Thin Python BFF reusing `MosaicBackend`.** Adds a service to run and contradicts ADR-0016
   (BFF = Bridge). Rejected; the Python client stays for programmatic use only.
 - **Separate frontend repo.** Splits code from the design docs and adds cross-repo overhead.
   Rejected for MVP; revisit if the app and the Python client need independent release cadences.

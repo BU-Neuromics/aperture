@@ -110,7 +110,7 @@ server export (X2) → v1.x.
 
 - `web/` — the **TypeScript SPA** (Vite + React + urql + TanStack Table + nuqs; ADR-0030). Talks to
   Hippo's GraphQL directly. This is the MVP product.
-- `src/aperture/` — a **Python** client library (the `HippoBackend` protocol + config), carried from
+- `src/aperture/` — a **Python** client library (the `MosaicBackend` protocol + config), carried from
   the CLI era. **Not** on the SPA data path; kept for programmatic use.
 - `design/` — all design docs + `design-export/` (the Claude Design prototype) + `design-tokens.md`
   (seeded into `web/src/styles/tokens.css`).

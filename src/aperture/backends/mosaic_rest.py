@@ -47,7 +47,7 @@ class MosaicRestBackend:
             "POST",
             f"/entities/{entity_type}",
             json=data,
-            headers={"X-Hippo-Actor": f"actor:{actor}"},
+            headers={"X-Mosaic-Actor": f"actor:{actor}"},
         )
 
     def update_entity(
@@ -57,7 +57,7 @@ class MosaicRestBackend:
             "PATCH",
             f"/entities/{entity_type}/{entity_id}",
             json=data,
-            headers={"X-Hippo-Actor": f"actor:{actor}"},
+            headers={"X-Mosaic-Actor": f"actor:{actor}"},
         )
 
     def set_availability(
@@ -67,7 +67,7 @@ class MosaicRestBackend:
             "PATCH",
             f"/entities/{entity_type}/{entity_id}/availability",
             json={"is_available": available},
-            headers={"X-Hippo-Actor": f"actor:{actor}"},
+            headers={"X-Mosaic-Actor": f"actor:{actor}"},
         )
 
     def search(
@@ -99,7 +99,7 @@ class MosaicRestBackend:
         try:
             health = self._request("GET", "/health")
             return {
-                "component": "hippo",
+                "component": "mosaic",
                 "mode": "rest",
                 "url": self._base_url,
                 "status": "healthy",
@@ -108,7 +108,7 @@ class MosaicRestBackend:
             }
         except Exception as exc:
             return {
-                "component": "hippo",
+                "component": "mosaic",
                 "mode": "rest",
                 "url": self._base_url,
                 "status": "unavailable",
