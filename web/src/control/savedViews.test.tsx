@@ -135,6 +135,32 @@ describe('saved views (Phase 4, R3.9)', () => {
     expect(screen.queryByText('broken')).not.toBeInTheDocument();
     expect(screen.queryByText('garbage')).not.toBeInTheDocument();
   });
+
+  it('removing a saved view retires it server-side (W4.4) and drops it from the nav', async () => {
+    const seeded = {
+      id: 'DOC-1',
+      kind: 'savedView',
+      name: 'Hardcovers p2',
+      payload: sealPayload(1, {
+        state: { collection: 'books', page: 2, filters: { format: 'HARDCOVER' } },
+        schemaFingerprint: 'whatever',
+      }),
+    };
+    const user = userEvent.setup();
+    const { client, docs } = makeClient([seeded]);
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    await within(nav).findByText('Hardcovers p2');
+
+    await user.click(
+      within(nav).getByRole('button', { name: 'Remove saved view "Hardcovers p2"' }),
+    );
+
+    // No hard delete — the document survives, payload cleared.
+    await vi.waitFor(() => expect(docs[0].payload).toBe(''));
+    expect(within(nav).queryByText('Hardcovers p2')).not.toBeInTheDocument();
+  });
 });
 
 describe('config-as-data through the control plane (Phase 4)', () => {

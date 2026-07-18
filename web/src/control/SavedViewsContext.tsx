@@ -10,12 +10,15 @@ export interface SavedViewsState {
   views: SavedView[];
   /** Upsert by name (same name overwrites — the store's collision rule). */
   save(view: SavedView): Promise<void>;
+  /** Retire the named view (W4.4 — clears the payload, never a hard delete). */
+  remove(name: string): Promise<void>;
 }
 
 const SavedViewsContext = createContext<SavedViewsState>({
   status: 'loading',
   views: [],
   save: async () => {},
+  remove: async () => {},
 });
 
 export function SavedViewsProvider({ children }: { children: ReactNode }) {
@@ -53,8 +56,16 @@ export function SavedViewsProvider({ children }: { children: ReactNode }) {
     [store, refresh],
   );
 
+  const remove = useCallback(
+    async (name: string) => {
+      await store.remove('savedView', name);
+      await refresh();
+    },
+    [store, refresh],
+  );
+
   return (
-    <SavedViewsContext.Provider value={{ status, views, save }}>
+    <SavedViewsContext.Provider value={{ status, views, save, remove }}>
       {children}
     </SavedViewsContext.Provider>
   );
