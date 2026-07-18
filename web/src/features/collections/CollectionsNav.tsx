@@ -66,22 +66,33 @@ export function CollectionsNav() {
             {savedViews.views.map((view) => {
               const stale = view.schemaFingerprint !== schemaFingerprint(state.source);
               return (
-                <button
-                  key={view.name}
-                  type="button"
-                  className="nav-item"
-                  // Stable certification contract (datahelix golden-path suite; #15).
-                  data-testid={`saved-view-${view.name}`}
-                  title={
-                    stale
-                      ? `${view.name} — saved under an older schema; review filters after opening`
-                      : view.name
-                  }
-                  onClick={() => applyView(view.state)}
-                >
-                  <span className="nav-item-chip">{stale ? '⚠' : initialFor(view.name)}</span>
-                  <span className="nav-item-label">{view.name}</span>
-                </button>
+                <div key={view.name} className="nav-item nav-item-removable">
+                  <button
+                    type="button"
+                    className="nav-item-main"
+                    // Stable certification contract (datahelix golden-path suite; #15).
+                    data-testid={`saved-view-${view.name}`}
+                    title={
+                      stale
+                        ? `${view.name} — saved under an older schema; review filters after opening`
+                        : view.name
+                    }
+                    onClick={() => applyView(view.state)}
+                  >
+                    <span className="nav-item-chip">{stale ? '⚠' : initialFor(view.name)}</span>
+                    <span className="nav-item-label">{view.name}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="nav-item-remove"
+                    data-testid={`remove-saved-view-${view.name}`}
+                    title={`Remove saved view "${view.name}"`}
+                    aria-label={`Remove saved view "${view.name}"`}
+                    onClick={() => void savedViews.remove(view.name)}
+                  >
+                    ×
+                  </button>
+                </div>
               );
             })}
           </div>

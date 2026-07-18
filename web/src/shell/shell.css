@@ -175,6 +175,52 @@
   text-overflow: ellipsis;
 }
 
+.nav-item-removable {
+  padding: 0;
+}
+
+.nav-item-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px var(--space-3);
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.nav-item-remove {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: var(--space-2);
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.nav-item-removable:hover .nav-item-remove,
+.nav-item-remove:focus-visible {
+  opacity: 1;
+}
+
+.nav-item-remove:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .nav-status {
   padding: var(--space-2) var(--space-3) var(--space-3) 14px;
   color: var(--text-tertiary);

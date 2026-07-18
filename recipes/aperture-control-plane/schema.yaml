@@ -1,0 +1,63 @@
+id: https://w3id.org/datahelix/aperture/recipes/control-plane
+name: aperture_control_plane
+title: Aperture control-plane document recipe
+description: >-
+  The Aperture control-plane document type, as an ordinary Mosaic entity type
+  (Aperture ADR-0032; refines ADR-0017). Aperture persists its OWN state —
+  saved views, workflow drafts, config-as-data — as `{kind, name, payload}`
+  documents on a Mosaic collection it recognizes STRUCTURALLY (an entity type
+  with text-ish kind/name/payload fields, kind+name equality filters, and
+  create+update mutations). Mosaic ships no such type; this recipe is the
+  reference implementation any deployment applies via `recipe_import`
+  (aperture#17).
+
+  Notes for deployers:
+    - The SPA finds this store by SHAPE, not by the name `ApertureDocument`
+      (derive-don't-assume; ADR-0032). The class name is convention only —
+      a deployment may rename it as long as the shape holds.
+    - `payload` is a JSON string wrapping a versioned envelope `{v, data}`;
+      readers validate structurally and skip documents they can't open.
+      Mosaic stores it as an opaque string — no server-side JSON schema.
+    - Removal is retire-not-delete: the SPA clears the payload; readers treat
+      an empty payload as absent (W4.4 discipline). No hard-delete mutation
+      needed.
+    - Without this recipe the SPA degrades to browser localStorage and labels
+      the fallback in its footer (honest degradation, ADR-0029).
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+
+imports:
+  - linkml:types
+  - hippo_core
+
+default_range: string
+
+classes:
+
+  ApertureDocument:
+    is_a: Entity
+    description: >-
+      A single control-plane document. Upserted by (kind, name). `kind` is
+      one of Aperture's document kinds (savedView | workflowDraft | config);
+      `name` is the document key (view name / workflowId / config key);
+      `payload` is the JSON-string versioned envelope.
+    attributes:
+      kind:
+        range: string
+        required: true
+        description: savedView | workflowDraft | config (equality-filtered).
+        annotations:
+          hippo_index: true
+      name:
+        range: string
+        required: true
+        description: Document key within its kind (equality-filtered).
+        annotations:
+          hippo_index: true
+      payload:
+        range: string
+        required: true
+        description: >-
+          JSON string of the versioned envelope `{v:<int>, data:<object>}`.
+          Opaque to Mosaic; validated structurally by the SPA on open.
