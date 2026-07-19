@@ -46,14 +46,34 @@ export interface HippoSource {
   collections: CollectionModel[];
   history?: HistoryModel;
   listEntities(collectionId: string, options: ListOptions): Promise<EntityPage>;
-  /** Fetch one entity via the collection's detail path; null when not found. */
-  getEntity(collectionId: string, id: string): Promise<Record<string, unknown> | null>;
+  /**
+   * Fetch one entity via the collection's detail path; null when not found.
+   * `fresh` bypasses the document cache — needed for read-after-write when
+   * the write's mutation response doesn't share the entity's typename (e.g.
+   * the lifecycle mutations, W4.4), which urql's cache invalidation can't
+   * key off of.
+   */
+  getEntity(collectionId: string, id: string, fresh?: boolean): Promise<Record<string, unknown> | null>;
   /** Entity change history, when the endpoint advertises it (R3.7). */
   getHistory(id: string): Promise<HistoryEntry[]>;
   /** Create via the derived write path; returns the new entity's id column value (W4.3). */
   createEntity(collectionId: string, values: WriteValues): Promise<string | null>;
   /** Partial-merge update: send only the given fields (W4.3). */
   updateEntity(collectionId: string, id: string, values: WriteValues): Promise<void>;
+  /** Availability transition (W4.4), when the endpoint advertises one. */
+  setAvailability(
+    collectionId: string,
+    id: string,
+    isAvailable: boolean,
+    reason?: string,
+  ): Promise<void>;
+  /** Supersede with a replacement entity (W4.4), when the endpoint advertises it. */
+  supersede(
+    collectionId: string,
+    id: string,
+    replacementId: string,
+    reason?: string,
+  ): Promise<void>;
   /** The introspected batch unit-of-work surface, when usable (ADR-0028). */
   batch?: BatchModel;
   /** Whole-set dry-run (dryRun=true) or atomic commit of a staged set (W4.7). */
@@ -228,6 +248,52 @@ export function buildUpdateMutation(
   };
 }
 
+/** Builds the availability-transition mutation (W4.4): id + isAvailable, optional reason. */
+export function buildSetAvailabilityMutation(
+  collection: CollectionModel,
+  id: string,
+  isAvailable: boolean,
+  reason?: string,
+): BuiltQuery | null {
+  const lifecycle = collection.lifecycle.setAvailability;
+  if (!lifecycle) return null;
+  const varDefs = [`$id: ${lifecycle.idArgType}`, '$isAvailable: Boolean!'];
+  const args = [`${lifecycle.idArgName}: $id`, `${lifecycle.availabilityArgName}: $isAvailable`];
+  const variables: Record<string, unknown> = { id, isAvailable };
+  if (lifecycle.reasonArgName && reason) {
+    varDefs.push('$reason: String');
+    args.push(`${lifecycle.reasonArgName}: $reason`);
+    variables.reason = reason;
+  }
+  return {
+    document: `mutation ApertureSetAvailability(${varDefs.join(', ')}) { ${lifecycle.field}(${args.join(', ')}) { entityId isAvailable } }`,
+    variables,
+  };
+}
+
+/** Builds the supersede mutation (W4.4): id + replacementId, optional reason. */
+export function buildSupersedeMutation(
+  collection: CollectionModel,
+  id: string,
+  replacementId: string,
+  reason?: string,
+): BuiltQuery | null {
+  const lifecycle = collection.lifecycle.supersede;
+  if (!lifecycle) return null;
+  const varDefs = [`$id: ${lifecycle.idArgType}`, `$replacementId: ${lifecycle.replacementArgType}`];
+  const args = [`${lifecycle.idArgName}: $id`, `${lifecycle.replacementArgName}: $replacementId`];
+  const variables: Record<string, unknown> = { id, replacementId };
+  if (lifecycle.reasonArgName && reason) {
+    varDefs.push('$reason: String');
+    args.push(`${lifecycle.reasonArgName}: $reason`);
+    variables.reason = reason;
+  }
+  return {
+    document: `mutation ApertureSupersede(${varDefs.join(', ')}) { ${lifecycle.field}(${args.join(', ')}) { entityId supersededBy } }`,
+    variables,
+  };
+}
+
 export async function connectHippoSource(client: ScopedDataClient): Promise<HippoSource> {
   const result = await client.query<IntrospectionData>(INTROSPECTION_QUERY);
   if (result.error || !result.data?.__schema) {
@@ -310,7 +376,7 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       return { rows, mayHaveMore: rows.length === pageSize };
     },
 
-    async getEntity(collectionId, id) {
+    async getEntity(collectionId, id, fresh) {
       const collection = collectionFor(collectionId);
       const built = buildDetailQuery(collection, id);
       if (!built) {
@@ -319,6 +385,7 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       const detailResult = await client.query<Record<string, unknown>>(
         built.document,
         built.variables,
+        { fresh },
       );
       if (detailResult.error || detailResult.data == null) {
         throw new Error(
@@ -364,6 +431,30 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       if (updateResult.error) {
         throw new Error(
           `Could not update ${collection.typeName} “${id}”: ${updateResult.error.message}`,
+        );
+      }
+    },
+
+    async setAvailability(collectionId, id, isAvailable, reason) {
+      const collection = collectionFor(collectionId);
+      const built = buildSetAvailabilityMutation(collection, id, isAvailable, reason);
+      if (!built) throw new Error(`${collection.label} does not support availability transitions`);
+      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      if (result.error) {
+        throw new Error(
+          `Could not update availability for ${collection.typeName} “${id}”: ${result.error.message}`,
+        );
+      }
+    },
+
+    async supersede(collectionId, id, replacementId, reason) {
+      const collection = collectionFor(collectionId);
+      const built = buildSupersedeMutation(collection, id, replacementId, reason);
+      if (!built) throw new Error(`${collection.label} does not support supersede`);
+      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      if (result.error) {
+        throw new Error(
+          `Could not supersede ${collection.typeName} “${id}”: ${result.error.message}`,
         );
       }
     },
