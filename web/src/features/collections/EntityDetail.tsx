@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useCapabilities } from '../../data/DataSourceContext';
 import type { HippoSource, HistoryEntry } from '../../data/hippoSource';
 import type { CollectionModel, ColumnModel } from '../../data/schemaModel';
@@ -33,26 +34,35 @@ export function EntityDetail({
   const { closeEntity, openEditForm } = useCollectionUrlState();
   const [state, setState] = useState<DetailState>({ status: 'loading' });
 
+  const load = useCallback(
+    (cancelledRef?: { current: boolean }, fresh?: boolean) => {
+      setState({ status: 'loading' });
+      return source
+        .getEntity(collection.id, entityId, fresh)
+        .then((entity) => {
+          if (!cancelledRef?.current) {
+            setState(entity ? { status: 'ready', entity } : { status: 'missing' });
+          }
+        })
+        .catch((error: unknown) => {
+          if (!cancelledRef?.current) {
+            setState({
+              status: 'error',
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        });
+    },
+    [source, collection.id, entityId],
+  );
+
   useEffect(() => {
-    let cancelled = false;
-    setState({ status: 'loading' });
-    source
-      .getEntity(collection.id, entityId)
-      .then((entity) => {
-        if (!cancelled) setState(entity ? { status: 'ready', entity } : { status: 'missing' });
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setState({
-            status: 'error',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      });
+    const cancelledRef = { current: false };
+    void load(cancelledRef);
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, [source, collection.id, entityId]);
+  }, [load]);
 
   const fieldColumns = collection.detailColumns.filter(
     (c) => c.kind !== 'ref' && c.kind !== 'refList',
@@ -77,6 +87,15 @@ export function EntityDetail({
             </button>
           )}
         </div>
+        {state.status === 'ready' && (
+          <LifecycleActions
+            source={source}
+            collection={collection}
+            entityId={entityId}
+            entity={state.entity}
+            onChanged={() => void load(undefined, true)}
+          />
+        )}
       </div>
 
       {state.status === 'loading' && (
@@ -131,6 +150,156 @@ export function EntityDetail({
 
           <HistorySection source={source} entityId={entityId} />
         </div>
+      )}
+    </div>
+  );
+}
+
+/** The entity's own `isAvailable`-ish column, when the collection has one. */
+function availabilityColumn(collection: CollectionModel): ColumnModel | undefined {
+  return collection.detailColumns.find(
+    (c) => c.kind === 'boolean' && /^is_?available$/i.test(c.field),
+  );
+}
+
+/**
+ * Availability transition + supersede affordances (W4.4), gated on the
+ * derived lifecycle model — offered only when the endpoint advertises the
+ * corresponding mutation (ADR-0029). Mirrors the Edit button's gating
+ * pattern (`collection.write.update`).
+ */
+function LifecycleActions({
+  source,
+  collection,
+  entityId,
+  entity,
+  onChanged,
+}: {
+  source: HippoSource;
+  collection: CollectionModel;
+  entityId: string;
+  entity: Record<string, unknown>;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [supersedeOpen, setSupersedeOpen] = useState(false);
+  const [replacementId, setReplacementId] = useState('');
+  const [reason, setReason] = useState('');
+
+  const { setAvailability, supersede } = collection.lifecycle;
+  if (!setAvailability && !supersede) return null;
+
+  const availCol = availabilityColumn(collection);
+  // Unknown current state defaults to "available" — the honest default when
+  // the endpoint doesn't expose the column even though it accepts the mutation.
+  const isAvailable = availCol ? Boolean(entity[availCol.field]) : true;
+
+  const runSetAvailability = async (nextAvailable: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await source.setAvailability(collection.id, entityId, nextAvailable);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitSupersede = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!replacementId.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await source.supersede(collection.id, entityId, replacementId.trim(), reason.trim() || undefined);
+      setSupersedeOpen(false);
+      setReplacementId('');
+      setReason('');
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="lifecycle-actions">
+      <div className="collection-actions">
+        {setAvailability && (
+          <button
+            type="button"
+            className="action-button"
+            disabled={busy}
+            onClick={() => void runSetAvailability(!isAvailable)}
+          >
+            {isAvailable ? 'Archive' : 'Restore'}
+          </button>
+        )}
+        {supersede && !supersedeOpen && (
+          <button
+            type="button"
+            className="action-button"
+            disabled={busy}
+            onClick={() => setSupersedeOpen(true)}
+          >
+            Supersede…
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="form-server-error" role="alert">
+          {error}
+        </div>
+      )}
+
+      {supersede && supersedeOpen && (
+        <form className="lifecycle-supersede-form" onSubmit={(e) => void submitSupersede(e)}>
+          <label className="lifecycle-supersede-label">
+            Replacement id
+            <input
+              type="text"
+              className="form-input"
+              value={replacementId}
+              onChange={(e) => setReplacementId(e.target.value)}
+              required
+            />
+          </label>
+          <label className="lifecycle-supersede-label">
+            Reason (optional)
+            <input
+              type="text"
+              className="form-input"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="action-button action-primary"
+              disabled={busy || !replacementId.trim()}
+            >
+              {busy ? 'Superseding…' : 'Confirm supersede'}
+            </button>
+            <button
+              type="button"
+              className="state-button"
+              onClick={() => {
+                setSupersedeOpen(false);
+                setReplacementId('');
+                setReason('');
+                setError(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

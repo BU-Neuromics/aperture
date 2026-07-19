@@ -2,6 +2,8 @@ import {
   buildCreateMutation,
   buildDetailQuery,
   buildListQuery,
+  buildSetAvailabilityMutation,
+  buildSupersedeMutation,
   buildUpdateMutation,
   connectHippoSource,
 } from './hippoSource';
@@ -181,6 +183,66 @@ describe('write mutations (W4.3)', () => {
       /Could not update Book “BK-1”: title must not be empty/,
     );
     await expect(source.createEntity('authors', {})).rejects.toThrow(/does not support create/);
+  });
+});
+
+describe('lifecycle mutations (W4.4)', () => {
+  it('builds the availability-transition and supersede documents', () => {
+    const [books] = deriveCollections(capableSchema({ bookLifecycle: true }));
+
+    const avail = buildSetAvailabilityMutation(books, 'BK-1', false)!;
+    expect(avail.document).toBe(
+      'mutation ApertureSetAvailability($id: ID!, $isAvailable: Boolean!) ' +
+        '{ setBookAvailability(id: $id, isAvailable: $isAvailable) { entityId isAvailable } }',
+    );
+    expect(avail.variables).toEqual({ id: 'BK-1', isAvailable: false });
+
+    const availWithReason = buildSetAvailabilityMutation(books, 'BK-1', false, 'duplicate record')!;
+    expect(availWithReason.document).toContain('$reason: String');
+    expect(availWithReason.variables).toEqual({
+      id: 'BK-1',
+      isAvailable: false,
+      reason: 'duplicate record',
+    });
+
+    const supersede = buildSupersedeMutation(books, 'BK-1', 'BK-2')!;
+    expect(supersede.document).toBe(
+      'mutation ApertureSupersede($id: ID!, $replacementId: ID!) ' +
+        '{ supersedeBook(id: $id, replacementId: $replacementId) { entityId supersededBy } }',
+    );
+    expect(supersede.variables).toEqual({ id: 'BK-1', replacementId: 'BK-2' });
+  });
+
+  it('returns null when the collection has no lifecycle paths (never fakes)', () => {
+    const [books] = deriveCollections(capableSchema());
+    expect(buildSetAvailabilityMutation(books, 'BK-1', false)).toBeNull();
+    expect(buildSupersedeMutation(books, 'BK-1', 'BK-2')).toBeNull();
+  });
+
+  it('setAvailability/supersede execute the mutation; both surface server rejection', async () => {
+    const client = fakeClient(capableSchema({ bookLifecycle: true }), (query) => {
+      if (query.includes('ApertureSetAvailability')) {
+        return { data: null, error: new Error('entity not found') };
+      }
+      if (query.includes('ApertureSupersede')) {
+        return { data: { supersedeBook: { entityId: 'BK-1', supersededBy: 'BK-2' } }, error: null };
+      }
+      return { data: {}, error: null };
+    });
+    const source = await connectHippoSource(client);
+
+    await expect(source.setAvailability('books', 'BK-1', false)).rejects.toThrow(
+      /Could not update availability for Book “BK-1”: entity not found/,
+    );
+    await expect(source.supersede('books', 'BK-1', 'BK-2')).resolves.toBeUndefined();
+
+    const bareSource = await connectHippoSource(fakeClient(capableSchema()));
+    await expect(bareSource.setAvailability('books', 'BK-1', false)).rejects.toThrow(
+      /does not support availability transitions/,
+    );
+    await expect(bareSource.supersede('books', 'BK-1', 'BK-2')).rejects.toThrow(
+      /does not support supersede/,
+    );
   });
 });
 

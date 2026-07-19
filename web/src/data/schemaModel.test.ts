@@ -192,6 +192,28 @@ describe('deriveCollections (live Hippo shapes — #15)', () => {
     expect(books.write.update?.idArgName).toBe('id');
   });
 
+  it('lifecycle paths derive from the live availability/supersede mutations (W4.4)', () => {
+    expect(books.lifecycle.setAvailability).toEqual({
+      field: 'setBookAvailability',
+      idArgName: 'id',
+      idArgType: 'ID!',
+      availabilityArgName: 'isAvailable',
+      reasonArgName: 'reason',
+    });
+    expect(books.lifecycle.supersede).toEqual({
+      field: 'supersedeBook',
+      idArgName: 'id',
+      idArgType: 'ID!',
+      replacementArgName: 'replacementId',
+      replacementArgType: 'ID!',
+      reasonArgName: 'reason',
+    });
+    // The bulk mutation must not be mistaken for the single-entity one.
+    expect(collections.every((c) => c.lifecycle.setAvailability?.field !== 'setBookAvailabilityBulk')).toBe(
+      true,
+    );
+  });
+
   it('a search-shaped bare list with no base collection never derives (required q unsatisfiable)', () => {
     const schema: IntrospectionSchema = {
       queryType: { name: 'Query' },
@@ -259,6 +281,45 @@ describe('deriveWriteModel (W4.1/W4.3)', () => {
     const [books] = deriveCollections(capableSchema());
     const form = books.write.create!.form;
     expect(JSON.parse(JSON.stringify(form))).toEqual(form);
+  });
+});
+
+describe('deriveLifecycleModel (W4.4)', () => {
+  it('is empty when the endpoint advertises no availability/supersede mutations (never fakes)', () => {
+    const [books] = deriveCollections(capableSchema());
+    expect(books.lifecycle).toEqual({});
+    const [things] = deriveCollections(bareSchema());
+    expect(things.lifecycle).toEqual({});
+  });
+
+  it('derives setAvailability + supersede paths when advertised', () => {
+    const [books] = deriveCollections(capableSchema({ bookLifecycle: true }));
+    expect(books.lifecycle.setAvailability).toEqual({
+      field: 'setBookAvailability',
+      idArgName: 'id',
+      idArgType: 'ID!',
+      availabilityArgName: 'isAvailable',
+      reasonArgName: 'reason',
+    });
+    expect(books.lifecycle.supersede).toEqual({
+      field: 'supersedeBook',
+      idArgName: 'id',
+      idArgType: 'ID!',
+      replacementArgName: 'replacementId',
+      replacementArgType: 'ID!',
+      reasonArgName: 'reason',
+    });
+  });
+
+  it('never matches the bulk availability mutation as the single-entity one', () => {
+    const [books] = deriveCollections(capableSchema({ bookLifecycle: true }));
+    expect(books.lifecycle.setAvailability?.field).not.toBe('setBookAvailabilityBulk');
+  });
+
+  it('does not derive lifecycle mutations for an unrelated type (name must reference the entity)', () => {
+    const collections = deriveCollections(capableSchema({ bookLifecycle: true }));
+    const authors = collections.find((c) => c.id === 'authors')!;
+    expect(authors.lifecycle).toEqual({});
   });
 });
 

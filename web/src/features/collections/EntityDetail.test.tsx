@@ -154,4 +154,110 @@ describe('EntityDetail (R3.7/R3.8)', () => {
     );
     expect(await screen.findByText(/No detail view for Authors/)).toBeInTheDocument();
   });
+
+  it('gates the Archive/Supersede affordances off when the endpoint advertises no lifecycle mutations', async () => {
+    renderApp(
+      <App endpoint={endpoint} clientFactory={() => fakeClient(capableSchema(), respond)} />,
+      '?collection=books&entity=BK-0007',
+    );
+    await screen.findByText('A Deep Book');
+    expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Supersede…' })).not.toBeInTheDocument();
+  });
+});
+
+describe('EntityDetail lifecycle affordances (W4.4)', () => {
+  function lifecycleRespond(mutations: {
+    setBookAvailability?: GraphQLResult<unknown>;
+    supersedeBook?: GraphQLResult<unknown>;
+  }) {
+    // Mutable so a successful mutation is reflected in the post-mutation reload,
+    // just like a real server would.
+    const current = { ...book, isAvailable: true } as Record<string, unknown>;
+    return (query: string, variables: Record<string, unknown>): GraphQLResult<unknown> => {
+      if (query.includes('ApertureSetAvailability')) {
+        if (mutations.setBookAvailability) return mutations.setBookAvailability;
+        current.isAvailable = variables['isAvailable'];
+        return {
+          data: { setBookAvailability: { entityId: 'BK-0007', isAvailable: variables['isAvailable'] } },
+          error: null,
+        };
+      }
+      if (query.includes('ApertureSupersede')) {
+        if (mutations.supersedeBook) return mutations.supersedeBook;
+        current.supersededBy = variables['replacementId'];
+        return {
+          data: { supersedeBook: { entityId: 'BK-0007', supersededBy: variables['replacementId'] } },
+          error: null,
+        };
+      }
+      if (query.includes('ApertureDetail')) return { data: { book: current }, error: null };
+      if (query.includes('ApertureHistory')) return { data: { entityHistory: [] }, error: null };
+      return { data: { books: [current] }, error: null };
+    };
+  }
+
+  it('archives an available entity, then reloads to show Restore', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient(capableSchema({ bookLifecycle: true }), lifecycleRespond({}));
+    renderApp(
+      <App endpoint={endpoint} clientFactory={() => client} />,
+      '?collection=books&entity=BK-0007',
+    );
+
+    const archiveButton = await screen.findByRole('button', { name: 'Archive' });
+    await user.click(archiveButton);
+
+    expect(await screen.findByRole('button', { name: 'Restore' })).toBeInTheDocument();
+    expect(
+      client.recorded.some(
+        (q) =>
+          q.document.includes('setBookAvailability') &&
+          q.variables['id'] === 'BK-0007' &&
+          q.variables['isAvailable'] === false,
+      ),
+    ).toBe(true);
+  });
+
+  it('surfaces a server rejection from the availability mutation without crashing', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient(
+      capableSchema({ bookLifecycle: true }),
+      lifecycleRespond({ setBookAvailability: { data: null, error: new Error('entity not found') } }),
+    );
+    renderApp(
+      <App endpoint={endpoint} clientFactory={() => client} />,
+      '?collection=books&entity=BK-0007',
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Archive' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/entity not found/);
+    // Stays "Archive" — the transition did not take effect.
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+  });
+
+  it('supersedes via the inline form and reloads the entity', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient(capableSchema({ bookLifecycle: true }), lifecycleRespond({}));
+    renderApp(
+      <App endpoint={endpoint} clientFactory={() => client} />,
+      '?collection=books&entity=BK-0007',
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Supersede…' }));
+    await user.type(await screen.findByLabelText('Replacement id'), 'BK-0099');
+    await user.click(screen.getByRole('button', { name: 'Confirm supersede' }));
+
+    await screen.findByText('A Deep Book'); // reload completed, detail still rendered
+    expect(
+      client.recorded.some(
+        (q) =>
+          q.document.includes('supersedeBook') &&
+          q.variables['id'] === 'BK-0007' &&
+          q.variables['replacementId'] === 'BK-0099',
+      ),
+    ).toBe(true);
+    // The form closes back to the trigger button after a successful submit.
+    expect(await screen.findByRole('button', { name: 'Supersede…' })).toBeInTheDocument();
+  });
 });

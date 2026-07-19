@@ -121,6 +121,8 @@ export interface CollectionModel {
   detail?: DetailPath;
   /** Create/update mutation paths + derived forms; absent members gate the write UI off. */
   write: WriteModel;
+  /** Availability/supersede mutation paths (W4.4); absent members gate those affordances off. */
+  lifecycle: LifecycleModel;
 }
 
 /** Derived from a Query `entityHistory`-style field, when advertised (R3.7). */
@@ -170,6 +172,31 @@ export interface WriteModel {
     inputArgName: string;
     inputArgType: string;
     form: FormModel;
+  };
+}
+
+/**
+ * Availability transitions and supersession, when the endpoint offers them
+ * (W4.4) — Mosaic's no-hard-delete lifecycle. Absent members gate the
+ * corresponding affordance off (ADR-0029).
+ */
+export interface LifecycleModel {
+  setAvailability?: {
+    field: string;
+    idArgName: string;
+    idArgType: string;
+    availabilityArgName: string;
+    /** Present only when the mutation advertises an optional reason arg. */
+    reasonArgName?: string;
+  };
+  supersede?: {
+    field: string;
+    idArgName: string;
+    idArgType: string;
+    replacementArgName: string;
+    replacementArgType: string;
+    /** Present only when the mutation advertises an optional reason arg. */
+    reasonArgName?: string;
   };
 }
 
@@ -471,6 +498,73 @@ function deriveWriteModel(
   return write;
 }
 
+/** A required scalar (ID/String) arg, optionally excluding one already claimed by name. */
+function requiredScalarIdArg(
+  field: IntrospectionField,
+  exclude?: string,
+): IntrospectionInputValue | undefined {
+  return field.args.find((a) => {
+    if (exclude && a.name === exclude) return false;
+    if (a.type.kind !== 'NON_NULL') return false;
+    const named = namedType(a.type);
+    return named.kind === 'SCALAR' && (named.name === 'ID' || named.name === 'String');
+  });
+}
+
+/**
+ * Availability-transition / supersede mutations derive from the Mutation
+ * type (W4.4): a `*Availability` field (id arg + Boolean arg) is the
+ * single-entity availability transition; a `supersede*` field (id arg + a
+ * second required id-typed arg) is the supersede mutation. Bulk availability
+ * mutations are excluded — this derives the single-entity detail-view
+ * affordances only. Unlike create/update (`deriveWriteModel`), these
+ * mutations return a result/receipt type rather than the entity itself, so
+ * the match can't ride the return type — the field name must reference the
+ * entity type instead. Nothing advertised → no affordance (ADR-0029).
+ */
+function deriveLifecycleModel(schema: IntrospectionSchema, typeName: string): LifecycleModel {
+  const mutationType = findType(schema, schema.mutationType?.name ?? null);
+  const lifecycle: LifecycleModel = {};
+  const lowerType = typeName.toLowerCase();
+
+  for (const field of mutationType?.fields ?? []) {
+    if (!field.name.toLowerCase().includes(lowerType)) continue;
+
+    if (!lifecycle.setAvailability && /availability/i.test(field.name) && !/bulk/i.test(field.name)) {
+      const idArg = requiredScalarIdArg(field);
+      const availabilityArg = field.args.find((a) => namedType(a.type).name === 'Boolean');
+      if (idArg && availabilityArg) {
+        const reasonArg = field.args.find((a) => /^reason$/i.test(a.name));
+        lifecycle.setAvailability = {
+          field: field.name,
+          idArgName: idArg.name,
+          idArgType: typeRefToSDL(idArg.type),
+          availabilityArgName: availabilityArg.name,
+          reasonArgName: reasonArg?.name,
+        };
+      }
+    }
+
+    if (!lifecycle.supersede && /^supersede/i.test(field.name)) {
+      const idArg = requiredScalarIdArg(field);
+      const replacementArg = idArg && requiredScalarIdArg(field, idArg.name);
+      if (idArg && replacementArg) {
+        const reasonArg = field.args.find((a) => /^reason$/i.test(a.name));
+        lifecycle.supersede = {
+          field: field.name,
+          idArgName: idArg.name,
+          idArgType: typeRefToSDL(idArg.type),
+          replacementArgName: replacementArg.name,
+          replacementArgType: typeRefToSDL(replacementArg.type),
+          reasonArgName: reasonArg?.name,
+        };
+      }
+    }
+  }
+
+  return lifecycle;
+}
+
 /** The derivable column set of an entity type (detail-budgeted). */
 function deriveColumns(
   schema: IntrospectionSchema,
@@ -604,6 +698,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
       detail: deriveDetailPath(queryFields, entityType.name, undefined, idColumn),
       write: deriveWriteModel(schema, entityType.name, detailColumns),
+      lifecycle: deriveLifecycleModel(schema, entityType.name),
     });
   }
 
@@ -698,6 +793,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
           : [],
       detail: deriveDetailPath(queryFields, named.name, filterType, idColumn),
       write: deriveWriteModel(schema, named.name, detailColumns),
+      lifecycle: deriveLifecycleModel(schema, named.name),
     });
   }
 

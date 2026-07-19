@@ -74,6 +74,8 @@ export function capableSchema(
     authorWrite?: boolean;
     /** Adds the Aperture control-plane document collection (Phase 4, N5.4). */
     documents?: boolean;
+    /** Adds Book's availability-transition + supersede mutations (W4.4). */
+    bookLifecycle?: boolean;
   } = {},
 ): IntrospectionSchema {
   const queryFields = [
@@ -102,6 +104,51 @@ export function capableSchema(
   }
   const mutationExtras: IntrospectionField[] = [];
   const typeExtras: IntrospectionType[] = [];
+  const bookFields = [
+    field('id', nonNull(scalar('ID'))),
+    field('title', nonNull(scalar('String'))),
+    field('published_on', scalar('Date')),
+    field('page_count', scalar('Int')),
+    field('in_print', scalar('Boolean')),
+    field('format', enumRef('BookFormat')),
+    field('author', object('Author')),
+    field('reviews', list(nonNull(object('Review')))),
+  ];
+  if (options.bookLifecycle) {
+    bookFields.push(field('isAvailable', nonNull(scalar('Boolean'))));
+    mutationExtras.push(
+      field('setBookAvailability', nonNull(object('AvailabilityResult')), [
+        arg('id', nonNull(scalar('ID'))),
+        arg('isAvailable', nonNull(scalar('Boolean'))),
+        arg('reason', scalar('String')),
+      ]),
+      field('setBookAvailabilityBulk', nonNull(object('BulkAvailabilityResult')), [
+        arg('ids', nonNull(list(nonNull(scalar('ID'))))),
+        arg('isAvailable', nonNull(scalar('Boolean'))),
+        arg('reason', scalar('String')),
+      ]),
+      field('supersedeBook', nonNull(object('SupersedeResult')), [
+        arg('id', nonNull(scalar('ID'))),
+        arg('replacementId', nonNull(scalar('ID'))),
+        arg('reason', scalar('String')),
+      ]),
+    );
+    typeExtras.push(
+      objectType('AvailabilityResult', [
+        field('entityId', nonNull(scalar('ID'))),
+        field('isAvailable', nonNull(scalar('Boolean'))),
+      ]),
+      objectType('BulkAvailabilityResult', [
+        field('total', nonNull(scalar('Int'))),
+        field('succeeded', nonNull(scalar('Int'))),
+        field('failed', nonNull(scalar('Int'))),
+      ]),
+      objectType('SupersedeResult', [
+        field('entityId', nonNull(scalar('ID'))),
+        field('supersededBy', nonNull(scalar('ID'))),
+      ]),
+    );
+  }
   if (options.authorWrite) {
     mutationExtras.push(
       field('createAuthor', object('Author'), [
@@ -249,16 +296,7 @@ export function capableSchema(
         field('field', scalar('String')),
         field('details', scalar('JSON')),
       ]),
-      objectType('Book', [
-        field('id', nonNull(scalar('ID'))),
-        field('title', nonNull(scalar('String'))),
-        field('published_on', scalar('Date')),
-        field('page_count', scalar('Int')),
-        field('in_print', scalar('Boolean')),
-        field('format', enumRef('BookFormat')),
-        field('author', object('Author')),
-        field('reviews', list(nonNull(object('Review')))),
-      ]),
+      objectType('Book', bookFields),
       objectType('Author', authorFields),
       objectType('Review', [field('id', nonNull(scalar('ID'))), field('rating', scalar('Int'))]),
       objectType('HippoSchema', [field('version', scalar('String'))]),
