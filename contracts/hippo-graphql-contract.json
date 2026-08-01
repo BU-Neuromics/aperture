@@ -1,0 +1,192 @@
+{
+  "$schemaComment": "Consumer-driven contract (issue #16): the subset of Mosaic's (formerly Hippo's) GraphQL surface Aperture's seam modules assume. Assertions are additive-tolerant subset checks - extra fields/args/types on the live schema are fine, but every asserted field/arg/type must still be present with the given shape. A Mosaic PR that removes or renames one of these breaks the check.",
+  "version": "1.0.0",
+  "confirmedAgainst": {
+    "mosaicVersion": "0.10.3 (as Hippo, pre ADR-0004 rename)",
+    "capturedAt": "2026-07-08",
+    "sourceIssue": "aperture#15",
+    "fixture": "web/src/data/testing/realIntrospection.json"
+  },
+  "assertions": [
+    {
+      "id": "filter-input-shape",
+      "description": "Generic equality filter input (schemaModel.ts filterShape='filterList') - a Query list field's `filters` arg element type.",
+      "kind": "inputFields",
+      "on": "FilterInput",
+      "fields": [
+        { "name": "field", "type": "String!" },
+        { "name": "value", "type": "JSON!" }
+      ]
+    },
+    {
+      "id": "filter-mode-enum",
+      "description": "AND/OR combinator for multi-filter composition.",
+      "kind": "enumValues",
+      "on": "FilterMode",
+      "values": ["AND", "OR"]
+    },
+    {
+      "id": "aperture-document-type",
+      "description": "The control-plane document type (config-as-data views/workflows, W4.x) - present in every Mosaic deployment regardless of the domain LinkML schema, so it doubles as the schema-agnostic instance of the generic list/singular/write/lifecycle field patterns below.",
+      "kind": "fields",
+      "on": "ApertureDocument",
+      "fields": [
+        { "name": "id", "type": "ID!" },
+        { "name": "kind", "type": "String!" },
+        { "name": "name", "type": "String!" },
+        { "name": "payload", "type": "String!" },
+        { "name": "isAvailable", "type": "Boolean!" },
+        { "name": "supersededBy", "type": "ID" }
+      ]
+    },
+    {
+      "id": "aperture-document-create-input",
+      "kind": "inputFields",
+      "on": "ApertureDocumentCreateInput",
+      "fields": [
+        { "name": "kind", "type": "String!" },
+        { "name": "name", "type": "String!" },
+        { "name": "payload", "type": "String!" }
+      ]
+    },
+    {
+      "id": "query-list-field-pattern",
+      "description": "schemaModel.ts deriveCollections: a list field's filter/pagination args (live-Hippo filterList shape, #15).",
+      "kind": "queryField",
+      "field": "apertureDocuments",
+      "args": [
+        { "name": "filters", "type": "[FilterInput!]" },
+        { "name": "filterMode", "type": "FilterMode!" },
+        { "name": "limit", "type": "Int!" },
+        { "name": "offset", "type": "Int!" }
+      ]
+    },
+    {
+      "id": "query-singular-field-pattern",
+      "description": "schemaModel.ts DetailPath 'field' kind: fetch-by-id for a collection's detail view.",
+      "kind": "queryField",
+      "field": "apertureDocument",
+      "args": [{ "name": "id", "type": "ID!" }]
+    },
+    {
+      "id": "query-search-twin-pattern",
+      "description": "schemaModel.ts SearchTwinModel: a bare-list search field for the same entity type.",
+      "kind": "queryField",
+      "field": "searchApertureDocuments",
+      "args": [{ "name": "q", "type": "String!" }]
+    },
+    {
+      "id": "query-entity-history",
+      "description": "schemaModel.ts deriveHistory - provenance rows for any entity.",
+      "kind": "queryField",
+      "field": "entityHistory",
+      "args": [{ "name": "entityId", "type": "ID!" }]
+    },
+    {
+      "id": "query-superseded-by",
+      "kind": "queryField",
+      "field": "supersededBy",
+      "args": [{ "name": "id", "type": "ID!" }]
+    },
+    {
+      "id": "query-find-by-xref",
+      "kind": "queryField",
+      "field": "findByXref",
+      "args": [
+        { "name": "system", "type": "String!" },
+        { "name": "value", "type": "String!" }
+      ]
+    },
+    {
+      "id": "mutation-create-pattern",
+      "description": "WriteModel.create: schemaModel.ts derives the create form from this mutation's input type.",
+      "kind": "mutationField",
+      "field": "createApertureDocument",
+      "args": [{ "name": "data", "type": "ApertureDocumentCreateInput!" }]
+    },
+    {
+      "id": "mutation-update-pattern",
+      "kind": "mutationField",
+      "field": "updateApertureDocument",
+      "args": [
+        { "name": "id", "type": "ID!" },
+        { "name": "data", "type": "ApertureDocumentUpdateInput!" }
+      ]
+    },
+    {
+      "id": "mutation-availability-pattern",
+      "description": "LifecycleModel.setAvailability (W4.4) - Mosaic's no-hard-delete availability transition.",
+      "kind": "mutationField",
+      "field": "setApertureDocumentAvailability",
+      "args": [
+        { "name": "id", "type": "ID!" },
+        { "name": "isAvailable", "type": "Boolean!" }
+      ]
+    },
+    {
+      "id": "mutation-availability-bulk-pattern",
+      "kind": "mutationField",
+      "field": "setApertureDocumentAvailabilityBulk",
+      "args": [
+        { "name": "ids", "type": "[ID!]!" },
+        { "name": "isAvailable", "type": "Boolean!" }
+      ]
+    },
+    {
+      "id": "mutation-supersede-pattern",
+      "description": "LifecycleModel.supersede (W4.4).",
+      "kind": "mutationField",
+      "field": "supersedeApertureDocument",
+      "args": [
+        { "name": "id", "type": "ID!" },
+        { "name": "replacementId", "type": "ID!" }
+      ]
+    },
+    {
+      "id": "batch-entity-input-shape",
+      "description": "batch.ts deriveBatchModel entity shape (ADR-0028; Hippo #84).",
+      "kind": "inputFields",
+      "on": "BatchEntityInput",
+      "fields": [
+        { "name": "entityType", "type": "String!" },
+        { "name": "data", "type": "JSON!" }
+      ]
+    },
+    {
+      "id": "batch-relationship-input-shape",
+      "kind": "inputFields",
+      "on": "BatchRelationshipInput",
+      "fields": [
+        { "name": "sourceId", "type": "ID!" },
+        { "name": "targetId", "type": "ID!" },
+        { "name": "relationshipType", "type": "String!" }
+      ]
+    },
+    {
+      "id": "mutation-ingest-batch",
+      "kind": "mutationField",
+      "field": "ingestBatch",
+      "args": [
+        { "name": "entities", "type": "[BatchEntityInput!]!" },
+        { "name": "relationships", "type": "[BatchRelationshipInput!]" },
+        { "name": "dryRun", "type": "Boolean!" }
+      ]
+    },
+    {
+      "id": "mutation-validate-batch",
+      "kind": "mutationField",
+      "field": "validateBatch",
+      "args": [{ "name": "entities", "type": "[BatchEntityInput!]!" }]
+    },
+    {
+      "id": "batch-write-result-shape",
+      "kind": "fields",
+      "on": "BatchWriteGraphQLResult",
+      "fields": [
+        { "name": "committed", "type": "Boolean!" },
+        { "name": "dryRun", "type": "Boolean!" },
+        { "name": "validation", "type": "BatchValidationGraphQLResult!" }
+      ]
+    }
+  ]
+}

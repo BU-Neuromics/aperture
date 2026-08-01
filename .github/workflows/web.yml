@@ -3,10 +3,10 @@ name: Web
 on:
   push:
     branches: [main]
-    paths: ['web/**', '.github/workflows/web.yml']
+    paths: ['web/**', 'contracts/**', '.github/workflows/web.yml']
   pull_request:
     branches: [main]
-    paths: ['web/**', '.github/workflows/web.yml']
+    paths: ['web/**', 'contracts/**', '.github/workflows/web.yml']
 
 concurrency:
   group: web-${{ github.ref }}
@@ -39,6 +39,10 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Check Mosaic GraphQL contract (issue #16)
+        working-directory: .
+        run: node contracts/check-contract.mjs --introspection web/src/data/testing/realIntrospection.json
 
       - name: Build
         run: npm run build
