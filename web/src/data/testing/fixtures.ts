@@ -40,7 +40,11 @@ export const field = (
   args: IntrospectionInputValue[] = [],
 ): IntrospectionField => ({ name, args, type });
 
-export const arg = (name: string, type: TypeRef): IntrospectionInputValue => ({ name, type });
+export const arg = (
+  name: string,
+  type: TypeRef,
+  defaultValue: string | null = null,
+): IntrospectionInputValue => ({ name, type, defaultValue });
 
 export const objectType = (name: string, fields: IntrospectionField[]): IntrospectionType => ({
   kind: 'OBJECT',

@@ -113,6 +113,44 @@ describe('buildListQuery (live Hippo shapes — #15)', () => {
     expect(envelope).toBe(false);
   });
 
+  it('a composed envelope twin (Mosaic #157) keeps filters and the page envelope', () => {
+    // Same base collection, but with the twin upgraded to the composed
+    // shape the new endpoint advertises.
+    const composed = {
+      ...books,
+      search: {
+        ...books.search!,
+        envelope: true,
+        filterArg: 'filters',
+        filterArgType: '[FilterInput!]',
+        filterModeArg: 'filterMode',
+        filterModeArgType: 'FilterMode!',
+      },
+    };
+    const { document, variables, rootField, envelope } = buildListQuery(composed, {
+      page: 2,
+      pageSize: 25,
+      filters: { format: 'paperback' },
+      filterMode: 'AND',
+      search: 'Le Guin',
+    });
+    expect(document).toBe(
+      'query ApertureList($q: String!, $limit: Int!, $offset: Int!, ' +
+        '$filters: [FilterInput!], $filterMode: FilterMode!) ' +
+        '{ searchBooks(q: $q, limit: $limit, offset: $offset, ' +
+        `filters: $filters, filterMode: $filterMode) { items { ${BOOK_COLUMNS} } total } }`,
+    );
+    expect(variables).toEqual({
+      q: 'Le Guin',
+      limit: 25,
+      offset: 25,
+      filters: [{ field: 'format', value: 'paperback' }],
+      filterMode: 'AND',
+    });
+    expect(rootField).toBe('searchBooks');
+    expect(envelope).toBe(true);
+  });
+
   it('detail rides the singular field with the full column set', () => {
     const built = buildDetailQuery(books, 'book-left-hand')!;
     expect(built.document).toBe(

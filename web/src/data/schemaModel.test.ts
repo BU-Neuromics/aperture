@@ -1,9 +1,10 @@
-import type { IntrospectionSchema } from './introspection';
+import type { IntrospectionSchema, TypeRef } from './introspection';
 import { deriveCollections, deriveCapabilities, deriveHistory, humanize } from './schemaModel';
 import {
   arg,
   bareSchema,
   capableSchema,
+  enumRef,
   field,
   list,
   nonNull,
@@ -212,6 +213,79 @@ describe('deriveCollections (live Hippo shapes — #15)', () => {
     expect(collections.every((c) => c.lifecycle.setAvailability?.field !== 'setBookAvailabilityBulk')).toBe(
       true,
     );
+  });
+
+  it('a NON_NULL arg with a server default never blocks derivation (Mosaic ADR-0007 orderDir)', () => {
+    // Regression: `orderDir: OrderDirection! = ASC` (Mosaic aggregation-and-
+    // ordering) made every list field carry a NON_NULL arg we don't supply;
+    // per the GraphQL spec it is not *required* — the default satisfies it.
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int')), '100'),
+            arg('offset', nonNull(scalar('Int')), '0'),
+            arg('orderBy', enumRef('ThingOrderField')),
+            arg('orderDir', nonNull(enumRef('OrderDirection')), 'ASC'),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID'))), field('label', scalar('String'))]),
+      ],
+    };
+    expect(deriveCollections(schema).map((c) => c.id)).toEqual(['things']);
+  });
+
+  it('attaches an envelope-shaped search twin (Mosaic #157) with its filter args', () => {
+    const filterInput: TypeRef = { kind: 'INPUT_OBJECT', name: 'FilterInput', ofType: null };
+    const pageArgs = [
+      arg('limit', nonNull(scalar('Int'))),
+      arg('offset', nonNull(scalar('Int'))),
+      arg('filters', list(nonNull(filterInput))),
+      arg('filterMode', nonNull(enumRef('FilterMode'))),
+    ];
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), pageArgs),
+          // Composed twin: same Page shape, required q, same filter args.
+          field('searchThings', nonNull(object('ThingPage')), [
+            arg('q', nonNull(scalar('String'))),
+            ...pageArgs,
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID'))), field('label', scalar('String'))]),
+      ],
+    };
+    const derived = deriveCollections(schema);
+    // The twin never derives as a collection (its q is unsatisfiable there)…
+    expect(derived.map((c) => c.id)).toEqual(['things']);
+    // …it attaches to its base, carrying the envelope + filter args.
+    expect(derived[0].search).toEqual({
+      field: 'searchThings',
+      argName: 'q',
+      argType: 'String!',
+      limitArg: 'limit',
+      limitArgType: 'Int!',
+      offsetArg: 'offset',
+      offsetArgType: 'Int!',
+      envelope: true,
+      filterArg: 'filters',
+      filterArgType: '[FilterInput!]',
+      filterModeArg: 'filterMode',
+      filterModeArgType: 'FilterMode!',
+    });
   });
 
   it('a search-shaped bare list with no base collection never derives (required q unsatisfiable)', () => {
