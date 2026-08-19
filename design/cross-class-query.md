@@ -9,7 +9,7 @@ design is co-designed with the Mosaic query surface, priced against Mosaic sourc
 Proposed — mosaic#153/#154 — and OpenSpec changes `typed-filter-inputs`/`aggregation-and-
 ordering`/`search-composition`/`heterogeneous-roots`, mosaic#155–#158). The Aperture side is
 promoted to **[ADR-0035](./decisions/ADR-0035-cross-class-queries-typed-queryspec.md)**
-(Proposed, aperture#46); the X-tracker entry §10 names "X3" landed as **X5** in
+(**Accepted** 2026-08-19, aperture#46); the X-tracker entry §10 names "X3" landed as **X5** in
 `portal-requirements.md`, since X3a/X3b were already taken by the schema-editing requirements.
 **Problem owner:** Aperture (portal query capability, Level-2 binding); instruction-path
 composition stays with Reel; server capabilities land in Mosaic via its ADR/OpenSpec process.

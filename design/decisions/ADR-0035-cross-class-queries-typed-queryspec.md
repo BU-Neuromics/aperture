@@ -1,8 +1,8 @@
 # ADR-0035: Cross-class queries are a typed QuerySpec artifact
 
-- **Status:** Proposed
-- **Date:** 2026-08-19
-- **Deciders:** labadorf (pending), design session
+- **Status:** Accepted
+- **Date:** 2026-08-19 (ratified same day; see #46)
+- **Deciders:** labadorf
 - **Related:** ADR-0002 (derived-never-enumerated — every class/edge/operator/traversal comes
   from introspection), ADR-0004 (no middle scripting layer; relationship joins are Level-2
   binding), ADR-0005 (config accessible to humans and LLMs — one typed artifact for both),
