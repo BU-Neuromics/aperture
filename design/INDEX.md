@@ -38,6 +38,7 @@ are **not** reproduced here.
 | `instruction-path-model.md` | Instruction-path model (working) | 🟠 Working | The formal data structure under `prefab/data-stories.md`: a data story as a path of source-tagged typed instructions producing intensional subgraph **states** + materialized **artifacts**. Topology (linear/tree/DAG) as a data property; reproducibility via one as-of watermark; UI modes as topology slices. Open decisions D-1–D-5 (ADR-0022–0025 + a Hippo requirement). |
 | `portal-vision-handoff.md` | Portal vision | 🟢 Historical vision / context | The original config-driven portal brainstorm: problem statement, settled decisions (§2), open questions (§9), invariants checklist (§10). Read for narrative context; **cite ADRs for decisions** — §2 is backfilled as ADR-0002–0009, §9 as Proposed ADR-0010–0013. |
 | `portal-open-questions.md` | Portal §9 working notes | 🟡 Working notes | Proposed resolutions to the §9 open questions, carried into the corresponding Proposed ADRs as their recommended Decision + rationale. |
+| `cross-class-query.md` | Cross-class query & heterogeneous results exploration | 🟠 Working | Research + candidate design for criteria queries spanning classes, joined anchor-grain table/CSV, and graph exploration; co-designed with the Mosaic query surface (Mosaic ADR-0006/0007). Distilled into Proposed ADR-0035; ADR-0036/0037 to follow when picked up. |
 
 ## How decisions are recorded
 
@@ -86,6 +87,7 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0032](./decisions/ADR-0032-control-plane-document-store.md) | Control-plane state = versioned `{kind,name,payload}` documents on a structurally-recognized Hippo collection; honest local fallback; retire-not-delete | ✅ Accepted | Phase 4 (PR #14); refines ADR-0017 |
 | [0033](./decisions/ADR-0033-workflow-config-and-engine.md) | Workflow config = steps-as-data interpreted by a pure reducer engine; the draft is the serialized run state | ✅ Accepted | Phase 3 (PR #13); implements ADR-0028 W4.6/W4.8 |
 | [0034](./decisions/ADR-0034-spa-image-runtime-config.md) | SPA image is deployment-agnostic: one digest-addressed artifact, `VITE_*` config injected into `config.js` at container start | ✅ Accepted | issue #22 (DataHelix P1.4); DataHelix ADR-0001 |
+| [0035](./decisions/ADR-0035-cross-class-queries-typed-queryspec.md) | Cross-class queries are a typed **QuerySpec** artifact — anchor grain, capability-gated operators, quantified relationship criteria, server-first planner with declared semijoin compensation | 🟡 Proposed | `cross-class-query.md` §5–§10; Mosaic ADR-0006/0007; portal req X1/X5; issue #46 |
 
 ## Decision Queue (open — resolve in dependency order)
 
