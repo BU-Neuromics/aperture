@@ -23,6 +23,16 @@ export interface Capabilities {
   entityHistory: boolean;
   /** Batch unit-of-work mutations (whole-set dry-run + atomic commit; Hippo #84). */
   batchWrite: boolean;
+  /**
+   * The flat-filter operator vocabulary the endpoint advertises — the member
+   * names of its `FilterOp` enum (Mosaic ADR-0006: the introspected schema is
+   * the capability contract). `["EQ"]`-era endpoints predate the enum;
+   * v0.12+ advertises `EQ`/`IN`; the typed-filter increments add
+   * `NEQ`/`GT`/`GTE`/`LT`/`LTE`/`CONTAINS`/`IS_NULL`.
+   */
+  filterOps: readonly string[];
+  /** Generated `where: <Type>Filter` inputs advertised (Mosaic ADR-0006 inc. 2). */
+  whereFilter: boolean;
 }
 
 export const NO_CAPABILITIES: Capabilities = {
@@ -35,4 +45,6 @@ export const NO_CAPABILITIES: Capabilities = {
   relationshipTraversal: false,
   entityHistory: false,
   batchWrite: false,
+  filterOps: [],
+  whereFilter: false,
 };

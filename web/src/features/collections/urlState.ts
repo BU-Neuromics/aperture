@@ -6,6 +6,8 @@ import {
   useQueryStates,
 } from 'nuqs';
 import type { FilterValues } from '../../data/hippoSource';
+import type { QuerySpec } from '../../query/querySpec';
+import { validateQuerySpecShape } from '../../query/querySpec';
 
 /**
  * Step R3.9 — the serializable query-state object ⇄ URL: `{collection, page,
@@ -36,6 +38,10 @@ export function useCollectionUrlState() {
     entity: parseAsString,
     form: parseAsStringLiteral(['new', 'edit'] as const),
     workflow: parseAsString,
+    /** Cross-class query surfaces (ADR-0035/0037): the builder and graph views. */
+    view: parseAsStringLiteral(['query', 'graph'] as const),
+    /** The QuerySpec artifact rides the URL — shareable/bookmarkable (ADR-0035). */
+    qs: parseAsJson(validateQuerySpecShape),
   });
 
   const filters = state.filters ?? EMPTY_FILTERS;
@@ -48,6 +54,8 @@ export function useCollectionUrlState() {
     entity: state.entity,
     form: state.form,
     workflow: state.workflow,
+    view: state.view,
+    querySpec: state.qs,
 
     selectCollection: (collection: string) =>
       void setState({
@@ -58,7 +66,24 @@ export function useCollectionUrlState() {
         entity: null,
         form: null,
         workflow: null,
+        view: null,
+        qs: null,
       }),
+    /** Open the cross-class query builder (ADR-0035), optionally pre-anchored. */
+    openQueryBuilder: (spec?: QuerySpec) =>
+      void setState({
+        view: 'query',
+        qs: spec ?? null,
+        entity: null,
+        form: null,
+        workflow: null,
+        page: 1,
+      }),
+    setQuerySpec: (spec: QuerySpec) => void setState({ qs: spec, page: 1 }),
+    setQueryPage: (page: number) => void setState({ page: Math.max(1, page) }),
+    /** Open the graph exploration view (ADR-0037) over the current QuerySpec. */
+    openGraphView: () => void setState({ view: 'graph', entity: null, form: null }),
+    closeQueryViews: () => void setState({ view: null, qs: null, page: 1 }),
     setPage: (page: number) => void setState({ page: Math.max(1, page) }),
     setSearch: (q: string) => void setState({ q: q.trim() === '' ? null : q.trim(), page: 1 }),
     /** Single-value equality per facet (flat AND semantics — R3.3); toggle clears. */

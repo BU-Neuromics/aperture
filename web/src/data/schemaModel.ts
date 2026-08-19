@@ -110,9 +110,11 @@ export interface CollectionModel {
     filter?: string;
     search?: string;
     orderBy?: string;
+    /** Typed per-class filter input (Mosaic ADR-0006 inc. 2), when advertised. */
+    where?: string;
   };
   /** SDL types for the advertised args (for variable definitions). */
-  argTypes: Partial<Record<'limit' | 'offset' | 'filter' | 'search', string>>;
+  argTypes: Partial<Record<'limit' | 'offset' | 'filter' | 'search' | 'where', string>>;
   /** Equality facets the endpoint's filter input advertises. */
   facets: FacetModel[];
   /** All non-combinator fields of the filter input (equality-filterable). */
@@ -282,7 +284,7 @@ const COMBINATOR_FIELDS = new Set(['and', 'or', 'not', 'AND', 'OR', 'NOT']);
  * output fields are their camelCase renames — filtering by `inPrint` silently
  * matches nothing; `in_print` works (verified against hippo v0.10.3).
  */
-function slotName(field: string): string {
+export function slotName(field: string): string {
   return field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
 
@@ -651,12 +653,27 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     const entityType = pageEnvelope(schema, field);
     if (!entityType) continue;
 
+    // The flat filter arg is LIST-typed ([FilterInput!]); a typed per-class
+    // `where` input object (Mosaic ADR-0006 inc. 2) may sit BESIDE it on the
+    // same field. Disambiguate by shape, not name — matching `where` by name
+    // alone would route the flat filter list into the typed input and fail
+    // GraphQL validation on ADR-0006-era endpoints.
+    const flatFilterArg = field.args.find(
+      (a) => ['filters', 'filter', 'where'].includes(a.name) && isListType(a.type),
+    );
+    const whereArg = field.args.find(
+      (a) =>
+        a.name === 'where' &&
+        !isListType(a.type) &&
+        findType(schema, namedType(a.type).name)?.kind === 'INPUT_OBJECT',
+    );
     const args = {
       limit: argNamed(field, 'limit', 'first'),
       offset: argNamed(field, 'offset', 'skip'),
-      filter: argNamed(field, 'filter', 'where', 'filters'),
+      filter: flatFilterArg ?? argNamed(field, 'filter', 'filters'),
       filterMode: argNamed(field, 'filterMode'),
       orderBy: argNamed(field, 'orderBy', 'order_by', 'sort'),
+      where: whereArg,
     };
     const supplied = new Set(
       [args.limit, args.offset, args.filter, args.filterMode].flatMap((a) =>
@@ -688,11 +705,13 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         offset: args.offset?.name,
         filter: args.filter?.name,
         orderBy: args.orderBy?.name,
+        where: args.where?.name,
       },
       argTypes: {
         limit: args.limit && typeRefToSDL(args.limit.type),
         offset: args.offset && typeRefToSDL(args.offset.type),
         filter: args.filter && typeRefToSDL(args.filter.type),
+        where: args.where && typeRefToSDL(args.where.type),
       },
       facets: args.filter ? deriveColumnFacets(detailColumns) : [],
       filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
@@ -848,6 +867,17 @@ export function deriveCapabilities(
     c.columns.some((col) => col.kind === 'ref' || col.kind === 'refList'),
   );
 
+  // The flat-filter operator vocabulary IS the introspected FilterOp enum
+  // (Mosaic ADR-0006's contract principle) — derived, never assumed. Pre-enum
+  // endpoints (equality-only filter inputs) degrade to bare equality.
+  const filterOpEnum = findType(schema, 'FilterOp');
+  const filterOps =
+    filterOpEnum?.kind === 'ENUM'
+      ? (filterOpEnum.enumValues ?? []).map((v) => v.name)
+      : some((c) => c.args.filter)
+        ? ['EQ']
+        : [];
+
   return {
     schemaIntrospection: hasHippoSchema ? 'hippo' : 'graphql',
     offsetPagination: some((c) => c.args.limit && c.args.offset),
@@ -862,5 +892,9 @@ export function deriveCapabilities(
     // True only when the batch surface introspects to a usable shape —
     // a name match alone is not a capability (ADR-0029).
     batchWrite: deriveBatchModel(schema) != null,
+    filterOps,
+    // Typed per-class filter inputs (Mosaic ADR-0006 inc. 2): a list field
+    // advertising a `where` arg whose type is an input object.
+    whereFilter: some((c) => c.args.where),
   };
 }

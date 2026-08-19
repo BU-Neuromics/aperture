@@ -6,6 +6,8 @@ import { WorkflowRunner } from '../../workflows/WorkflowRunner';
 import { CollectionTable } from './CollectionTable';
 import { EntityDetail } from './EntityDetail';
 import { EntityForm } from './EntityForm';
+import { GraphView } from '../../query/GraphView';
+import { QueryBuilderView } from '../../query/QueryBuilderView';
 import './collections.css';
 
 /**
@@ -19,11 +21,20 @@ import './collections.css';
 export function CollectionMain() {
   const state = useDataSource();
   const view = useNavView();
-  const { collection, entity, form, workflow, closeEntity, closeForm } = useCollectionUrlState();
+  const urlState = useCollectionUrlState();
+  const { collection, entity, form, workflow, closeEntity, closeForm } = urlState;
 
   // The guided workflow runner owns main when a workflow is open (W4.6).
   if (workflow != null) {
     return <WorkflowRunner key={workflow} workflowId={workflow} />;
+  }
+
+  // Cross-class query surfaces (ADR-0035/0037) own main when open.
+  if (urlState.view === 'query' && state.status === 'ready') {
+    return <QueryBuilderView source={state.source} />;
+  }
+  if (urlState.view === 'graph' && state.status === 'ready') {
+    return <GraphView source={state.source} />;
   }
 
   if (state.status === 'unconfigured') {

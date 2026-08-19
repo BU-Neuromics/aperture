@@ -19,6 +19,14 @@ as versioned documents on a LinkML-on-Hippo store (co-located by default,
 `VITE_HIPPO_CONTROL_PLANE_URL` to split; honest localStorage fallback). Facet
 **counts**/sort stay capability-gated off until Hippo X1
 ([hippo#96](https://github.com/BU-Neuromics/hippo/issues/96)).
+**Cross-class queries + graph exploration** (ADR-0035/0037): the **Query builder** (nav →
+"Query builder", or "Advanced…" on the facet panel) builds a typed QuerySpec — anchor,
+field conditions with introspected operators, and "having ≥1 … where …" relationship
+criteria (client-planned semijoin until Mosaic relationship predicates land) — riding the
+URL, exportable, and explorable as a Cytoscape **graph view** (client one-hop expansion
+until Mosaic `neighbors` lands). Local smoke harness: `web/e2e-smoke.mjs` +
+`web/vite.smoke.config.ts` (same-origin `/graphql` dev proxy against a local
+`mosaic serve --graphql`).
 
 **Next actions (all tracked as issues, dependency-ordered):**
 

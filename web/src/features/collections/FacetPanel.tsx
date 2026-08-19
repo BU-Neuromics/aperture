@@ -18,12 +18,29 @@ export function FacetPanel() {
   const state = useDataSource();
   const view = useNavView();
   const capabilities = useCapabilities();
-  const { collection, filters, search, toggleFilter, setSearch, clearFilters } =
-    useCollectionUrlState();
+  const urlState = useCollectionUrlState();
+  const { collection, filters, search, toggleFilter, setSearch, clearFilters } = urlState;
 
   if (state.status !== 'ready' || view == null) return null;
+  // The builder/graph views own the URL's filter semantics — hide the panel.
+  if (urlState.view != null) return null;
   const active = activeCollection(view, collection);
   if (!active) return null;
+
+  // Progressive disclosure into the cross-class builder (ADR-0035): the
+  // current facet state carries over as the degenerate QuerySpec.
+  const openAdvanced = () =>
+    urlState.openQueryBuilder({
+      v: 1,
+      anchor: active.id,
+      mode: 'AND',
+      criteria: Object.entries(filters).map(([slot, value]) => ({
+        kind: 'field',
+        slot,
+        op: 'eq',
+        value,
+      })),
+    });
 
   const searchable = capabilities.fullTextSearch && Boolean(active.args.search || active.search);
   const facets = capabilities.equalityFacets ? active.facets : [];
@@ -45,6 +62,15 @@ export function FacetPanel() {
             Clear all
           </button>
         )}
+        <button
+          type="button"
+          className="facet-clear-all"
+          data-testid="facet-advanced"
+          title="Cross-class criteria query (ADR-0035)"
+          onClick={openAdvanced}
+        >
+          Advanced…
+        </button>
       </div>
       <div className="facet-panel-body">
         {searchable && <SearchBox value={search} onApply={setSearch} />}
