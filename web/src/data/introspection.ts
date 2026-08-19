@@ -15,6 +15,12 @@ export interface TypeRef {
 export interface IntrospectionInputValue {
   name: string;
   type: TypeRef;
+  /**
+   * GraphQL-literal default, when declared. Per the GraphQL spec an
+   * argument is only *required* when NON_NULL **and** defaultless — e.g.
+   * Mosaic's `orderDir: OrderDirection! = ASC` needs no value from us.
+   */
+  defaultValue?: string | null;
 }
 
 export interface IntrospectionField {
@@ -63,7 +69,7 @@ export const INTROSPECTION_QUERY = `
         fields {
           name
           description
-          args { name type { ${typeRefSelection(TYPE_REF_DEPTH)} } }
+          args { name defaultValue type { ${typeRefSelection(TYPE_REF_DEPTH)} } }
           type { ${typeRefSelection(TYPE_REF_DEPTH)} }
         }
         inputFields { name type { ${typeRefSelection(TYPE_REF_DEPTH)} } }

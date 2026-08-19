@@ -154,10 +154,24 @@ class QueryBuilder {
  *
  * Envelope collections (live Hippo, #15) select `{ items { … } total }` and
  * pass filters as the generic `[{field, value}]` list (AND). An active search
- * term routes to the attached search twin instead — a bare list whose `q` the
- * server requires; search takes no filters, so it replaces them for the query
- * (mirroring the flat search-over-filters UI semantics).
+ * term routes to the attached search twin instead. Composed twins (Mosaic
+ * issue #157) return the same page envelope and take the same filter
+ * arguments, so search runs WITHIN the filtered cohort with an honest
+ * `total`; legacy bare-list twins take no filters, so there the term
+ * replaces them (the old flat search-over-filters semantics).
  */
+/** The generic `[{field, value, op?}]` filter entries for a list request. */
+function listFilterEntries(options: ListOptions): Record<string, unknown>[] {
+  return [
+    ...Object.entries(options.filters ?? {}).map(([field, value]) => ({ field, value })),
+    ...(options.conditions ?? []).map((c) =>
+      c.op && c.op !== 'EQ'
+        ? { field: c.field, value: c.value, op: c.op }
+        : { field: c.field, value: c.value },
+    ),
+  ];
+}
+
 export function buildListQuery(collection: CollectionModel, options: ListOptions): BuiltListQuery {
   const builder = new QueryBuilder();
   const offset = (options.page - 1) * options.pageSize;
@@ -167,26 +181,41 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
     builder.add(twin.argName, twin.argType, 'q', options.search);
     builder.add(twin.limitArg, twin.limitArgType, 'limit', options.pageSize);
     builder.add(twin.offsetArg, twin.offsetArgType, 'offset', offset);
+    // Composed twins (Mosaic issue #157) accept the list surface's filter
+    // arguments — search within a filtered cohort instead of replacing
+    // the filters. Legacy bare-list twins take none; there the term
+    // replaces the filters (the old flat semantics).
+    if (twin.filterArg) {
+      const twinFilterEntries = listFilterEntries(options);
+      builder.add(
+        twin.filterArg,
+        twin.filterArgType,
+        'filters',
+        twinFilterEntries.length > 0 ? twinFilterEntries : undefined,
+      );
+      builder.add(
+        twin.filterModeArg,
+        twin.filterModeArgType,
+        'filterMode',
+        twinFilterEntries.length > 0 ? (options.filterMode ?? 'AND') : undefined,
+      );
+    }
+    const rows = selectionSet(collection.columns, options.extraColumns);
     return {
       document: builder.document(
         twin.field,
-        selectionSet(collection.columns, options.extraColumns),
+        twin.envelope ? `items { ${rows} } total` : rows,
       ),
       variables: builder.variables,
       rootField: twin.field,
-      envelope: false,
+      envelope: twin.envelope ?? false,
     };
   }
 
   builder.add(collection.args.limit, collection.argTypes.limit, 'limit', options.pageSize);
   builder.add(collection.args.offset, collection.argTypes.offset, 'offset', offset);
 
-  const filterEntries: Record<string, unknown>[] = [
-    ...Object.entries(options.filters ?? {}).map(([field, value]) => ({ field, value })),
-    ...(options.conditions ?? []).map((c) =>
-      c.op && c.op !== 'EQ' ? { field: c.field, value: c.value, op: c.op } : { field: c.field, value: c.value },
-    ),
-  ];
+  const filterEntries = listFilterEntries(options);
   const hasFilters = filterEntries.length > 0;
   if (collection.filterShape === 'filterList') {
     builder.add(

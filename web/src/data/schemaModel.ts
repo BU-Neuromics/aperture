@@ -58,11 +58,13 @@ export type DetailPath =
   | { kind: 'filter'; filterField: string };
 
 /**
- * A search twin (live Hippo shape, #15): a bare-list Query field for the same
- * entity type taking a required search string (e.g. `searchBooks(q: String!)`).
- * It attaches to the base collection as its search capability rather than
- * deriving as a standalone collection — its required arg is only satisfiable
- * when a search term is active.
+ * A search twin: a Query field for the same entity type taking a required
+ * search string (e.g. `searchBooks(q: String!)`). It attaches to the base
+ * collection as its search capability rather than deriving as a standalone
+ * collection — its required arg is only satisfiable when a search term is
+ * active. Two shapes exist: the legacy bare list, and the composed page
+ * envelope (Mosaic issue #157) which returns the same `{ items total }`
+ * Page as the base collection and accepts its filter arguments.
  */
 export interface SearchTwinModel {
   field: string;
@@ -72,6 +74,13 @@ export interface SearchTwinModel {
   limitArgType?: string;
   offsetArg?: string;
   offsetArgType?: string;
+  /** True when the twin returns the `{ items total }` Page envelope (#157). */
+  envelope?: boolean;
+  /** The twin's flat filter-list arg, when it composes with filters (#157). */
+  filterArg?: string;
+  filterArgType?: string;
+  filterModeArg?: string;
+  filterModeArgType?: string;
 }
 
 export interface CollectionModel {
@@ -622,9 +631,16 @@ function pageEnvelope(
   return entityType?.fields?.length ? entityType : undefined;
 }
 
-/** Never derive a query surface whose required args we can't supply (ADR-0029). */
+/**
+ * Never derive a query surface whose required args we can't supply
+ * (ADR-0029). Per the GraphQL spec an argument is only *required* when
+ * NON_NULL **and** defaultless — a server-side default (e.g. Mosaic's
+ * `orderDir: OrderDirection! = ASC`, ADR-0007) satisfies it without us.
+ */
 function requiredArgsSatisfiable(field: IntrospectionField, supplied: Set<string>): boolean {
-  return field.args.every((a) => a.type.kind !== 'NON_NULL' || supplied.has(a.name));
+  return field.args.every(
+    (a) => a.type.kind !== 'NON_NULL' || a.defaultValue != null || supplied.has(a.name),
+  );
 }
 
 /** The search-twin arg: a required search string (`q(uery)`/`search`: String!). */
@@ -719,6 +735,56 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       write: deriveWriteModel(schema, entityType.name, detailColumns),
       lifecycle: deriveLifecycleModel(schema, entityType.name),
     });
+  }
+
+  // Pass 1.5 — envelope search twins (Mosaic issue #157): a non-list Query
+  // field returning the same Page shape with a required search-string arg
+  // (`searchSamples(q: String!): SamplePage`). It never derived as a
+  // collection above (its required `q` is unsatisfiable there); attach it
+  // to its base collection, carrying the filter args it composes with.
+  for (const field of queryFields) {
+    const entityType = pageEnvelope(schema, field);
+    if (!entityType) continue;
+    const twinArg = searchTwinArg(field);
+    if (!twinArg) continue;
+    const base = collections.find(
+      (c) => c.pageShape === 'envelope' && c.typeName === entityType.name,
+    );
+    if (!base) continue;
+    const limit = argNamed(field, 'limit', 'first');
+    const offset = argNamed(field, 'offset', 'skip');
+    // Same shape-based disambiguation as the base collection: the flat
+    // filter arg is LIST-typed; `where` beside it is the typed input.
+    const twinFilterArg = field.args.find(
+      (a) => ['filters', 'filter', 'where'].includes(a.name) && isListType(a.type),
+    );
+    const twinFilterMode = argNamed(field, 'filterMode');
+    if (
+      !requiredArgsSatisfiable(
+        field,
+        new Set(
+          [twinArg, limit, offset, twinFilterArg, twinFilterMode].flatMap((a) =>
+            a ? [a.name] : [],
+          ),
+        ),
+      )
+    ) {
+      continue;
+    }
+    base.search ??= {
+      field: field.name,
+      argName: twinArg.name,
+      argType: typeRefToSDL(twinArg.type),
+      limitArg: limit?.name,
+      limitArgType: limit && typeRefToSDL(limit.type),
+      offsetArg: offset?.name,
+      offsetArgType: offset && typeRefToSDL(offset.type),
+      envelope: true,
+      filterArg: twinFilterArg?.name,
+      filterArgType: twinFilterArg && typeRefToSDL(twinFilterArg.type),
+      filterModeArg: twinFilterMode?.name,
+      filterModeArgType: twinFilterMode && typeRefToSDL(twinFilterMode.type),
+    };
   }
 
   // An endpoint that advertises page envelopes is envelope-shaped: its bare
