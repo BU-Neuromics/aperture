@@ -17,11 +17,34 @@ import { deriveCapabilities, deriveCollections, deriveHistory } from './schemaMo
 /** Active equality filters: filter-input field → value (AND across fields, R3.3). */
 export type FilterValues = Record<string, string | boolean>;
 
+/**
+ * One typed filter condition for the flat `filters:` list (Mosaic ADR-0006
+ * increment 1). `op` is a member of the endpoint's introspected `FilterOp`
+ * enum (`EQ`/`IN`/`NEQ`/`GT`/…); omit it (or pass `EQ`) for plain equality —
+ * equality entries are emitted without an `op` key so pre-enum endpoints and
+ * the certified golden-path query shapes are untouched.
+ */
+export interface FilterCondition {
+  field: string;
+  value: unknown;
+  op?: string;
+}
+
 export interface ListOptions {
   page: number;
   pageSize: number;
   filters?: FilterValues;
+  /** Typed conditions appended to the same flat `filters:` list (ADR-0035 planner). */
+  conditions?: FilterCondition[];
+  /** AND (default) / OR across all filter entries, when the endpoint advertises FilterMode. */
+  filterMode?: 'AND' | 'OR';
   search?: string;
+  /**
+   * Columns to select beyond the curated table set — e.g. the reference
+   * column a semijoin extracts linking ids from (ADR-0035 planner), which
+   * the table budget routinely truncates away.
+   */
+  extraColumns?: ColumnModel[];
   /** Bypass the document cache (read-after-write surfaces, e.g. the control plane). */
   fresh?: boolean;
 }
@@ -87,8 +110,10 @@ function selectionFor(column: ColumnModel): string {
   return column.field;
 }
 
-function selectionSet(columns: ColumnModel[]): string {
-  return columns.map(selectionFor).join(' ');
+function selectionSet(columns: ColumnModel[], extra?: ColumnModel[]): string {
+  const seen = new Set(columns.map((c) => c.field));
+  const all = [...columns, ...(extra ?? []).filter((c) => !seen.has(c.field))];
+  return all.map(selectionFor).join(' ');
 }
 
 export interface BuiltQuery {
@@ -143,7 +168,10 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
     builder.add(twin.limitArg, twin.limitArgType, 'limit', options.pageSize);
     builder.add(twin.offsetArg, twin.offsetArgType, 'offset', offset);
     return {
-      document: builder.document(twin.field, selectionSet(collection.columns)),
+      document: builder.document(
+        twin.field,
+        selectionSet(collection.columns, options.extraColumns),
+      ),
       variables: builder.variables,
       rootField: twin.field,
       envelope: false,
@@ -153,36 +181,43 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
   builder.add(collection.args.limit, collection.argTypes.limit, 'limit', options.pageSize);
   builder.add(collection.args.offset, collection.argTypes.offset, 'offset', offset);
 
-  const hasFilters = options.filters && Object.keys(options.filters).length > 0;
+  const filterEntries: Record<string, unknown>[] = [
+    ...Object.entries(options.filters ?? {}).map(([field, value]) => ({ field, value })),
+    ...(options.conditions ?? []).map((c) =>
+      c.op && c.op !== 'EQ' ? { field: c.field, value: c.value, op: c.op } : { field: c.field, value: c.value },
+    ),
+  ];
+  const hasFilters = filterEntries.length > 0;
   if (collection.filterShape === 'filterList') {
     builder.add(
       collection.args.filter,
       collection.argTypes.filter,
       'filters',
-      hasFilters
-        ? Object.entries(options.filters!).map(([field, value]) => ({ field, value }))
-        : undefined,
+      hasFilters ? filterEntries : undefined,
     );
     builder.add(
       collection.filterModeArg?.name,
       collection.filterModeArg?.type,
       'filterMode',
-      hasFilters ? 'AND' : undefined,
+      hasFilters ? (options.filterMode ?? 'AND') : undefined,
     );
   } else {
+    // The inputObject (stub) shape carries equality filters only; typed
+    // conditions have no representation there and are never sent.
+    const hasEqualityFilters = options.filters && Object.keys(options.filters).length > 0;
     builder.add(
       collection.args.filter,
       collection.argTypes.filter,
       'filter',
-      hasFilters ? options.filters : undefined,
+      hasEqualityFilters ? options.filters : undefined,
     );
   }
   builder.add(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
 
   const envelope = collection.pageShape === 'envelope';
   const selections = envelope
-    ? `items { ${selectionSet(collection.columns)} } total`
-    : selectionSet(collection.columns);
+    ? `items { ${selectionSet(collection.columns, options.extraColumns)} } total`
+    : selectionSet(collection.columns, options.extraColumns);
   return {
     document: builder.document(collection.id, selections),
     variables: builder.variables,

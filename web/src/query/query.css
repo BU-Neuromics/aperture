@@ -1,0 +1,231 @@
+/* Cross-class query builder + graph view (ADR-0035/0037). Inherits the
+   collection styles' vocabulary (main-panel, action-button, cell-*). */
+
+.query-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.query-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.query-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.query-condition {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.query-keyword {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.query-select,
+.query-input {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.4rem;
+  background: var(--surface-2, #232323);
+  color: inherit;
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 4px;
+}
+
+.query-input {
+  min-width: 12rem;
+}
+
+.query-remove {
+  font: inherit;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0 0.3rem;
+}
+
+.query-remove:hover {
+  opacity: 1;
+}
+
+.query-related {
+  border-left: 2px solid var(--border, #3a3a3a);
+  padding-left: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.query-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-left: 1.5rem;
+}
+
+.query-add {
+  font: inherit;
+  font-size: 0.8rem;
+  background: none;
+  border: 1px dashed var(--border, #3a3a3a);
+  border-radius: 4px;
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 0.25rem 0.6rem;
+  align-self: flex-start;
+}
+
+.query-add:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.query-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.query-problems,
+.query-notes {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.5rem 1.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: var(--surface-2, #232323);
+  border: 1px solid var(--border, #3a3a3a);
+}
+
+.query-problems {
+  border-color: #a5555588;
+}
+
+.query-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.query-results-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.query-total {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.query-tier {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.query-row {
+  cursor: pointer;
+}
+
+.query-empty {
+  text-align: center;
+  opacity: 0.6;
+  padding: 1rem;
+}
+
+.query-pager {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+/* Graph view */
+
+.query-graph-honesty {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.query-graph-wrap {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 24rem;
+}
+
+.query-graph-canvas {
+  flex: 1;
+  min-height: 24rem;
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 6px;
+  background: var(--surface-2, #1d1d1d);
+}
+
+.query-graph-side {
+  width: 16rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.query-graph-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.query-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.query-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.query-graph-selected {
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 6px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.query-selected-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.query-graph-hint {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}

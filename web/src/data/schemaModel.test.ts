@@ -356,6 +356,9 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       relationshipTraversal: true,
       entityHistory: true,
       batchWrite: true,
+      // Pre-FilterOp-enum endpoint with a filter arg: bare equality only.
+      filterOps: ['EQ'],
+      whereFilter: false,
     });
   });
 
@@ -376,6 +379,10 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     // The real ingestBatch shape ({entityType, data} entities + dryRun) is
     // now the derived contract — the batch surface gates ON (#15 write path).
     expect(caps.batchWrite).toBe(true);
+    // The captured hippo 0.10.3 schema advertises the FilterOp enum (EQ/IN
+    // era) and no typed where inputs yet (Mosaic ADR-0006 not landed there).
+    expect(caps.filterOps).toContain('EQ');
+    expect(caps.whereFilter).toBe(false);
   });
 
   it('gates everything off for a bare endpoint', () => {
@@ -391,6 +398,8 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       relationshipTraversal: false,
       entityHistory: false,
       batchWrite: false,
+      filterOps: [],
+      whereFilter: false,
     });
   });
 });

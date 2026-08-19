@@ -22,7 +22,7 @@ function initialFor(label: string): string {
 export function CollectionsNav() {
   const state = useDataSource();
   const view = useNavView();
-  const { collection, workflow, selectCollection, openWorkflow, applyView } =
+  const { collection, workflow, selectCollection, openWorkflow, applyView, openQueryBuilder } =
     useCollectionUrlState();
   const { workflows, error: workflowsError } = useWorkflows();
   const savedViews = useSavedViews();
@@ -58,6 +58,19 @@ export function CollectionsNav() {
             <span className="nav-item-label">{c.label}</span>
           </button>
         ))}
+      </div>
+      <div className="nav-section-label">Query</div>
+      <div className="nav-list">
+        <button
+          type="button"
+          className="nav-item"
+          data-testid="nav-query-builder"
+          title="Cross-class criteria query (ADR-0035)"
+          onClick={() => openQueryBuilder()}
+        >
+          <span className="nav-item-chip">Qy</span>
+          <span className="nav-item-label">Query builder</span>
+        </button>
       </div>
       {savedViews.status === 'ready' && savedViews.views.length > 0 && (
         <>
