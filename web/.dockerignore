@@ -1,0 +1,7 @@
+# Keep host build output out of the build context: the Dockerfile's `COPY . .`
+# would otherwise overwrite the musl node_modules installed by `npm ci` with
+# the host's (glibc) copy. CI never hit this because a fresh checkout has no
+# node_modules, but a local `docker build` did.
+node_modules
+dist
+*.tsbuildinfo
