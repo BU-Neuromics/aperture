@@ -1,11 +1,19 @@
 /* Cross-class query builder + graph view (ADR-0035/0037). Inherits the
-   collection styles' vocabulary (main-panel, action-button, cell-*). */
+   collection styles' vocabulary (main-panel, action-button, cell-*).
+
+   Colors come from styles/tokens.css with no inline var() fallbacks — the
+   prototype's `var(--surface-2, #232323)` literals painted this view dark
+   against the light theme (and, with `color: inherit`, dark text on a dark
+   box). Form controls follow .form-input / .facet-search-input. */
 
 .query-view {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  /* .main-panel caps prose panels at 560px; the builder and the graph canvas
+     are working surfaces and want the full main slot. */
+  max-width: none;
 }
 
 .query-header {
@@ -19,8 +27,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 0.75rem;
 }
 
@@ -33,7 +42,7 @@
 
 .query-keyword {
   font-size: 0.85rem;
-  opacity: 0.75;
+  color: var(--text-secondary);
 }
 
 .query-select,
@@ -41,32 +50,47 @@
   font: inherit;
   font-size: 0.85rem;
   padding: 0.25rem 0.4rem;
-  background: var(--surface-2, #232323);
-  color: inherit;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 4px;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.query-select:focus,
+.query-input:focus {
+  border-color: var(--accent);
+}
+
+.query-select:disabled,
+.query-input:disabled {
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
 }
 
 .query-input {
   min-width: 12rem;
 }
 
+.query-input::placeholder {
+  color: var(--text-tertiary);
+}
+
 .query-remove {
   font: inherit;
   background: none;
   border: none;
-  color: inherit;
-  opacity: 0.6;
+  color: var(--text-tertiary);
   cursor: pointer;
   padding: 0 0.3rem;
 }
 
 .query-remove:hover {
-  opacity: 1;
+  color: var(--text-primary);
 }
 
 .query-related {
-  border-left: 2px solid var(--border, #3a3a3a);
+  border-left: 2px solid var(--border);
   padding-left: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -84,17 +108,22 @@
   font: inherit;
   font-size: 0.8rem;
   background: none;
-  border: 1px dashed var(--border, #3a3a3a);
-  border-radius: 4px;
-  color: inherit;
-  opacity: 0.8;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0.25rem 0.6rem;
   align-self: flex-start;
 }
 
+.query-add:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .query-add:disabled {
-  opacity: 0.35;
+  color: var(--text-tertiary);
+  border-color: var(--border);
   cursor: default;
 }
 
@@ -109,14 +138,24 @@
 .query-notes {
   margin: 0;
   padding: 0.5rem 0.75rem 0.5rem 1.75rem;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 0.8rem;
-  background: var(--surface-2, #232323);
-  border: 1px solid var(--border, #3a3a3a);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
 }
 
-.query-problems {
-  border-color: #a5555588;
+/* Validation problems and hard errors read as errors; role="status" notes stay
+   neutral (the same class serves both — see QueryBuilderView). */
+.query-problems,
+.query-notes[role='alert'] {
+  background: var(--error-bg);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.query-notes[role='alert'] {
+  padding-left: 0.75rem;
 }
 
 .query-results {
@@ -136,11 +175,11 @@
 
 .query-total {
   font-size: 0.85rem;
-  opacity: 0.85;
+  color: var(--text-secondary);
 }
 
 .query-tier {
-  opacity: 0.7;
+  color: var(--text-tertiary);
   font-style: italic;
 }
 
@@ -150,7 +189,7 @@
 
 .query-empty {
   text-align: center;
-  opacity: 0.6;
+  color: var(--text-tertiary);
   padding: 1rem;
 }
 
@@ -159,6 +198,7 @@
   gap: 0.75rem;
   align-items: center;
   font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
 /* Graph view */
@@ -166,7 +206,7 @@
 .query-graph-honesty {
   margin: 0;
   font-size: 0.8rem;
-  opacity: 0.75;
+  color: var(--text-secondary);
 }
 
 .query-graph-wrap {
@@ -179,9 +219,20 @@
 .query-graph-canvas {
   flex: 1;
   min-height: 24rem;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 6px;
-  background: var(--surface-2, #1d1d1d);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  /* Cytoscape renders into a transparent <canvas>, so this is the graph
+     backdrop. */
+  background: var(--bg-surface);
+
+  /* Canvas-side palette. Cytoscape cannot resolve var(), so graphTheme.ts
+     reads these computed values off this element and feeds them to the
+     stylesheet — declaring them here keeps the graph on the same tokens as
+     the rest of the site, including whatever a dark theme redefines. */
+  --graph-label: var(--text-secondary);
+  --graph-edge: var(--border-strong);
+  --graph-selected: var(--accent);
+  --graph-node-ring: var(--bg-surface);
 }
 
 .query-graph-side {
@@ -196,6 +247,7 @@
   flex-direction: column;
   gap: 0.3rem;
   font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .query-legend-item {
@@ -212,8 +264,9 @@
 }
 
 .query-graph-selected {
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 0.6rem;
   display: flex;
   flex-direction: column;
@@ -227,5 +280,5 @@
 
 .query-graph-hint {
   font-size: 0.8rem;
-  opacity: 0.6;
+  color: var(--text-tertiary);
 }
