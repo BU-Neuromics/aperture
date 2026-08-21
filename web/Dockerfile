@@ -3,7 +3,7 @@
 # baked at build; the entrypoint script injects it into config.js from
 # container env at start (docker/40-aperture-config.sh).
 
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /build
 COPY package.json package-lock.json ./

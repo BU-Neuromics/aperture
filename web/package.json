@@ -4,12 +4,16 @@
   "version": "0.4.0",
   "type": "module",
   "description": "Aperture MVP portal SPA (Phase 0 walking skeleton).",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:container": "docker run --rm -v \"$PWD\":/app -w /app node:26 npx vitest run",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
