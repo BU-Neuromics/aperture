@@ -5,6 +5,12 @@
  * (no inline fallbacks, unlike the prototype).
  */
 :root {
+  /* Tells the UA which palette to render native widgets with (form controls,
+     select popups, scrollbars, caret). Without this, a browser on an OS set
+     to dark paints those chrome-side dark regardless of our tokens. The dark
+     theme block flips this to `dark` alongside the color tokens. */
+  color-scheme: light;
+
   /* Color — surfaces */
   --bg-canvas: #f6f7f9;
   --bg-surface: #ffffff;

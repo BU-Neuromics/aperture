@@ -6,6 +6,7 @@ import type { CollectionModel, ColumnModel } from '../data/schemaModel';
 import { slotName } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import { runQuerySpec } from './planner';
+import { readGraphTheme, useGraphTheme, type GraphTheme } from './graphTheme';
 import './query.css';
 
 /**
@@ -39,6 +40,45 @@ function colorFor(typeName: string): string {
   return PALETTE[hash % PALETTE.length]!;
 }
 
+/**
+ * The Cytoscape stylesheet for a given resolved palette. Kept out of the mount
+ * effect so the same definition can be re-applied when the theme changes; the
+ * per-node `background-color` bypass set in addEntity survives a restyle.
+ */
+function graphStylesheet(theme: GraphTheme): cytoscape.StylesheetStyle[] {
+  return [
+    {
+      selector: 'node',
+      style: {
+        label: 'data(label)',
+        'font-size': '9px',
+        color: theme.label,
+        'text-valign': 'bottom',
+        'text-margin-y': 4,
+        width: 18,
+        height: 18,
+        'border-width': 1,
+        'border-color': theme['node-ring'],
+      },
+    },
+    {
+      selector: 'edge',
+      style: {
+        width: 1,
+        'line-color': theme.edge,
+        'target-arrow-shape': 'triangle',
+        'target-arrow-color': theme.edge,
+        'curve-style': 'bezier',
+        'arrow-scale': 0.7,
+      },
+    },
+    {
+      selector: 'node:selected',
+      style: { 'border-width': 3, 'border-color': theme.selected },
+    },
+  ];
+}
+
 function labelColumn(collection: CollectionModel): ColumnModel | undefined {
   return (
     collection.columns.find((c) => c.kind === 'text') ??
@@ -59,11 +99,13 @@ export function GraphView({ source }: { source: HippoSource }) {
   const { collections, capabilities } = source;
   const urlState = useCollectionUrlState();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const cyRef = useRef<Core | null>(null);
   const [selected, setSelected] = useState<GraphNodeData | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [nodeCount, setNodeCount] = useState(0);
+  const graphTheme = useGraphTheme(containerEl);
 
   const byType = useMemo(
     () => new Map(collections.map((c) => [c.typeName, c])),
@@ -179,34 +221,11 @@ export function GraphView({ source }: { source: HippoSource }) {
   // Mount cytoscape once.
   useEffect(() => {
     if (!containerRef.current) return;
+    // Read synchronously at mount so the first paint is already themed; the
+    // effect below keeps it in step with later theme changes.
     const cy = cytoscape({
       container: containerRef.current,
-      style: [
-        {
-          selector: 'node',
-          style: {
-            label: 'data(label)',
-            'font-size': '9px',
-            color: '#e8e6e3',
-            'text-valign': 'bottom',
-            'text-margin-y': 4,
-            width: 18,
-            height: 18,
-          },
-        },
-        {
-          selector: 'edge',
-          style: {
-            width: 1,
-            'line-color': '#8886',
-            'target-arrow-shape': 'triangle',
-            'target-arrow-color': '#8886',
-            'curve-style': 'bezier',
-            'arrow-scale': 0.7,
-          },
-        },
-        { selector: 'node:selected', style: { 'border-width': 3, 'border-color': '#fff' } },
-      ],
+      style: graphStylesheet(readGraphTheme(containerRef.current)),
     });
     cy.on('tap', 'node', (event) => {
       const node = event.target as NodeSingular;
@@ -218,6 +237,11 @@ export function GraphView({ source }: { source: HippoSource }) {
       cyRef.current = null;
     };
   }, []);
+
+  // Re-skin the canvas when the theme changes (data-theme flip, OS preference).
+  useEffect(() => {
+    cyRef.current?.style(graphStylesheet(graphTheme)).update();
+  }, [graphTheme]);
 
   // Seed from the QuerySpec results (or the active collection's first page).
   useEffect(() => {
@@ -292,7 +316,14 @@ export function GraphView({ source }: { source: HippoSource }) {
         </div>
       )}
       <div className="query-graph-wrap">
-        <div ref={containerRef} className="query-graph-canvas" data-testid="graph-canvas" />
+        <div
+          ref={(el) => {
+            containerRef.current = el;
+            setContainerEl(el);
+          }}
+          className="query-graph-canvas"
+          data-testid="graph-canvas"
+        />
         <div className="query-graph-side">
           <div className="query-graph-legend">
             {typesShown.map((t) => (
