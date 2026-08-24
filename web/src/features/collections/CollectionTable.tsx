@@ -36,9 +36,31 @@ export function CollectionTable({
   collection: CollectionModel;
 }) {
   const capabilities = useCapabilities();
-  const { page, setPage, filters, search, clearFilters, openEntity, openIn, openCreateForm } =
-    useCollectionUrlState();
-  const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search);
+  const {
+    page,
+    setPage,
+    filters,
+    search,
+    sort,
+    toggleSort,
+    clearFilters,
+    openEntity,
+    openIn,
+    openCreateForm,
+  } = useCollectionUrlState();
+  const columnByField = useMemo(
+    () => new Map(collection.columns.map((c) => [c.field, c])),
+    [collection],
+  );
+  // Only resolved when the sorted column's endpoint enum actually matched
+  // (ADR-0029 — a stale/foreign sort in the URL just falls back to unsorted).
+  const activeOrderBy = useMemo(() => {
+    if (!sort) return undefined;
+    const orderField = columnByField.get(sort.field)?.orderField;
+    if (!orderField) return undefined;
+    return { field: orderField, dir: sort.dir === 'desc' ? ('DESC' as const) : ('ASC' as const) };
+  }, [sort, columnByField]);
+  const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search, activeOrderBy);
   const isFiltered = Object.keys(filters).length > 0 || search !== '';
 
   const columns = useMemo(
@@ -128,6 +150,7 @@ export function CollectionTable({
             collection={collection}
             filters={filters}
             search={search}
+            orderBy={activeOrderBy}
             disabled={result.status !== 'ready'}
           />
         </div>
@@ -141,19 +164,42 @@ export function CollectionTable({
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className={
-                        (header.column.columnDef.meta as { align?: string } | undefined)?.align ===
-                        'right'
-                          ? 'align-right'
-                          : undefined
-                      }
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    // Sort is column-specific (ADR-0007 orderField), not just
+                    // collection-level — never offer it where it can't work (ADR-0029).
+                    const sortable = capabilities.sort && columnByField.get(header.column.id)?.orderField != null;
+                    const label = flexRender(header.column.columnDef.header, header.getContext());
+                    const active = sort?.field === header.column.id;
+                    return (
+                      <th
+                        key={header.id}
+                        className={
+                          (header.column.columnDef.meta as { align?: string } | undefined)?.align ===
+                          'right'
+                            ? 'align-right'
+                            : undefined
+                        }
+                        aria-sort={
+                          active ? (sort?.dir === 'desc' ? 'descending' : 'ascending') : undefined
+                        }
+                      >
+                        {sortable ? (
+                          <button
+                            type="button"
+                            className="collection-sort-header"
+                            onClick={() => toggleSort(header.column.id)}
+                          >
+                            {label}
+                            <span className="sort-indicator" aria-hidden="true">
+                              {active ? (sort?.dir === 'desc' ? '▼' : '▲') : ''}
+                            </span>
+                          </button>
+                        ) : (
+                          label
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>

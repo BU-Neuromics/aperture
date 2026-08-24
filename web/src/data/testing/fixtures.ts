@@ -323,6 +323,39 @@ export function bareSchema(): IntrospectionSchema {
 }
 
 /**
+ * A minimal X1-shaped endpoint (Mosaic ADR-0007): envelope paging with
+ * `orderBy`/`orderDir` on both the base list and its search twin, an
+ * `id`/`label` entity, and an orderBy enum matching both columns.
+ */
+export function sortableSchema(): IntrospectionSchema {
+  const pageArgs = [
+    arg('limit', nonNull(scalar('Int'))),
+    arg('offset', nonNull(scalar('Int'))),
+    arg('orderBy', enumRef('ThingOrderField')),
+    arg('orderDir', nonNull(enumRef('OrderDirection')), 'ASC'),
+  ];
+  return {
+    queryType: { name: 'Query' },
+    mutationType: null,
+    types: [
+      objectType('Query', [
+        field('things', nonNull(object('ThingPage')), pageArgs),
+        field('searchThings', nonNull(object('ThingPage')), [
+          arg('q', nonNull(scalar('String'))),
+          ...pageArgs,
+        ]),
+      ]),
+      objectType('ThingPage', [
+        field('items', nonNull(list(nonNull(object('Thing'))))),
+        field('total', nonNull(scalar('Int'))),
+      ]),
+      objectType('Thing', [field('id', nonNull(scalar('ID'))), field('label', scalar('String'))]),
+      enumType('ThingOrderField', ['ID', 'LABEL']),
+    ],
+  };
+}
+
+/**
  * A ScopedDataClient test double: introspection queries get the fixture
  * schema; anything else is answered by `respond` (which also records the
  * query documents + variables it sees).

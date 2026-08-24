@@ -5,6 +5,7 @@ import {
   bareSchema,
   capableSchema,
   enumRef,
+  enumType,
   field,
   list,
   nonNull,
@@ -288,6 +289,110 @@ describe('deriveCollections (live Hippo shapes — #15)', () => {
     });
   });
 
+  it('tags columns with the orderBy enum member that sorts them (Mosaic ADR-0007, issue #20)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+            arg('orderBy', enumRef('ThingOrderField')),
+            arg('orderDir', nonNull(enumRef('OrderDirection')), 'ASC'),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [
+          field('id', nonNull(scalar('ID'))),
+          field('collectedAt', scalar('Date')),
+          field('label', scalar('String')), // not in the enum — stays unsortable
+        ]),
+        // Members are the LinkML slot names, SCREAMING_SNAKE (Mosaic's own
+        // convention) — but matching is normalized, not name-format-assuming.
+        enumType('ThingOrderField', ['ID', 'COLLECTED_AT']),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    expect(things.args.orderBy).toBe('orderBy');
+    expect(things.args.orderDir).toBe('orderDir');
+    expect(things.argTypes.orderBy).toBe('ThingOrderField');
+    expect(things.argTypes.orderDir).toBe('OrderDirection!');
+    expect(things.columns.map((c) => [c.field, c.orderField])).toEqual([
+      ['id', 'ID'],
+      ['collectedAt', 'COLLECTED_AT'],
+      ['label', undefined],
+    ]);
+  });
+
+  it('leaves columns unsortable when orderBy is absent or resolves to a non-enum type', () => {
+    const noOrderBy = deriveCollections(capableSchema())[0];
+    expect(noOrderBy.columns.every((c) => c.orderField == null)).toBe(true);
+
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+            // Advertised, but not an enum — never assume it's the ADR-0007 shape.
+            arg('orderBy', scalar('String')),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID')))]),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    expect(things.columns.every((c) => c.orderField == null)).toBe(true);
+  });
+
+  it('attaches orderBy/orderDir to an envelope search twin when it advertises them (Mosaic #157/ADR-0007)', () => {
+    const filterInput: TypeRef = { kind: 'INPUT_OBJECT', name: 'FilterInput', ofType: null };
+    const pageArgs = [
+      arg('limit', nonNull(scalar('Int'))),
+      arg('offset', nonNull(scalar('Int'))),
+      arg('filters', list(nonNull(filterInput))),
+      arg('filterMode', nonNull(enumRef('FilterMode'))),
+      arg('orderBy', enumRef('ThingOrderField')),
+      arg('orderDir', nonNull(enumRef('OrderDirection')), 'ASC'),
+    ];
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), pageArgs),
+          field('searchThings', nonNull(object('ThingPage')), [
+            arg('q', nonNull(scalar('String'))),
+            ...pageArgs,
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID')))]),
+        enumType('ThingOrderField', ['ID']),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    expect(things.search).toMatchObject({
+      orderByArg: 'orderBy',
+      orderByArgType: 'ThingOrderField',
+      orderDirArg: 'orderDir',
+      orderDirArgType: 'OrderDirection!',
+    });
+  });
+
   it('a search-shaped bare list with no base collection never derives (required q unsatisfiable)', () => {
     const schema: IntrospectionSchema = {
       queryType: { name: 'Query' },
@@ -457,6 +562,55 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     // era) and no typed where inputs yet (Mosaic ADR-0006 not landed there).
     expect(caps.filterOps).toContain('EQ');
     expect(caps.whereFilter).toBe(false);
+  });
+
+  it('sort gates on when an orderBy enum resolves to at least one column (Mosaic X1/ADR-0007, issue #20)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+            arg('orderBy', enumRef('ThingOrderField')),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID')))]),
+        enumType('ThingOrderField', ['ID']),
+      ],
+    };
+    const caps = deriveCapabilities(schema, deriveCollections(schema));
+    expect(caps.sort).toBe(true);
+  });
+
+  it('sort stays off when orderBy is advertised but its enum matches no derived column', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+            arg('orderBy', enumRef('ThingOrderField')),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID')))]),
+        // Members share no normalized name with any derived column.
+        enumType('ThingOrderField', ['RELEVANCE']),
+      ],
+    };
+    const caps = deriveCapabilities(schema, deriveCollections(schema));
+    expect(caps.sort).toBe(false);
   });
 
   it('gates everything off for a bare endpoint', () => {

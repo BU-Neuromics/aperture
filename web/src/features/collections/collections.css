@@ -122,6 +122,30 @@
   text-align: right;
 }
 
+.collection-sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.collection-sort-header:hover {
+  color: var(--text-primary);
+}
+
+.sort-indicator {
+  font-size: 0.85em;
+  min-width: 0.85em;
+}
+
 /* Cell renderers (slot-kind keyed) */
 
 .cell-empty {
