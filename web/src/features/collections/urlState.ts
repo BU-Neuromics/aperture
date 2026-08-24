@@ -29,6 +29,22 @@ function validateFilters(value: unknown): FilterValues {
 
 const EMPTY_FILTERS: FilterValues = {};
 
+/** `<column field>:<asc|desc>` — the column field, not the orderBy enum member (issue #20). */
+export interface SortState {
+  field: string;
+  dir: 'asc' | 'desc';
+}
+
+function parseSort(value: string): SortState | null {
+  const [field, dir] = value.split(':');
+  if (!field || (dir !== 'asc' && dir !== 'desc')) return null;
+  return { field, dir };
+}
+
+export function formatSort(sort: SortState): string {
+  return `${sort.field}:${sort.dir}`;
+}
+
 export function useCollectionUrlState() {
   const [state, setState] = useQueryStates({
     collection: parseAsString,
@@ -42,9 +58,12 @@ export function useCollectionUrlState() {
     view: parseAsStringLiteral(['query', 'graph'] as const),
     /** The QuerySpec artifact rides the URL — shareable/bookmarkable (ADR-0035). */
     qs: parseAsJson(validateQuerySpecShape),
+    /** Server-side sort (issue #20): `<column field>:<asc|desc>`. */
+    sort: parseAsString,
   });
 
   const filters = state.filters ?? EMPTY_FILTERS;
+  const sort = state.sort ? parseSort(state.sort) : null;
 
   return {
     collection: state.collection,
@@ -56,6 +75,7 @@ export function useCollectionUrlState() {
     workflow: state.workflow,
     view: state.view,
     querySpec: state.qs,
+    sort,
 
     selectCollection: (collection: string) =>
       void setState({
@@ -68,6 +88,7 @@ export function useCollectionUrlState() {
         workflow: null,
         view: null,
         qs: null,
+        sort: null,
       }),
     /** Open the cross-class query builder (ADR-0035), optionally pre-anchored. */
     openQueryBuilder: (spec?: QuerySpec) =>
@@ -106,6 +127,7 @@ export function useCollectionUrlState() {
         filters: null,
         form: null,
         workflow: null,
+        sort: null,
       }),
     /** Relationship pivot: jump to a related collection filtered by this entity (R3.8). */
     pivotTo: (collection: string, field: string, value: string) =>
@@ -117,7 +139,19 @@ export function useCollectionUrlState() {
         entity: null,
         form: null,
         workflow: null,
+        sort: null,
       }),
+    /**
+     * Sort toggle (issue #20): unsorted → asc → desc → unsorted on repeated
+     * clicks of the same column; a different column always starts at asc.
+     */
+    toggleSort: (field: string) => {
+      let next: SortState | null;
+      if (sort?.field !== field) next = { field, dir: 'asc' };
+      else if (sort.dir === 'asc') next = { field, dir: 'desc' };
+      else next = null;
+      void setState({ sort: next ? formatSort(next) : null, page: 1 });
+    },
     /** Write loop (W4): open the generated create/edit form. */
     openCreateForm: () => void setState({ form: 'new', entity: null }),
     openEditForm: () => void setState({ form: 'edit' }),
@@ -126,7 +160,13 @@ export function useCollectionUrlState() {
     openWorkflow: (workflow: string) => void setState({ workflow, entity: null, form: null }),
     closeWorkflow: () => void setState({ workflow: null }),
     /** Saved views (Phase 4): apply a persisted query-state wholesale. */
-    applyView: (view: { collection: string; page: number; q?: string; filters?: FilterValues }) =>
+    applyView: (view: {
+      collection: string;
+      page: number;
+      q?: string;
+      filters?: FilterValues;
+      sort?: string;
+    }) =>
       void setState({
         collection: view.collection,
         page: Math.max(1, view.page),
@@ -135,6 +175,7 @@ export function useCollectionUrlState() {
         entity: null,
         form: null,
         workflow: null,
+        sort: view.sort ?? null,
       }),
   };
 }

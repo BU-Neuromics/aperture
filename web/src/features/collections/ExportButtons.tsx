@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FilterValues, HippoSource } from '../../data/hippoSource';
 import type { CollectionModel } from '../../data/schemaModel';
-import { collectAllRows, downloadFile, toCSV, toJSONExport } from './export';
+import { EXPORT_CAP, collectAllRows, downloadFile, toCSV, toJSONExport } from './export';
 
 /**
  * Export actions (R3.10): page through the current filtered set client-side
@@ -13,12 +13,14 @@ export function ExportButtons({
   collection,
   filters,
   search,
+  orderBy,
   disabled,
 }: {
   source: HippoSource;
   collection: CollectionModel;
   filters: FilterValues;
   search: string;
+  orderBy?: { field: string; dir?: 'ASC' | 'DESC' };
   disabled: boolean;
 }) {
   const [busy, setBusy] = useState(false);
@@ -28,7 +30,14 @@ export function ExportButtons({
     setBusy(true);
     setNote(null);
     try {
-      const { rows, truncated } = await collectAllRows(source, collection, filters, search);
+      const { rows, truncated } = await collectAllRows(
+        source,
+        collection,
+        filters,
+        search,
+        EXPORT_CAP,
+        orderBy,
+      );
       const content = format === 'csv' ? toCSV(collection.columns, rows) : toJSONExport(rows);
       downloadFile(
         `${collection.id}.${format}`,

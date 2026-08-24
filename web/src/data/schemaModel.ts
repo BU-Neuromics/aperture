@@ -36,6 +36,12 @@ export interface ColumnModel {
   /** For ref/refList columns: the target entity type + its id-ish field. */
   targetType?: string;
   targetIdField?: string;
+  /**
+   * The `orderBy` enum member that sorts by this column, when the endpoint's
+   * `<Class>OrderField` enum advertises one (Mosaic ADR-0007). Absent →
+   * unsortable, regardless of the collection-level sort capability.
+   */
+  orderField?: string;
 }
 
 /**
@@ -81,6 +87,11 @@ export interface SearchTwinModel {
   filterArgType?: string;
   filterModeArg?: string;
   filterModeArgType?: string;
+  /** The twin's `orderBy`/`orderDir` args (Mosaic ADR-0007), when advertised. */
+  orderByArg?: string;
+  orderByArgType?: string;
+  orderDirArg?: string;
+  orderDirArgType?: string;
 }
 
 export interface CollectionModel {
@@ -119,11 +130,15 @@ export interface CollectionModel {
     filter?: string;
     search?: string;
     orderBy?: string;
+    /** The direction arg beside `orderBy` (Mosaic ADR-0007 `orderDir`), when advertised. */
+    orderDir?: string;
     /** Typed per-class filter input (Mosaic ADR-0006 inc. 2), when advertised. */
     where?: string;
   };
   /** SDL types for the advertised args (for variable definitions). */
-  argTypes: Partial<Record<'limit' | 'offset' | 'filter' | 'search' | 'where', string>>;
+  argTypes: Partial<
+    Record<'limit' | 'offset' | 'filter' | 'search' | 'where' | 'orderBy' | 'orderDir', string>
+  >;
   /** Equality facets the endpoint's filter input advertises. */
   facets: FacetModel[];
   /** All non-combinator fields of the filter input (equality-filterable). */
@@ -653,6 +668,41 @@ function searchTwinArg(field: IntrospectionField): IntrospectionInputValue | und
   );
 }
 
+/** Case/separator-insensitive key for matching a field name against an enum member. */
+function normalizeForMatch(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * The `orderBy` arg's advertised enum type, when it resolves to one (Mosaic
+ * ADR-0007 `<Class>OrderField`). Never assumed by name — derived from the
+ * arg's own introspected type, so a non-enum `orderBy` (or none) yields
+ * nothing to match against.
+ */
+function orderFieldEnumType(
+  schema: IntrospectionSchema,
+  orderByArg: IntrospectionInputValue | undefined,
+): IntrospectionType | undefined {
+  if (!orderByArg) return undefined;
+  const enumType = findType(schema, namedType(orderByArg.type).name);
+  return enumType?.kind === 'ENUM' ? enumType : undefined;
+}
+
+/**
+ * Tags each column with the `orderBy` enum member that sorts by it, when the
+ * endpoint's enum advertises a matching member (normalized name match — e.g.
+ * `collectedAt` ↔ `COLLECTED_AT`). Columns with no match stay unsortable
+ * (ADR-0029 — degrade honestly rather than guessing).
+ */
+function attachOrderFields(columns: ColumnModel[], enumType: IntrospectionType | undefined): ColumnModel[] {
+  if (!enumType?.enumValues?.length) return columns;
+  const byNormalizedName = new Map(enumType.enumValues.map((v) => [normalizeForMatch(v.name), v.name]));
+  return columns.map((column) => {
+    const member = byNormalizedName.get(normalizeForMatch(column.field));
+    return member ? { ...column, orderField: member } : column;
+  });
+}
+
 /**
  * A Query field is a browsable collection when it pages entities — either a
  * page envelope `{ items total }` (live Hippo, #15) or a bare list of OBJECTs
@@ -689,6 +739,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       filter: flatFilterArg ?? argNamed(field, 'filter', 'filters'),
       filterMode: argNamed(field, 'filterMode'),
       orderBy: argNamed(field, 'orderBy', 'order_by', 'sort'),
+      orderDir: argNamed(field, 'orderDir', 'order_dir', 'direction'),
       where: whereArg,
     };
     const supplied = new Set(
@@ -698,7 +749,8 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     );
     if (!requiredArgsSatisfiable(field, supplied)) continue;
 
-    const detailColumns = deriveColumns(schema, entityType);
+    const orderFieldEnum = orderFieldEnumType(schema, args.orderBy);
+    const detailColumns = attachOrderFields(deriveColumns(schema, entityType), orderFieldEnum);
     if (detailColumns.length === 0) continue;
     const columns = detailColumns.slice(0, MAX_COLUMNS);
     const idColumn = pickIdColumn(columns);
@@ -721,6 +773,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         offset: args.offset?.name,
         filter: args.filter?.name,
         orderBy: args.orderBy?.name,
+        orderDir: args.orderDir?.name,
         where: args.where?.name,
       },
       argTypes: {
@@ -728,6 +781,8 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         offset: args.offset && typeRefToSDL(args.offset.type),
         filter: args.filter && typeRefToSDL(args.filter.type),
         where: args.where && typeRefToSDL(args.where.type),
+        orderBy: args.orderBy && typeRefToSDL(args.orderBy.type),
+        orderDir: args.orderDir && typeRefToSDL(args.orderDir.type),
       },
       facets: args.filter ? deriveColumnFacets(detailColumns) : [],
       filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
@@ -771,6 +826,8 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     ) {
       continue;
     }
+    const twinOrderBy = argNamed(field, 'orderBy', 'order_by', 'sort');
+    const twinOrderDir = argNamed(field, 'orderDir', 'order_dir', 'direction');
     base.search ??= {
       field: field.name,
       argName: twinArg.name,
@@ -784,6 +841,10 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       filterArgType: twinFilterArg && typeRefToSDL(twinFilterArg.type),
       filterModeArg: twinFilterMode?.name,
       filterModeArgType: twinFilterMode && typeRefToSDL(twinFilterMode.type),
+      orderByArg: twinOrderBy?.name,
+      orderByArgType: twinOrderBy && typeRefToSDL(twinOrderBy.type),
+      orderDirArg: twinOrderDir?.name,
+      orderDirArgType: twinOrderDir && typeRefToSDL(twinOrderDir.type),
     };
   }
 
@@ -834,13 +895,15 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       filter: argNamed(field, 'filter', 'where', 'filters'),
       search: argNamed(field, 'search', 'q', 'fts', 'query'),
       orderBy: argNamed(field, 'orderBy', 'order_by', 'sort'),
+      orderDir: argNamed(field, 'orderDir', 'order_dir', 'direction'),
     };
     // A bare list with required args we don't send (e.g. an unmatched search
     // twin's `q`) can never be queried as a collection — skip it (ADR-0029).
     const supplied = new Set([args.limit, args.offset].flatMap((a) => (a ? [a.name] : [])));
     if (!requiredArgsSatisfiable(field, supplied)) continue;
 
-    const detailColumns = deriveColumns(schema, entityType);
+    const orderFieldEnum = orderFieldEnumType(schema, args.orderBy);
+    const detailColumns = attachOrderFields(deriveColumns(schema, entityType), orderFieldEnum);
     if (detailColumns.length === 0) continue;
     const columns = detailColumns.slice(0, MAX_COLUMNS);
     const idColumn = pickIdColumn(columns);
@@ -862,12 +925,15 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         filter: args.filter?.name,
         search: args.search?.name,
         orderBy: args.orderBy?.name,
+        orderDir: args.orderDir?.name,
       },
       argTypes: {
         limit: args.limit && typeRefToSDL(args.limit.type),
         offset: args.offset && typeRefToSDL(args.offset.type),
         filter: args.filter && typeRefToSDL(args.filter.type),
         search: args.search && typeRefToSDL(args.search.type),
+        orderBy: args.orderBy && typeRefToSDL(args.orderBy.type),
+        orderDir: args.orderDir && typeRefToSDL(args.orderDir.type),
       },
       facets: deriveFacets(schema, filterTypeName, detailColumns),
       filterFields:
@@ -951,7 +1017,10 @@ export function deriveCapabilities(
     fullTextSearch:
       some((c) => c.args.search || c.search) ||
       (queryType?.fields ?? []).some((f) => /^search/i.test(f.name)),
-    sort: some((c) => c.args.orderBy),
+    // A collection only counts as sortable if at least one of its columns
+    // actually resolved to an orderBy enum member — an advertised `orderBy`
+    // arg whose enum matches none of the derived columns sorts nothing.
+    sort: some((c) => c.args.orderBy && c.columns.some((col) => col.orderField != null)),
     aggregation: (queryType?.fields ?? []).some((f) => /aggregate|count/i.test(f.name)),
     relationshipTraversal,
     entityHistory: deriveHistory(schema) != null,

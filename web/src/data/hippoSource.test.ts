@@ -8,7 +8,13 @@ import {
   connectHippoSource,
 } from './hippoSource';
 import { deriveCollections } from './schemaModel';
-import { bareSchema, capableSchema, fakeClient, realIntrospection } from './testing/fixtures';
+import {
+  bareSchema,
+  capableSchema,
+  fakeClient,
+  realIntrospection,
+  sortableSchema,
+} from './testing/fixtures';
 
 const BOOK_COLUMNS = 'authorId format inPrint title year id isAvailable version';
 
@@ -158,6 +164,57 @@ describe('buildListQuery (live Hippo shapes — #15)', () => {
         `{ ${BOOK_COLUMNS} createdAt updatedAt schemaVersion createdBy updatedBy supersededBy author { id } } }`,
     );
     expect(built.variables).toEqual({ id: 'book-left-hand' });
+  });
+});
+
+describe('buildListQuery (server-side sort — Mosaic ADR-0007, issue #20)', () => {
+  const [things] = deriveCollections(sortableSchema());
+
+  it('sends orderBy/orderDir as typed variables when a sort is active', () => {
+    const { document, variables } = buildListQuery(things, {
+      page: 1,
+      pageSize: 25,
+      orderBy: { field: 'LABEL', dir: 'DESC' },
+    });
+    expect(document).toBe(
+      'query ApertureList($limit: Int!, $offset: Int!, $orderBy: ThingOrderField, ' +
+        '$orderDir: OrderDirection!) { things(limit: $limit, offset: $offset, ' +
+        'orderBy: $orderBy, orderDir: $orderDir) { items { id label } total } }',
+    );
+    expect(variables).toEqual({ limit: 25, offset: 0, orderBy: 'LABEL', orderDir: 'DESC' });
+  });
+
+  it('defaults direction to ASC when unspecified', () => {
+    const { variables } = buildListQuery(things, {
+      page: 1,
+      pageSize: 25,
+      orderBy: { field: 'ID' },
+    });
+    expect(variables).toEqual({ limit: 25, offset: 0, orderBy: 'ID', orderDir: 'ASC' });
+  });
+
+  it('omits orderBy/orderDir entirely when no sort is active (never fakes)', () => {
+    const { document, variables } = buildListQuery(things, { page: 1, pageSize: 25 });
+    expect(document).not.toContain('orderBy');
+    expect(variables).toEqual({ limit: 25, offset: 0 });
+  });
+
+  it('threads orderBy/orderDir through an active search twin too', () => {
+    const { document, variables, rootField } = buildListQuery(things, {
+      page: 1,
+      pageSize: 25,
+      search: 'widget',
+      orderBy: { field: 'LABEL', dir: 'DESC' },
+    });
+    expect(rootField).toBe('searchThings');
+    expect(document).toContain('orderBy: $orderBy, orderDir: $orderDir');
+    expect(variables).toEqual({
+      q: 'widget',
+      limit: 25,
+      offset: 0,
+      orderBy: 'LABEL',
+      orderDir: 'DESC',
+    });
   });
 });
 

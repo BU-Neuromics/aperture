@@ -14,6 +14,7 @@ export function useEntityPage(
   pageSize: number,
   filters?: FilterValues,
   search?: string,
+  orderBy?: { field: string; dir?: 'ASC' | 'DESC' },
 ): EntityPageState & { retry: () => void } {
   const [state, setState] = useState<EntityPageState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -25,11 +26,13 @@ export function useEntityPage(
     [filtersKey],
   );
 
+  const orderByKey = orderBy ? `${orderBy.field}:${orderBy.dir ?? 'ASC'}` : '';
+
   useEffect(() => {
     let cancelled = false;
     setState({ status: 'loading' });
     source
-      .listEntities(collectionId, { page, pageSize, filters: stableFilters, search })
+      .listEntities(collectionId, { page, pageSize, filters: stableFilters, search, orderBy })
       .then((result) => {
         if (!cancelled) setState({ status: 'ready', page: result });
       })
@@ -44,7 +47,8 @@ export function useEntityPage(
     return () => {
       cancelled = true;
     };
-  }, [source, collectionId, page, pageSize, stableFilters, search, attempt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- orderBy keyed by content, not identity
+  }, [source, collectionId, page, pageSize, stableFilters, search, orderByKey, attempt]);
 
   return { ...state, retry };
 }

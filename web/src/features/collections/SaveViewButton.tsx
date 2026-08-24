@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSavedViews } from '../../control/SavedViewsContext';
 import type { HippoSource } from '../../data/hippoSource';
 import { schemaFingerprint } from '../../workflows/engine';
-import { useCollectionUrlState } from './urlState';
+import { formatSort, useCollectionUrlState } from './urlState';
 
 /**
  * Saves the current query-state as a named view (Phase 4). Same name
@@ -16,7 +16,7 @@ export function SaveViewButton({
   collectionId: string;
 }) {
   const { save, views } = useSavedViews();
-  const { page, search, filters } = useCollectionUrlState();
+  const { page, search, filters, sort } = useCollectionUrlState();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,6 +35,7 @@ export function SaveViewButton({
           page,
           q: search || undefined,
           filters: Object.keys(filters).length > 0 ? filters : undefined,
+          sort: sort ? formatSort(sort) : undefined,
         },
         schemaFingerprint: schemaFingerprint(source),
       });

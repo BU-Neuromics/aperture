@@ -15,6 +15,8 @@ export interface SavedViewState {
   page: number;
   q?: string;
   filters?: FilterValues;
+  /** `<column field>:<asc|desc>` (issue #20) — absent for endpoints/columns without sort. */
+  sort?: string;
 }
 
 export interface SavedView {
@@ -43,7 +45,8 @@ function isSavedViewData(data: unknown): data is Omit<SavedView, 'name'> {
     typeof state['collection'] === 'string' &&
     typeof state['page'] === 'number' &&
     (state['q'] === undefined || typeof state['q'] === 'string') &&
-    (state['filters'] === undefined || isFilterValues(state['filters']))
+    (state['filters'] === undefined || isFilterValues(state['filters'])) &&
+    (state['sort'] === undefined || typeof state['sort'] === 'string')
   );
 }
 

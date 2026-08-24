@@ -1,9 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
 import { App } from '../../App';
-import { bareSchema, capableSchema, fakeClient } from '../../data/testing/fixtures';
+import { bareSchema, capableSchema, fakeClient, sortableSchema } from '../../data/testing/fixtures';
 import type { GraphQLResult } from '../../data/scopedClient';
 import { PAGE_SIZE } from './CollectionTable';
 
@@ -118,6 +118,63 @@ describe('pagination (capability-gated, URL-backed)', () => {
     expect(await screen.findByText('only page')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Prev' })).not.toBeInTheDocument();
+  });
+});
+
+describe('sort (capability-gated, URL-backed — Mosaic ADR-0007, issue #20)', () => {
+  function makeThings(orderBy?: unknown, orderDir?: unknown) {
+    const rows = [
+      { id: 'T-1', label: 'Banana' },
+      { id: 'T-2', label: 'Apple' },
+    ];
+    if (orderBy === 'LABEL') {
+      rows.sort((a, b) => (orderDir === 'DESC' ? b.label.localeCompare(a.label) : a.label.localeCompare(b.label)));
+    }
+    return rows;
+  }
+
+  it('is not offered when the endpoint advertises no matching orderBy enum', async () => {
+    const client = fakeClient(capableSchema(), () => ({ data: { books: makeRows(1) }, error: null }));
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText('BK-0001')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /title/i })?.querySelector('button')).toBeNull();
+  });
+
+  it('cycles a column header asc → desc → unsorted, re-querying the server each time', async () => {
+    const seen: Array<{ orderBy: unknown; orderDir: unknown }> = [];
+    const client = fakeClient(sortableSchema(), (_query, variables) => {
+      seen.push({ orderBy: variables['orderBy'], orderDir: variables['orderDir'] });
+      return { data: { things: { items: makeThings(variables['orderBy'], variables['orderDir']), total: 2 } }, error: null };
+    });
+    const user = userEvent.setup();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+
+    expect(await screen.findByText('Banana')).toBeInTheDocument();
+    const header = screen.getByRole('button', { name: /label/i });
+
+    await user.click(header);
+    expect(await screen.findByText('Apple')).toBeInTheDocument();
+    const rowsAsc = screen.getAllByRole('row').slice(1).map((r) => r.textContent);
+    expect(rowsAsc[0]).toContain('Apple');
+
+    await user.click(header);
+    await screen.findByText('Banana');
+    const rowsDesc = screen.getAllByRole('row').slice(1).map((r) => r.textContent);
+    expect(rowsDesc[0]).toContain('Banana');
+
+    await user.click(header);
+    // Third click clears sort — back to insertion order (Banana, Apple).
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row').slice(1).map((r) => r.textContent);
+      expect(rows[0]).toContain('Banana');
+    });
+
+    expect(seen).toEqual([
+      { orderBy: undefined, orderDir: undefined },
+      { orderBy: 'LABEL', orderDir: 'ASC' },
+      { orderBy: 'LABEL', orderDir: 'DESC' },
+      { orderBy: undefined, orderDir: undefined },
+    ]);
   });
 });
 

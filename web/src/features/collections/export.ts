@@ -22,6 +22,7 @@ export async function collectAllRows(
   filters: FilterValues,
   search: string,
   cap: number = EXPORT_CAP,
+  orderBy?: { field: string; dir?: 'ASC' | 'DESC' },
 ): Promise<CollectedRows> {
   // Without offset pagination the first fetch is all the endpoint offers.
   if (!source.capabilities.offsetPagination) {
@@ -30,6 +31,7 @@ export async function collectAllRows(
       pageSize: EXPORT_PAGE_SIZE,
       filters,
       search,
+      orderBy,
     });
     return { rows: page.rows.slice(0, cap), truncated: page.rows.length > cap };
   }
@@ -42,6 +44,7 @@ export async function collectAllRows(
       pageSize: EXPORT_PAGE_SIZE,
       filters,
       search,
+      orderBy,
     });
     rows.push(...result.rows);
     if (rows.length >= cap) return { rows: rows.slice(0, cap), truncated: result.mayHaveMore || rows.length > cap };

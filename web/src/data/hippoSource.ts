@@ -40,6 +40,12 @@ export interface ListOptions {
   filterMode?: 'AND' | 'OR';
   search?: string;
   /**
+   * Server-side ordering (Mosaic ADR-0007), when the collection advertises
+   * it: `field` is the column's derived `orderField` enum member — never a
+   * raw column name — and `dir` defaults to ascending.
+   */
+  orderBy?: { field: string; dir?: 'ASC' | 'DESC' };
+  /**
    * Columns to select beyond the curated table set — e.g. the reference
    * column a semijoin extracts linking ids from (ADR-0035 planner), which
    * the table budget routinely truncates away.
@@ -200,6 +206,13 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
         twinFilterEntries.length > 0 ? (options.filterMode ?? 'AND') : undefined,
       );
     }
+    builder.add(twin.orderByArg, twin.orderByArgType, 'orderBy', options.orderBy?.field);
+    builder.add(
+      twin.orderDirArg,
+      twin.orderDirArgType,
+      'orderDir',
+      options.orderBy?.field ? (options.orderBy.dir ?? 'ASC') : undefined,
+    );
     const rows = selectionSet(collection.columns, options.extraColumns);
     return {
       document: builder.document(
@@ -242,6 +255,13 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
     );
   }
   builder.add(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
+  builder.add(collection.args.orderBy, collection.argTypes.orderBy, 'orderBy', options.orderBy?.field);
+  builder.add(
+    collection.args.orderDir,
+    collection.argTypes.orderDir,
+    'orderDir',
+    options.orderBy?.field ? (options.orderBy.dir ?? 'ASC') : undefined,
+  );
 
   const envelope = collection.pageShape === 'envelope';
   const selections = envelope
