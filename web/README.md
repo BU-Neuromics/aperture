@@ -57,7 +57,8 @@ match `web/package.json`'s version).
 The published image is **deployment-agnostic**: endpoint config is injected at container
 start, not baked at build. The entrypoint (`docker/40-aperture-config.sh`) writes recognized
 env vars (`VITE_HIPPO_GRAPHQL_URL`, `VITE_HIPPO_CONTROL_PLANE_URL`, `VITE_WORKFLOWS`,
-`VITE_NAV`) into `config.js`, which `index.html` loads before the bundle
+`VITE_NAV`, and the `VITE_AUTH_*` set below) into `config.js`, which `index.html` loads before
+the bundle
 (`src/config/runtime.ts`); runtime values override build-time ones.
 
 ```bash
@@ -69,6 +70,38 @@ docker run -p 5173:80 -e VITE_HIPPO_GRAPHQL_URL=http://hippo:8001/graphql apertu
 to `fetch`, which resolves it against the page origin. Same-origin deployments that
 reverse-proxy the GraphQL endpoint next to the SPA (the DataHelix `solo` recipe) use this to
 avoid CORS configuration entirely.
+
+## Authentication (ADR-0038)
+
+Aperture **never authenticates**. It holds no token, runs no OAuth flow, and enforces nothing.
+An authenticating reverse proxy in front of it (DataHelix platform ADR-0006 — PIV/CAC via VA
+SSOi in production, htpasswd for testing) establishes the session; Aperture reads a same-origin
+identity endpoint and *presents* the result.
+
+Off by default. With `VITE_AUTH_MODE` unset the capability renders nothing and the app behaves
+exactly as it did before it existed.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_AUTH_MODE` | `none` | `proxy` turns the capability on. Any other value is `none`. |
+| `VITE_AUTH_IDENTITY_URL` | `/oauth2/userinfo` | Same-origin JSON endpoint returning the viewer's claims. |
+| `VITE_AUTH_LOGIN_URL` | `/oauth2/start` | Top-level navigation target to start a sign-in. |
+| `VITE_AUTH_LOGOUT_URL` | `/oauth2/sign_out` | Sign-out route. Empty hides the affordance. |
+| `VITE_AUTH_IDENTITY_CLAIM` | *(probe)* | Claim holding the viewer's stable id. |
+| `VITE_AUTH_DISPLAY_CLAIM` | *(probe)* | Claim holding the display name. |
+
+### Pin `VITE_AUTH_IDENTITY_CLAIM` before you accumulate data
+
+The identity claim becomes the `owner` on every control-plane document (ADR-0032). **Changing it
+later orphans every saved view and workflow draft in the deployment**, because ownership matches
+by exact string.
+
+The default probe order is `preferredUsername` → `upn` → `edipi` → `sub` → `user`. **`email` is
+deliberately excluded**: addresses change, and a changed address silently orphans that user's
+documents. If no candidate claim is present the app shows "Sign-in unavailable" and names the
+fix, rather than guessing — a silent fallback to `email` is the worst outcome available here.
+
+Set the claim explicitly for any deployment you intend to keep.
 
 ## Nav composition config (issue #18, R3.1)
 
