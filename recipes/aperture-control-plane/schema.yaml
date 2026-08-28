@@ -20,9 +20,33 @@ description: >-
       Mosaic stores it as an opaque string — no server-side JSON schema.
     - Removal is retire-not-delete: the SPA clears the payload; readers treat
       an empty payload as absent (W4.4 discipline). No hard-delete mutation
-      needed.
+      needed. Because retirement is an UPDATE, the owner-only-write rule
+      below protects deletion with no separate check.
     - Without this recipe the SPA degrades to browser localStorage and labels
       the fallback in its footer (honest degradation, ADR-0029).
+
+  MULTI-USER DEPLOYMENTS (v1.1.0, ADR-0032 ownership amendment):
+    - `owner` and `visibility` make the store multi-tenant. Both are
+      recognized OPTIONALLY: an endpoint carrying them (with `owner` and
+      `visibility` equality-filterable) enables per-user scoping; an endpoint
+      on recipe 1.0.0 keeps the single-namespace behavior, labeled in the UI.
+      Upgrading is additive — existing documents read as unowned and stay
+      visible to everyone.
+    - The upsert key becomes `(owner, kind, name)`, so two users may each hold
+      a distinct view named "PTSD cohort v2" without collision.
+    - `savedView` defaults to `shared` (everyone lists it, only the owner may
+      write it); `workflowDraft` defaults to `private`; `config` is
+      deployment-scoped and NOT owner-stamped — governing who may edit
+      deployment config is an admin-role question that belongs to Bridge.
+    - ENFORCEMENT IS NOT THE SPA'S. Aperture hides the affordance and declines
+      to issue the mutation, but a client can still reach this endpoint
+      directly. To make the rule real, deploy Mosaic behind an authenticating
+      proxy with an `AuthMiddleware` that stamps `owner` from the verified
+      actor header on create and rejects updates where `owner != actor`
+      (BU-Neuromics/mosaic#178). Until then the partition is advisory and
+      Aperture says so.
+    - `owner` MUST be treated as immutable after create by whatever enforces
+      it. A writable owner is a stealable owner.
 
 prefixes:
   linkml: https://w3id.org/linkml/
@@ -33,15 +57,29 @@ imports:
 
 default_range: string
 
+enums:
+
+  ApertureDocumentVisibility:
+    description: >-
+      Who may LIST a document. Orthogonal to who may write it — writes are
+      always owner-only regardless of visibility (ADR-0032 amendment).
+    permissible_values:
+      private:
+        description: Listed only for its owner. The default for workflowDraft.
+      shared:
+        description: >-
+          Listed for every viewer; still writable only by its owner. The
+          default for savedView.
+
 classes:
 
   ApertureDocument:
     is_a: Entity
     description: >-
-      A single control-plane document. Upserted by (kind, name). `kind` is
-      one of Aperture's document kinds (savedView | workflowDraft | config);
-      `name` is the document key (view name / workflowId / config key);
-      `payload` is the JSON-string versioned envelope.
+      A single control-plane document. Upserted by (owner, kind, name).
+      `kind` is one of Aperture's document kinds (savedView | workflowDraft |
+      config); `name` is the document key (view name / workflowId / config
+      key); `payload` is the JSON-string versioned envelope.
     attributes:
       kind:
         range: string
@@ -52,7 +90,7 @@ classes:
       name:
         range: string
         required: true
-        description: Document key within its kind (equality-filtered).
+        description: Document key within its (owner, kind) (equality-filtered).
         annotations:
           hippo_index: true
       payload:
@@ -61,3 +99,28 @@ classes:
         description: >-
           JSON string of the versioned envelope `{v:<int>, data:<object>}`.
           Opaque to Mosaic; validated structurally by the SPA on open.
+      owner:
+        range: string
+        required: false
+        description: >-
+          The owning viewer's stable identity — the actor string, keyed on UPN
+          or EDIPI for VA SSOi deployments, never on email (which changes).
+          Empty/absent means UNOWNED: a document written before this recipe
+          version, or by a deployment with no viewer identity. Unowned
+          documents stay visible and writable by everyone, which is exactly
+          the pre-1.1.0 behavior.
+
+          Set on CREATE and immutable thereafter. A deployment that enforces
+          ownership must stamp this from the verified actor header and ignore
+          any client-supplied value.
+        annotations:
+          hippo_index: true
+      visibility:
+        range: ApertureDocumentVisibility
+        required: false
+        description: >-
+          Who may LIST this document (see the enum). Absent is read as
+          `shared`, so documents predating this field keep their current
+          everyone-can-see behavior. Never governs writes.
+        annotations:
+          hippo_index: true

@@ -175,6 +175,16 @@
   text-overflow: ellipsis;
 }
 
+/* Whose shared view this is — shown only for views the viewer cannot edit,
+   so two same-named views are distinguishable (ADR-0032 ownership). */
+.nav-item-owner {
+  flex: 0 0 auto;
+  margin-left: var(--space-2);
+  font-size: 10.5px;
+  color: var(--text-tertiary, var(--text-secondary));
+  white-space: nowrap;
+}
+
 .nav-item-removable {
   padding: 0;
 }

@@ -78,33 +78,48 @@ export function CollectionsNav() {
           <div className="nav-list">
             {savedViews.views.map((view) => {
               const stale = view.schemaFingerprint !== schemaFingerprint(state.source);
+              // A view shared by someone else is read-only: apply it and save
+              // under a new name to fork it (ADR-0032 ownership amendment).
+              // Gating the affordance is honest UI, not enforcement.
+              const mine = savedViews.canWrite(view);
+              const titleParts = [view.name];
+              if (stale) titleParts.push('saved under an older schema; review filters after opening');
+              if (!mine) titleParts.push(`shared by ${view.owner} — read-only; save under a new name to make your own copy`);
               return (
-                <div key={view.name} className="nav-item nav-item-removable">
+                // Keyed by owner too: two viewers may each hold a view of the
+                // same name (ADR-0032 ownership amendment), so the name alone
+                // is no longer unique in this list.
+                <div key={`${view.owner ?? ''}:${view.name}`} className="nav-item nav-item-removable">
                   <button
                     type="button"
                     className="nav-item-main"
-                    // Stable certification contract (datahelix golden-path suite; #15).
-                    data-testid={`saved-view-${view.name}`}
-                    title={
-                      stale
-                        ? `${view.name} — saved under an older schema; review filters after opening`
-                        : view.name
-                    }
+                    // `saved-view-<name>` is the stable certification contract
+                    // (datahelix golden-path suite; #15) and stays reserved for
+                    // the viewer's own views; another owner's shared view gets
+                    // an owner-qualified id so the two never collide.
+                    data-testid={mine ? `saved-view-${view.name}` : `shared-view-${view.owner}-${view.name}`}
+                    title={titleParts.join(' — ')}
                     onClick={() => applyView(view.state)}
                   >
-                    <span className="nav-item-chip">{stale ? '⚠' : initialFor(view.name)}</span>
+                    <span className="nav-item-chip">
+                      {stale ? '⚠' : mine ? initialFor(view.name) : '↗'}
+                    </span>
                     <span className="nav-item-label">{view.name}</span>
+                    {/* Without this two same-named views render identically. */}
+                    {!mine && <span className="nav-item-owner">{view.owner}</span>}
                   </button>
-                  <button
-                    type="button"
-                    className="nav-item-remove"
-                    data-testid={`remove-saved-view-${view.name}`}
-                    title={`Remove saved view "${view.name}"`}
-                    aria-label={`Remove saved view "${view.name}"`}
-                    onClick={() => void savedViews.remove(view.name)}
-                  >
-                    ×
-                  </button>
+                  {mine && (
+                    <button
+                      type="button"
+                      className="nav-item-remove"
+                      data-testid={`remove-saved-view-${view.name}`}
+                      title={`Remove saved view "${view.name}"`}
+                      aria-label={`Remove saved view "${view.name}"`}
+                      onClick={() => void savedViews.remove(view.name)}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               );
             })}

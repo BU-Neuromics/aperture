@@ -78,6 +78,13 @@ export function capableSchema(
     authorWrite?: boolean;
     /** Adds the Aperture control-plane document collection (Phase 4, N5.4). */
     documents?: boolean;
+    /**
+     * Adds the recipe-1.1.0 `owner`/`visibility` fields + filters to the
+     * document collection (ADR-0032 ownership amendment). Without this the
+     * collection is the 1.0.0 shape, which must still work — per-user scoping
+     * simply does not light up.
+     */
+    documentOwnership?: boolean;
     /** Adds Book's availability-transition + supersede mutations (W4.4). */
     bookLifecycle?: boolean;
   } = {},
@@ -179,26 +186,36 @@ export function capableSchema(
         arg('input', nonNull({ kind: 'INPUT_OBJECT', name: 'ApertureDocumentUpdateInput', ofType: null })),
       ]),
     );
+    const ownershipFields = options.documentOwnership
+      ? [field('owner', scalar('String')), field('visibility', scalar('String'))]
+      : [];
+    const ownershipArgs = options.documentOwnership
+      ? [arg('owner', scalar('String')), arg('visibility', scalar('String'))]
+      : [];
     typeExtras.push(
       objectType('ApertureDocument', [
         field('id', nonNull(scalar('ID'))),
         field('kind', nonNull(scalar('String'))),
         field('name', nonNull(scalar('String'))),
         field('payload', nonNull(scalar('String'))),
+        ...ownershipFields,
       ]),
       inputObjectType('ApertureDocumentFilter', [
         arg('kind', scalar('String')),
         arg('name', scalar('String')),
+        ...ownershipArgs,
       ]),
       inputObjectType('ApertureDocumentInput', [
         arg('kind', nonNull(scalar('String'))),
         arg('name', nonNull(scalar('String'))),
         arg('payload', nonNull(scalar('String'))),
+        ...ownershipArgs,
       ]),
       inputObjectType('ApertureDocumentUpdateInput', [
         arg('kind', scalar('String')),
         arg('name', scalar('String')),
         arg('payload', scalar('String')),
+        ...ownershipArgs,
       ]),
     );
   }
