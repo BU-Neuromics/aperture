@@ -1,8 +1,11 @@
 import { useControlPlane } from './ControlPlaneContext';
 
 /**
- * The footer status line: where saved views/drafts/config actually live —
- * persistence scope stays legible (ADR-0029).
+ * The footer status line: where saved views/drafts/config actually live, and
+ * whether they are partitioned per viewer — persistence scope stays legible
+ * (ADR-0029). The scoping half matters because a shared namespace means a
+ * colleague's saved view can be overwritten by name collision; users should
+ * not have to discover that empirically.
  */
 export function ControlPlaneStatus() {
   const { status, store } = useControlPlane();
@@ -11,12 +14,18 @@ export function ControlPlaneStatus() {
   if (status !== 'ready') {
     return <span data-testid="control-plane-status">Control plane: resolving…</span>;
   }
+  const backend =
+    store.backend === 'hippo'
+      ? 'LinkML-on-Hippo document store'
+      : 'this browser only (no document type advertised by the endpoint)';
+  const scoping =
+    store.scoping === 'per-user'
+      ? `, your own (${store.viewer})`
+      : ', shared by everyone using this endpoint';
   return (
     <span data-testid="control-plane-status">
-      Control plane:{' '}
-      {store.backend === 'hippo'
-        ? 'LinkML-on-Hippo document store'
-        : 'this browser only (no document type advertised by the endpoint)'}
+      Control plane: {backend}
+      {scoping}
     </span>
   );
 }

@@ -1,5 +1,5 @@
 import type { FilterValues } from '../data/hippoSource';
-import type { ControlPlaneDocument } from './store';
+import type { ControlPlaneDocument, Visibility } from './store';
 import { openPayload, sealPayload } from './store';
 
 /**
@@ -23,6 +23,13 @@ export interface SavedView {
   name: string;
   state: SavedViewState;
   schemaFingerprint: string;
+  /**
+   * Read-side ownership metadata (ADR-0032 ownership amendment). Absent when
+   * constructing a view to save — the store stamps the owner on create, and
+   * never accepts one from here. `null` means unowned.
+   */
+  owner?: string | null;
+  visibility?: Visibility;
 }
 
 function isFilterValues(value: unknown): value is FilterValues {
@@ -64,5 +71,11 @@ export function sealSavedView(view: SavedView): ControlPlaneDocument {
 /** Invalid/foreign documents read as null — skipped, never a crash. */
 export function openSavedView(document: ControlPlaneDocument): SavedView | null {
   const data = openPayload(document.payload, SAVED_VIEW_VERSION, isSavedViewData);
-  return data ? { name: document.name, ...data } : null;
+  if (!data) return null;
+  return {
+    name: document.name,
+    ...data,
+    owner: document.owner ?? null,
+    visibility: document.visibility,
+  };
 }

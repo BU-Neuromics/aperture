@@ -239,3 +239,118 @@ describe('workflow drafts through the control plane (W4.8)', () => {
     });
   });
 });
+
+
+/* ------------------------------------------------------------------ */
+/* Ownership in the UI (ADR-0032 ownership amendment)                  */
+/* ------------------------------------------------------------------ */
+
+interface OwnedDoc {
+  id: string;
+  kind: string;
+  name: string;
+  payload: string;
+  owner?: string;
+  visibility?: string;
+}
+
+/** As makeClient, but on the recipe-1.1.0 shape (owner + visibility). */
+function makeOwnedClient(seedDocs: OwnedDoc[] = []) {
+  const docs = [...seedDocs];
+  const client = fakeClient(
+    capableSchema({ documents: true, documentOwnership: true }),
+    (query, variables) => {
+      if (query.includes('apertureDocuments')) {
+        const filter = (variables['filter'] ?? {}) as Record<string, string>;
+        return {
+          data: {
+            apertureDocuments: docs.filter((d) =>
+              (['kind', 'name', 'owner', 'visibility'] as const).every(
+                (f) => filter[f] == null || String(d[f] ?? '') === filter[f],
+              ),
+            ),
+          },
+          error: null,
+        };
+      }
+      if (query.includes('createApertureDocument')) {
+        const input = variables['input'] as Record<string, string>;
+        const doc = { id: `DOC-${docs.length + 1}`, ...input } as OwnedDoc;
+        docs.push(doc);
+        return { data: { createApertureDocument: doc }, error: null };
+      }
+      if (query.includes('updateApertureDocument')) {
+        const doc = docs.find((d) => d.id === variables['id']);
+        if (doc) Object.assign(doc, variables['input']);
+        return { data: { updateApertureDocument: doc ?? null }, error: null };
+      }
+      return { data: { books: [{ id: 'BK-0001' }], authors: [] }, error: null };
+    },
+  );
+  return { client, docs };
+}
+
+const aliceView = (): OwnedDoc => ({
+  id: 'DOC-1',
+  kind: 'savedView',
+  name: 'Alice cohort',
+  payload: sealPayload(1, {
+    state: { collection: 'books', page: 1 },
+    schemaFingerprint: 'unused',
+  }),
+  owner: 'alice',
+  visibility: 'shared',
+});
+
+describe('shared views are read-only for non-owners', () => {
+  it('shows a shared view but withholds its remove affordance from a non-owner', async () => {
+    const { client } = makeOwnedClient([aliceView()]);
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} viewer="bob" />);
+
+    // Bob sees Alice's shared view under an owner-qualified id …
+    expect(await screen.findByTestId('shared-view-alice-Alice cohort')).toBeInTheDocument();
+    // … and is told whose it is, without an affordance to change it.
+    expect(screen.getByTestId('shared-view-alice-Alice cohort')).toHaveAttribute(
+      'title',
+      expect.stringContaining('shared by alice'),
+    );
+    expect(screen.queryByTestId('remove-saved-view-Alice cohort')).not.toBeInTheDocument();
+  });
+
+  it('keeps the remove affordance for the owner', async () => {
+    const { client } = makeOwnedClient([aliceView()]);
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} viewer="alice" />);
+    expect(await screen.findByTestId('remove-saved-view-Alice cohort')).toBeInTheDocument();
+  });
+
+  it('reports the per-user partition in the footer', async () => {
+    const { client } = makeOwnedClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} viewer="bob" />);
+    expect(await screen.findByText(/your own \(bob\)/)).toBeInTheDocument();
+  });
+
+  it('says the namespace is shared when there is no viewer — the default today', async () => {
+    const { client } = makeOwnedClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText(/shared by everyone using this endpoint/)).toBeInTheDocument();
+  });
+
+  it('forks rather than overwrites when a non-owner reuses a shared name', async () => {
+    const user = userEvent.setup();
+    const { client, docs } = makeOwnedClient([aliceView()]);
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} viewer="bob" />, '?collection=books');
+
+    await user.click(await screen.findByRole('button', { name: 'Save view' }));
+    await user.type(screen.getByLabelText('View name'), 'Alice cohort');
+    // Not an "Overwrite" — it is Bob's own copy alongside Alice's.
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByTestId('remove-saved-view-Alice cohort'); // Bob's copy, removable
+    // Both are listed, distinguishable, and no key collides.
+    expect(screen.getByTestId('saved-view-Alice cohort')).toBeInTheDocument(); // Bob's
+    expect(screen.getByTestId('shared-view-alice-Alice cohort')).toBeInTheDocument(); // Alice's
+    expect(docs).toHaveLength(2);
+    expect(docs[0].owner).toBe('alice');
+    expect(docs[1].owner).toBe('bob');
+  });
+});

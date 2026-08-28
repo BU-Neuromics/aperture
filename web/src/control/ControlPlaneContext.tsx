@@ -15,6 +15,12 @@ import { createHippoStore, createLocalStore, findDocumentCollection } from './st
  * endpoint's schema advertises an Aperture document type, documents live
  * there; otherwise persistence falls back to this browser's localStorage —
  * and the UI says so (ADR-0029).
+ *
+ * `viewer` is the identity documents are owned by (ADR-0032 ownership
+ * amendment). It is the seam the authentication capability fills in: today it
+ * is always null, which yields exactly the pre-amendment single-namespace
+ * behavior. It is deliberately NOT read from runtime config — a
+ * client-declared identity would be a footgun, not a feature.
  */
 export interface ControlPlaneState {
   status: 'resolving' | 'ready';
@@ -36,11 +42,17 @@ export function resolveControlPlaneUrl(
 export function ControlPlaneProvider({
   controlUrl = resolveControlPlaneUrl(),
   clientFactory = createPassthroughClient,
+  viewer = null,
   children,
 }: {
   /** Explicit control-plane endpoint; null → co-located with the data plane. */
   controlUrl?: string | null;
   clientFactory?: (url: string) => ScopedDataClient;
+  /**
+   * The current viewer's stable identity (UPN/EDIPI, never email). null → no
+   * identity, so documents are unowned and the store is a single namespace.
+   */
+  viewer?: string | null;
   children: ReactNode;
 }) {
   const dataState = useDataSource();
@@ -52,7 +64,9 @@ export function ControlPlaneProvider({
   useEffect(() => {
     let cancelled = false;
     const fallback = () => {
-      if (!cancelled) setState({ status: 'ready', store: createLocalStore() });
+      if (!cancelled) {
+        setState({ status: 'ready', store: createLocalStore(window.localStorage, viewer) });
+      }
     };
 
     if (controlUrl == null) {
@@ -64,8 +78,8 @@ export function ControlPlaneProvider({
         setState({
           status: 'ready',
           store: collection
-            ? createHippoStore(dataState.source, collection)
-            : createLocalStore(),
+            ? createHippoStore(dataState.source, collection, viewer)
+            : createLocalStore(window.localStorage, viewer),
         });
       }
       return;
@@ -77,14 +91,16 @@ export function ControlPlaneProvider({
         const collection = findDocumentCollection(source);
         setState({
           status: 'ready',
-          store: collection ? createHippoStore(source, collection) : createLocalStore(),
+          store: collection
+            ? createHippoStore(source, collection, viewer)
+            : createLocalStore(window.localStorage, viewer),
         });
       })
       .catch(fallback);
     return () => {
       cancelled = true;
     };
-  }, [controlUrl, clientFactory, dataState]);
+  }, [controlUrl, clientFactory, dataState, viewer]);
 
   return <ControlPlaneContext.Provider value={state}>{children}</ControlPlaneContext.Provider>;
 }

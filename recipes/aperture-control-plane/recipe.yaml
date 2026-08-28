@@ -1,12 +1,18 @@
 id: org.datahelix.aperture.control-plane
 name: aperture_control_plane
-version: 1.0.0
+version: 1.1.0
 description: >-
   The Aperture control-plane document type: a Mosaic entity type for storing
   Aperture's own state (saved views, workflow drafts, config-as-data) as
   {kind, name, payload} documents, recognized structurally by the SPA
   (ADR-0032). Ships as a recipe so any Mosaic deployment can opt in without
   Aperture code changes; see aperture#17.
+
+  v1.1.0 adds the optional `owner` and `visibility` attributes that make
+  the store multi-tenant (ADR-0032 ownership amendment): upsert by
+  (owner, kind, name), owner-only writes, shared-but-read-only views.
+  Both are recognized optionally, so the upgrade is additive — a
+  deployment on 1.0.0 keeps working, with per-user scoping not lit up.
 author:
   organization: BU-Neuromics
 license: https://creativecommons.org/publicdomain/zero/1.0/

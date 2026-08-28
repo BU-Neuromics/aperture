@@ -31,6 +31,13 @@ interface AppProps {
   workflows?: ResolvedWorkflows;
   nav?: ResolvedNavConfig;
   controlUrl?: string | null;
+  /**
+   * The current viewer's stable identity, owning their control-plane documents
+   * (ADR-0032 ownership amendment). null today — this is the seam the
+   * authentication capability fills in once a proxy supplies a verified
+   * identity; until then the control plane is a single shared namespace.
+   */
+  viewer?: string | null;
 }
 
 export function App({
@@ -39,10 +46,11 @@ export function App({
   workflows = resolveWorkflows(),
   nav = resolveNavConfig(),
   controlUrl,
+  viewer = null,
 }: AppProps) {
   return (
     <DataSourceProvider endpoint={endpoint} clientFactory={clientFactory}>
-      <ControlPlaneProvider controlUrl={controlUrl} clientFactory={clientFactory}>
+      <ControlPlaneProvider controlUrl={controlUrl} clientFactory={clientFactory} viewer={viewer}>
         <SavedViewsProvider>
           <WorkflowsProvider value={workflows}>
             <NavConfigProvider value={nav}>

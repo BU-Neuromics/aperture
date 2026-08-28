@@ -6,7 +6,12 @@ import { formatSort, useCollectionUrlState } from './urlState';
 
 /**
  * Saves the current query-state as a named view (Phase 4). Same name
- * overwrites — the store's (kind, name) upsert rule, said out loud.
+ * overwrites — the store's (owner, kind, name) upsert rule, said out loud.
+ *
+ * Reusing the name of a view *someone else* shared is not an overwrite: it
+ * creates your own copy alongside theirs (ADR-0032 ownership amendment), so
+ * the button says "Save". This is also the fork path for a shared view —
+ * apply it, then save it under any name.
  */
 export function SaveViewButton({
   source,
@@ -15,7 +20,7 @@ export function SaveViewButton({
   source: HippoSource;
   collectionId: string;
 }) {
-  const { save, views } = useSavedViews();
+  const { save, views, canWrite } = useSavedViews();
   const { page, search, filters, sort } = useCollectionUrlState();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -70,7 +75,7 @@ export function SaveViewButton({
     );
   }
 
-  const overwriting = views.some((v) => v.name === name.trim());
+  const overwriting = views.some((v) => v.name === name.trim() && canWrite(v));
   return (
     <div className="save-view-form">
       <input
