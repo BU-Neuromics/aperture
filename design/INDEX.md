@@ -90,6 +90,7 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0035](./decisions/ADR-0035-cross-class-queries-typed-queryspec.md) | Cross-class queries are a typed **QuerySpec** artifact — anchor grain, capability-gated operators, quantified relationship criteria, server-first planner with declared semijoin compensation | ✅ Accepted | `cross-class-query.md` §5–§10; Mosaic ADR-0006/0007; portal req X1/X5; issue #46 |
 | [0036](./decisions/ADR-0036-global-search-heterogeneous-fanout.md) | Global search is a heterogeneous fan-out surface (server `searchAll` → client fan-out degradation) | 🟡 Proposed | `cross-class-query.md` §6(c)/§7 M4; mosaic#158 |
 | [0037](./decisions/ADR-0037-graph-view-primitive.md) | Graph exploration view — Cytoscape; `neighbors`-fed with an honest client one-hop fallback; catalog promotion after ADR-0010 | 🟡 Proposed | `cross-class-query.md` §8; mosaic#158 |
+| [0038](./decisions/ADR-0038-identity-is-presentation-not-enforcement.md) | Aperture presents an identity it is given; it never authenticates, holds no token, enforces nothing | ✅ Accepted | 2026-08-28; fills ADR-0032's viewer seam; platform ADR-0006 supplies the identity |
 
 ## Decision Queue (open — resolve in dependency order)
 

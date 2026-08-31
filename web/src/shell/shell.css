@@ -236,3 +236,47 @@
   color: var(--text-tertiary);
   font-size: 11.5px;
 }
+
+/* ── Identity (ADR-0038) ─────────────────────────────────────────────────
+   Presentation only: who the viewer is and a way out. Pushed to the right of
+   the header bar; renders nothing when auth is unconfigured. */
+.identity {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.identity-name {
+  color: var(--text-secondary);
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity-muted {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+/* A misconfigured identity endpoint must not look like a signed-out user. */
+.identity-error {
+  color: var(--text-danger, #b3261e);
+}
+
+.identity-action {
+  padding: 2px 8px;
+  font-size: 11.5px;
+}
+
+.session-expired {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-warning, #fdf6e3);
+  border-bottom: 1px solid var(--border-default, #e0ddd5);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
