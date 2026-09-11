@@ -74,11 +74,12 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0019](./decisions/ADR-0019-per-user-llm-provider-keys.md) | Per-user LLM provider key management (config-as-LinkML; key refs, not secrets) | ⛔ Deferred (MVP) | 2026-06-16 |
 | [0020](./decisions/ADR-0020-llm-conversations-are-provenance-events.md) | LLM conversations & agent actions are provenance events + observability | ⛔ Deferred (MVP) | 2026-06-16 |
 | [0021](./decisions/ADR-0021-defer-in-app-chat-mcp-agent-first.md) | Defer in-app chat; coding agent (MCP/API) is the near-term agent surface | ⛔ Deferred (MVP) | 2026-06-16 |
-| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | ⛔ Deferred (MVP) | instruction-path-model.md (D-1) |
-| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | ⛔ Deferred (MVP) | instruction-path-model.md (D-2) |
-| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | ⛔ Deferred (MVP) | instruction-path-model.md (D-3) |
-| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | ⛔ Deferred (MVP) | instruction-path-model.md (D-5) |
-| [0026](./decisions/ADR-0026-portal-first-mvp-defer-agentic-surfaces.md) | Portal-first MVP; defer agentic, agent-assist & schema-editing surfaces | ✅ Accepted | portal-requirements L1/L13/L14 |
+| [0022](./decisions/ADR-0022-data-story-is-an-instruction-path.md) | A data story is an instruction path → typed subgraph states + artifacts | ⤳ Superseded by [Reel ADR-0001](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0001-data-story-is-an-instruction-path.md) (2026-06-22 split) | instruction-path-model.md (D-1) |
+| [0023](./decisions/ADR-0023-data-story-reproducibility-as-of-watermark.md) | Reproducibility: one as-of watermark per story-version; "pull new data" = recorded watermark-advance | ⤳ Superseded by [Reel ADR-0002](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0002-data-story-reproducibility-as-of-watermark.md) (2026-06-22 split) | instruction-path-model.md (D-2) |
+| [0024](./decisions/ADR-0024-instruction-path-linear-first-general-schema.md) | Topology: general `parents`-list schema now, linear-only validator in v1 | ⤳ Superseded by [Reel ADR-0003](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0003-instruction-path-linear-first-general-schema.md) (2026-06-22 split) | instruction-path-model.md (D-3) |
+| [0025](./decisions/ADR-0025-mid-path-edit-recompute-with-suspend.md) | Mid-path edits recompute downstream + suspend-on-invalid (not discard) | ⤳ Superseded by [Reel ADR-0004](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0004-mid-path-edit-recompute-with-suspend.md) (2026-06-22 split) | instruction-path-model.md (D-5) |
+| [0026](./decisions/ADR-0026-headless-core-thin-shell.md) | Aperture is a headless interaction core + a thin, replaceable shell (**number later reused** by the portal-first-MVP ADR below; cite **Reel ADR-0005** for this decision) | ⤳ Superseded by [Reel ADR-0005](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0005-headless-core-thin-shell.md) (2026-06-22 split) | vision.md reframe; ADR-0014 |
+| [0026](./decisions/ADR-0026-portal-first-mvp-defer-agentic-surfaces.md) | Portal-first MVP; defer agentic, agent-assist & schema-editing surfaces | ✅ Accepted (number **reused** — see the superseded 0026 row above) | portal-requirements L1/L13/L14 |
 | [0027](./decisions/ADR-0027-read-and-write-portal.md) | Read *and* write portal; v1 write boundary = Tier 0 forms + one Tier 1 workflow | ✅ Accepted | portal-requirements L3/L4 |
 | [0028](./decisions/ADR-0028-workflow-atomicity-staged-batch.md) | Workflow atomicity: stage → whole-set dry-run validate → atomic commit (Hippo #84); saga fallback | ✅ Accepted | portal-requirements L9/L10 |
 | [0029](./decisions/ADR-0029-capability-gated-honest-degradation.md) | Capability-gated UI, honest degradation (faceting/aggregation/export) | ✅ Accepted | portal-requirements L7/L8 |
@@ -97,11 +98,11 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 Per `portal-open-questions.md`, resolve **ADR-0010 → 0011 → 0012 → 0013**; ADR-0014 follows
 0011 (the runtime/Pyodide weight changes the SSR-vs-SPA tradeoff), and ADR-0015 follows
 0010/0014. ADR-0010 (the typed view vocabulary) is what the platform **View Contract**
-(`drylims:platform/design/view-contract.md`) now absorbs as a shared rendering standard.
+(`datahelix:platform/design/view-contract.md`) now absorbs as a shared rendering standard.
 
 > **Relocated to Reel (2026-06-22 split).** The agentic **keystone probe** — *"can an LLM drive a
 > typed declarative artifact through a validator to a correct change?"* — and its survival-curve
-> exemplar now belong to **Reel** (`drylims:platform/design/decisions/ADR-0001`); they are no
+> exemplar now belong to **Reel** (DataHelix platform ADR-0003 — `datahelix:platform/design/decisions/ADR-0003-reel-data-story-engine-separate-from-portal.md`); they are no
 > longer Aperture's gating "next action." Aperture's queue is the portal-rendering decisions
 > above.
 

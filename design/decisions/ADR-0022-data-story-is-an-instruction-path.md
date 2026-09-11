@@ -6,8 +6,9 @@
 - **Related:** ADR-0003 (config-as-LinkML-in-Hippo), ADR-0009 (view-descriptions + headless validation), ADR-0010 (typed noun-catalog, keystone), ADR-0020 (conversations/actions are provenance events), ADR-0002 (generic, no domain nouns); `instruction-path-model.md`; `prefab/data-stories.md`
 
 > **⤳ Superseded — moved to Reel (2026-06-22).** This decision moved to the **Reel** component
-> when the AI-native data-story engine was split out of Aperture (boundary:
-> `drylims:platform/design/decisions/ADR-0001`; runbook `drylims:proposals/reel-split.md`). Its
+> when the AI-native data-story engine was split out of Aperture (boundary: DataHelix platform ADR-0003 —
+> `datahelix:platform/design/decisions/ADR-0003-reel-data-story-engine-separate-from-portal.md`,
+> whose **Outcome** section records the execution; no separate runbook landed). Its
 > canonical home is now **Reel [ADR-0001](https://github.com/BU-Neuromics/reel/blob/main/design/decisions/ADR-0001-data-story-is-an-instruction-path.md)**
 > (renumbered from this ADR). Kept here as a tombstone per the never-delete convention — **do not
 > edit; edit the Reel ADR.** The body below is the original Aperture text, preserved for history.
