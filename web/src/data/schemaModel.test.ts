@@ -538,6 +538,8 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       // Pre-FilterOp-enum endpoint with a filter arg: bare equality only.
       filterOps: ['EQ'],
       whereFilter: false,
+      // No converse mutation on this surface — the chat panel stays off.
+      conversationalQuery: false,
     });
   });
 
@@ -628,6 +630,7 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       batchWrite: false,
       filterOps: [],
       whereFilter: false,
+      conversationalQuery: false,
     });
   });
 });

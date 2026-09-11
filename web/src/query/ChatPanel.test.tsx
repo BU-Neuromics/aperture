@@ -1,0 +1,180 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
+import type { ReactNode } from 'react';
+import { describe, expect, it } from 'vitest';
+import { App } from '../App';
+import { capableSchema, fakeClient } from '../data/testing/fixtures';
+import type { GraphQLResult } from '../data/scopedClient';
+
+const endpoint = { url: 'http://example.test/graphql' };
+
+interface WireTurn {
+  id: string;
+  utterance: string;
+  status: string;
+  message: string;
+  query_spec: unknown;
+}
+
+/**
+ * A planning endpoint with just enough behavior to drive the panel: each turn
+ * proposes a spec, an unresolvable one asks for clarification, and an edit
+ * replays the list so a turn that depended on the edited one suspends.
+ */
+function conversationalClient(options: { anchor?: string } = {}) {
+  const anchor = options.anchor ?? 'Book';
+  const client = fakeClient(capableSchema({ conversational: true }), (query, variables) => {
+    if (!query.includes('ApertureConverse')) {
+      return { data: { books: [], authors: [] }, error: null } as GraphQLResult<unknown>;
+    }
+    const utterance = variables['utterance'] as string;
+    const prior = (variables['turns'] as WireTurn[] | undefined) ?? [];
+    const editId = variables['editTurnId'] as string | undefined;
+
+    const plan = (text: string) =>
+      /nothing|xyzzy/.test(text)
+        ? { status: 'clarification', message: 'Which field did you mean?', query_spec: null }
+        : {
+            status: 'proposal',
+            message: `Filtering to ${text}.`,
+            query_spec: { v: 1, anchor, mode: 'AND', criteria: [] },
+          };
+
+    if (editId) {
+      const i = prior.findIndex((t) => t.id === editId);
+      const turns = prior.map((t, j) => {
+        if (j === i) return { ...t, utterance, ...plan(utterance) };
+        // Anything after the edited turn that had a spec loses it.
+        if (j > i && t.status === 'proposal') {
+          return { ...t, status: 'suspended', message: 'No longer applies.', query_spec: null };
+        }
+        return t;
+      });
+      return {
+        data: {
+          converseQuerySpec: {
+            turn: turns[i],
+            turns,
+            suspended_turn_ids: turns.filter((t) => t.status === 'suspended').map((t) => t.id),
+          },
+        },
+        error: null,
+      };
+    }
+
+    const turn = { id: `t${prior.length + 1}`, utterance, ...plan(utterance) };
+    return {
+      data: {
+        converseQuerySpec: { turn, turns: [...prior, turn], suspended_turn_ids: [] },
+      },
+      error: null,
+    };
+  });
+  return client;
+}
+
+function renderApp(ui: ReactNode, searchParams = '') {
+  return render(
+    <NuqsTestingAdapter searchParams={searchParams} hasMemory>
+      {ui}
+    </NuqsTestingAdapter>,
+  );
+}
+
+describe('ChatPanel (ADR-0039)', () => {
+  it('stays off when the endpoint advertises no conversational mutation', async () => {
+    const client = fakeClient(capableSchema(), () => ({
+      data: { books: [], authors: [] },
+      error: null,
+    }));
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+    await screen.findByTestId('query-builder');
+    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
+  });
+
+  it('stays out of the inspector while browsing a collection', async () => {
+    const client = conversationalClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    await screen.findByTestId('facet-panel');
+    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
+  });
+
+  it('composes turns and shows the draft spec', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    await user.type(screen.getByRole('textbox', { name: '' }), 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText('Filtering to recent books.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Show QuerySpec/ })).toBeInTheDocument();
+  });
+
+  it('sends the prior turns and the draft back on the next turn', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    const input = screen.getByRole('textbox', { name: '' });
+    await user.type(input, 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+    await user.type(input, 'only hardbacks');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to only hardbacks.');
+
+    const second = client.recorded.filter((r) => r.document.includes('ApertureConverse'))[1];
+    expect((second.variables['turns'] as WireTurn[]).map((t) => t.utterance)).toEqual([
+      'recent books',
+    ]);
+    expect(second.variables['querySpec']).toMatchObject({ anchor: 'Book' });
+  });
+
+  it('hands a resolvable spec to the builder, and refuses one it cannot resolve', async () => {
+    const user = userEvent.setup();
+    // `Book` resolves to a collection id of `books`, so this spec's anchor
+    // does NOT match — exactly the pending v1→v2 spelling gap.
+    const client = conversationalClient({ anchor: 'Book' });
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    await user.type(screen.getByRole('textbox', { name: '' }), 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+
+    expect(screen.getByRole('button', { name: 'Use in builder' })).toBeDisabled();
+    expect(screen.getByText(/is a schema type name/)).toBeInTheDocument();
+  });
+
+  it('flags turns an edit invalidated instead of dropping them', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    const input = screen.getByRole('textbox', { name: '' });
+    await user.type(input, 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+    await user.type(input, 'only hardbacks');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to only hardbacks.');
+
+    // Rewind turn 1; turn 2 depended on it.
+    await user.click(screen.getAllByRole('button', { name: 'edit' })[0]);
+    await user.clear(input);
+    await user.type(input, 'xyzzy');
+    await user.click(screen.getByRole('button', { name: 'Redo turn' }));
+
+    expect(await screen.findByText('No longer applies.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /1 turn suspended by an edit/ }),
+    ).toBeInTheDocument();
+    // Flagged, not dropped — the original wording is still on screen.
+    expect(screen.getByText('only hardbacks')).toBeInTheDocument();
+  });
+});

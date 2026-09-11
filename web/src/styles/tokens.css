@@ -31,6 +31,9 @@
   --accent-weak: #eaf1fe;
   --error: #b23b3b;
   --error-bg: #fbe9e9;
+  /* Flagged-but-not-failed: a suspended conversational turn (ADR-0025/0039). */
+  --warning: #8a6420;
+  --warning-bg: #fdf3e2;
 
   /* Typography. Self-host IBM Plex (woff2) under web/public/fonts/ to drop the
      system fallback; see design/design-export/README.md "deltas". */

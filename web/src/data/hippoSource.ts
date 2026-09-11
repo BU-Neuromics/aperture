@@ -1,6 +1,8 @@
 import type { Capabilities } from './capabilities';
 import type { BatchModel, BatchOperation, BatchResult } from './batch';
 import { buildIngestBatch, deriveBatchModel, normalizeBatchResult } from './batch';
+import type { ConversationModel, ConverseRequest, ConverseResponse } from './conversation';
+import { buildConverseMutation, deriveConversationModel, normalizeConverseResult } from './conversation';
 import type { IntrospectionData } from './introspection';
 import { INTROSPECTION_QUERY } from './introspection';
 import type { ScopedDataClient } from './scopedClient';
@@ -107,6 +109,10 @@ export interface HippoSource {
   batch?: BatchModel;
   /** Whole-set dry-run (dryRun=true) or atomic commit of a staged set (W4.7). */
   runBatch(operations: BatchOperation[], dryRun: boolean): Promise<BatchResult>;
+  /** The introspected conversational query surface, when usable (ADR-0039). */
+  conversation?: ConversationModel;
+  /** One conversational turn; the response's `turns` replaces the caller's list. */
+  converse(request: ConverseRequest): Promise<ConverseResponse>;
 }
 
 function selectionFor(column: ColumnModel): string {
@@ -391,6 +397,7 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
   const capabilities = deriveCapabilities(schema, collections);
   const history = deriveHistory(schema);
   const batch = deriveBatchModel(schema);
+  const conversation = deriveConversationModel(schema);
 
   const collectionFor = (collectionId: string): CollectionModel => {
     const collection = collections.find((c) => c.id === collectionId);
@@ -403,6 +410,21 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
     collections,
     history,
     batch,
+    conversation,
+
+    async converse(request) {
+      if (!conversation) {
+        throw new Error('The endpoint does not advertise a conversational query surface');
+      }
+      const built = buildConverseMutation(conversation, request);
+      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      if (result.error || result.data == null) {
+        throw new Error(
+          `The conversational turn failed: ${result.error?.message ?? 'empty response'}`,
+        );
+      }
+      return normalizeConverseResult(conversation, result.data[conversation.field]);
+    },
 
     async runBatch(operations, dryRun) {
       if (!batch) throw new Error('The endpoint does not advertise a batch unit-of-work');

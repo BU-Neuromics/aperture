@@ -15,6 +15,7 @@ import { SavedViewsProvider } from './control/SavedViewsContext';
 import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
+import { ChatPanel } from './query/ChatPanel';
 import type { ResolvedNavConfig } from './nav/config';
 import { resolveNavConfig } from './nav/config';
 import { NavConfigProvider } from './nav/NavConfigContext';
@@ -112,7 +113,16 @@ function AppBody({
                 ),
                 primaryNav: <CollectionsNav />,
                 main: <CollectionMain />,
-                inspector: <FacetPanel />,
+                // Two inspector residents, each gating itself on a condition
+                // the other excludes: facets while browsing a collection, chat
+                // while a cross-class query view is open. Both render null
+                // otherwise, and the layout collapses the empty column.
+                inspector: (
+                  <>
+                    <FacetPanel />
+                    <ChatPanel />
+                  </>
+                ),
                 footer: <ControlPlaneStatus />,
               }}
             />

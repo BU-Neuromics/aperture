@@ -7,6 +7,7 @@ import type {
 import { findType, isListType, namedType, typeRefToSDL } from './introspection';
 import type { Capabilities } from './capabilities';
 import { deriveBatchModel } from './batch';
+import { deriveConversationModel } from './conversation';
 
 /**
  * The schema-derived binding model (the novel bet, `prior-art.md`): browsable
@@ -1031,5 +1032,8 @@ export function deriveCapabilities(
     // Typed per-class filter inputs (Mosaic ADR-0006 inc. 2): a list field
     // advertising a `where` arg whose type is an input object.
     whereFilter: some((c) => c.args.where),
+    // Same standard as batchWrite: the mutation must introspect to a shape the
+    // panel can actually drive, not merely carry the right name (ADR-0039).
+    conversationalQuery: deriveConversationModel(schema) != null,
   };
 }
