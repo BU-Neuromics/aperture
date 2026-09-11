@@ -210,7 +210,7 @@ describe('normalizeConverseResult', () => {
       turns: [wireTurn(), wireTurn({ id: 't2' })],
       suspended_turn_ids: ['t1'],
     });
-    expect(result.turns.map((t) => t.id)).toEqual(['t1', 't2']);
+    expect(result.turns?.map((t) => t.id)).toEqual(['t1', 't2']);
     expect(result.suspendedTurnIds).toEqual(['t1']);
     expect(result.turn.id).toBe('t2');
   });

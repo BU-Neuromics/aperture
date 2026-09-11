@@ -920,3 +920,41 @@
   font-size: 0.8rem;
   line-height: 1.55;
 }
+
+/* Elapsed seconds beside the typing indicator. Mono + tabular so the width
+   does not jitter as the count ticks, and tertiary so a long wait informs
+   without alarming (design Decision 10). */
+.chat-elapsed {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+/* Builder lock (design Decision 11). The form stays visible and legible —
+   greyed, not hidden — so the query the conversation built can still be read;
+   only editing is withdrawn. `fieldset[disabled]` does the actual disabling,
+   so this is appearance only and cannot drift from the real behaviour. */
+.query-frame[data-locked] {
+  opacity: 0.62;
+  background: var(--bg-subtle);
+}
+
+.query-locked-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.82rem;
+}
+
+/* A fieldset resets the frame's flex layout in some engines; restate it. */
+fieldset.query-frame {
+  min-width: 0;
+  margin: 0;
+}

@@ -105,6 +105,8 @@ export function useCollectionUrlState() {
     /** Open the graph exploration view (ADR-0037) over the current QuerySpec. */
     openGraphView: () => void setState({ view: 'graph', entity: null, form: null }),
     closeQueryViews: () => void setState({ view: null, qs: null, page: 1 }),
+    /** Drop the spec but stay in the query view (conversation reset, ADR-0039). */
+    clearQuerySpec: () => void setState({ qs: null, page: 1 }),
     setPage: (page: number) => void setState({ page: Math.max(1, page) }),
     setSearch: (q: string) => void setState({ q: q.trim() === '' ? null : q.trim(), page: 1 }),
     /** Single-value equality per facet (flat AND semantics — R3.3); toggle clears. */

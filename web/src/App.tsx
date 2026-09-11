@@ -17,6 +17,7 @@ import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
 import { ChatPanel } from './query/ChatPanel';
+import { ConversationProvider } from './query/ConversationContext';
 import { useCollectionUrlState } from './features/collections/urlState';
 import type { ResolvedNavConfig } from './nav/config';
 import { resolveNavConfig } from './nav/config';
@@ -109,6 +110,9 @@ function AppBody({
           <NavConfigProvider value={nav}>
             {/* App-level, not layout chrome — so it needs no new slot (ADR-0031). */}
             <SessionExpiry />
+            {/* Above the shell because the composer (aside) and the builder
+                (main) are different slots that share one conversation. */}
+            <ConversationProvider>
             <AppShell
               config={{ layout: SHELL_LAYOUTS[context] }}
               slots={{
@@ -125,6 +129,7 @@ function AppBody({
                 footer: <ControlPlaneStatus />,
               }}
             />
+            </ConversationProvider>
           </NavConfigProvider>
         </WorkflowsProvider>
       </SavedViewsProvider>

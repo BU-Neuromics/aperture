@@ -197,6 +197,31 @@ describe('ChatPanel (ADR-0039)', () => {
     expect(screen.getByRole('combobox', { name: 'Field' })).toHaveValue('title');
   });
 
+  /**
+   * Design Decision 11. Not presentation: Mosaic asserts the wire query_spec
+   * agrees with what it derives from `turns` and 400s otherwise, so a hand-edit
+   * under a live conversation would break the next turn.
+   */
+  it('locks the manual builder once a conversation owns the spec, and unlocks on clear', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    expect(screen.getByRole('combobox', { name: 'Anchor' })).toBeEnabled();
+
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+
+    // Read-only, not hidden — the query stays legible.
+    expect(screen.getByRole('combobox', { name: 'Anchor' })).toBeDisabled();
+    expect(screen.getByText(/composer is building this query/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Clear conversation/i }));
+    expect(screen.getByRole('combobox', { name: 'Anchor' })).toBeEnabled();
+  });
+
   it('flags turns an edit invalidated instead of dropping them', async () => {
     const user = userEvent.setup();
     const client = conversationalClient();

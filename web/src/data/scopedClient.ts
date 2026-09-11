@@ -27,7 +27,22 @@ export interface ScopedDataClient {
     variables?: Record<string, unknown>,
     options?: QueryOptions,
   ): Promise<GraphQLResult<T>>;
-  mutate<T>(document: string, variables?: Record<string, unknown>): Promise<GraphQLResult<T>>;
+  mutate<T>(
+    document: string,
+    variables?: Record<string, unknown>,
+    options?: MutateOptions,
+  ): Promise<GraphQLResult<T>>;
+}
+
+export interface MutateOptions {
+  /**
+   * Abort the underlying request. Threaded to `fetch` through urql's
+   * per-operation `fetchOptions`, so cancelling actually stops the round trip
+   * rather than only hiding it — a conversational turn may wait up to the
+   * planning service's full timeout (60s), and abandoning one has to release
+   * the connection too, not just the UI.
+   */
+  signal?: AbortSignal;
 }
 
 export function createPassthroughClient(url: string): ScopedDataClient {
@@ -41,8 +56,18 @@ export function createPassthroughClient(url: string): ScopedDataClient {
     },
     // Routed through urql's mutation path so the document cache invalidates
     // queries touching the mutated typename.
-    async mutate<T>(document: string, variables?: Record<string, unknown>) {
-      const result = await client.mutation<T>(document, variables ?? {}).toPromise();
+    async mutate<T>(
+      document: string,
+      variables?: Record<string, unknown>,
+      options?: MutateOptions,
+    ) {
+      const result = await client
+        .mutation<T>(
+          document,
+          variables ?? {},
+          options?.signal ? { fetchOptions: { signal: options.signal } } : undefined,
+        )
+        .toPromise();
       return { data: result.data ?? null, error: result.error ?? null };
     },
   };

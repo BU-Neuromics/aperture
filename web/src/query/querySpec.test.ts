@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Capabilities } from '../data/capabilities';
 import { NO_CAPABILITIES } from '../data/capabilities';
 import type { CollectionModel } from '../data/schemaModel';
+import type { QuerySpec } from './querySpec';
 import {
   deriveEdges,
   emptyQuerySpec,
@@ -263,7 +264,7 @@ describe('canonicalizeQuerySpec (legacy dialect → platform spelling)', () => {
   });
 
   it('leaves an already-canonical spec untouched, by identity', () => {
-    const spec = { v: 1, anchor: 'Donor', mode: 'AND', criteria: [] } as const;
+    const spec: QuerySpec = { v: 1, anchor: 'Donor', mode: 'AND', criteria: [] };
     expect(canonicalizeQuerySpec(spec, collections)).toBe(spec);
   });
 

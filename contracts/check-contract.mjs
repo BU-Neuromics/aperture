@@ -131,7 +131,16 @@ function checkRootField(schema, rootTypeName, assertion) {
   const rootType = findType(schema, rootTypeName);
   if (!rootType) return [`root type '${rootTypeName}' not found in schema`];
   const field = findField(rootType.fields, assertion.field);
-  if (!field) return [`${rootTypeName}.${assertion.field}: field not found`];
+  if (!field) {
+    // A `gated` assertion describes a capability the endpoint registers
+    // conditionally (Aperture ADR-0029: the client derives the feature from
+    // introspection and renders nothing when it is absent). Its absence is a
+    // legitimate deployment, so it is not a contract breach — but when the
+    // field IS present its shape still has to match, which is the half worth
+    // pinning, since that is what the client binds to.
+    if (assertion.gated) return [];
+    return [`${rootTypeName}.${assertion.field}: field not found`];
+  }
   return checkArgs(field.args, assertion.args ?? [], `${rootTypeName}.${assertion.field}`);
 }
 

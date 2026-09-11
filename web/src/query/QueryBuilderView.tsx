@@ -25,6 +25,7 @@ import {
   canonicalizeQuerySpec,
   validateQuerySpec,
 } from './querySpec';
+import { useConversation } from './ConversationContext';
 import { OP_LABELS } from './specProse';
 import './query.css';
 
@@ -257,6 +258,8 @@ function RelatedEditor({
 export function QueryBuilderView({ source }: { source: HippoSource }) {
   const { collections, capabilities } = source;
   const urlState = useCollectionUrlState();
+  const conversation = useConversation();
+  const locked = conversation?.locked ?? false;
   const anchored = collections.filter((c) => c.args.filter);
   // The URL may still carry a v1 spec from a bookmarked or shared link, so
   // upgrade on the way in (schema-aware — v1 addressed the anchor by
@@ -389,7 +392,25 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
         </button>
       </div>
 
-      <div className="query-frame">
+      {/* Once a conversation owns the spec the manual form goes read-only
+          (design Decision 11). Not presentation: Mosaic asserts the wire
+          `query_spec` agrees with what it derives from `turns` and 400s
+          otherwise, so a hand-edit underneath a live conversation would break
+          the next turn. It stays visible rather than disappearing, with an
+          explicit way back to manual editing. */}
+      {locked && (
+        <div className="query-locked-note" role="status">
+          <span className="chat-dot chat-dot-warning" aria-hidden="true" />
+          <span>
+            The composer is building this query. Editing it by hand would
+            disagree with the conversation.
+          </span>
+          <button type="button" className="chat-inline-link" onClick={() => conversation?.clear()}>
+            Clear conversation &amp; edit manually
+          </button>
+        </div>
+      )}
+      <fieldset className="query-frame" disabled={locked} data-locked={locked || undefined}>
         <div className="query-condition">
           <span className="query-keyword">Rows are</span>
           <select
@@ -494,7 +515,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             ))}
           </ul>
         )}
-      </div>
+      </fieldset>
 
       {error && (
         <div className="query-notes" role="alert">

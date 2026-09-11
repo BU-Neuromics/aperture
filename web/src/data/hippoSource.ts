@@ -112,7 +112,12 @@ export interface HippoSource {
   /** The introspected conversational query surface, when usable (ADR-0039). */
   conversation?: ConversationModel;
   /** One conversational turn; the response's `turns` replaces the caller's list. */
-  converse(request: ConverseRequest): Promise<ConverseResponse>;
+  /**
+   * `signal` aborts the round trip. A conversational turn can legitimately run
+   * to the planning service's full timeout, so abandoning one must release the
+   * request, not merely stop rendering it (ADR-0039 / design Decision 10).
+   */
+  converse(request: ConverseRequest, signal?: AbortSignal): Promise<ConverseResponse>;
 }
 
 function selectionFor(column: ColumnModel): string {
@@ -412,12 +417,16 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
     batch,
     conversation,
 
-    async converse(request) {
+    async converse(request, signal) {
       if (!conversation) {
         throw new Error('The endpoint does not advertise a conversational query surface');
       }
       const built = buildConverseMutation(conversation, request);
-      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      const result = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+        signal ? { signal } : undefined,
+      );
       if (result.error || result.data == null) {
         throw new Error(
           `The conversational turn failed: ${result.error?.message ?? 'empty response'}`,
@@ -545,7 +554,10 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       const collection = collectionFor(collectionId);
       const built = buildSetAvailabilityMutation(collection, id, isAvailable, reason);
       if (!built) throw new Error(`${collection.label} does not support availability transitions`);
-      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      const result = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
       if (result.error) {
         throw new Error(
           `Could not update availability for ${collection.typeName} “${id}”: ${result.error.message}`,
@@ -557,7 +569,10 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       const collection = collectionFor(collectionId);
       const built = buildSupersedeMutation(collection, id, replacementId, reason);
       if (!built) throw new Error(`${collection.label} does not support supersede`);
-      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      const result = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
       if (result.error) {
         throw new Error(
           `Could not supersede ${collection.typeName} “${id}”: ${result.error.message}`,

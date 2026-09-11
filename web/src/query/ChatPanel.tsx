@@ -4,8 +4,8 @@ import type { ConversationTurn } from '../data/conversation';
 import { currentQuerySpec } from '../data/conversation';
 import type { CollectionModel } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
-import type { QuerySpec } from './querySpec';
-import { canonicalizeQuerySpec, validateQuerySpecShape } from './querySpec';
+import { canonicalizeQuerySpec, readQuerySpec } from './querySpec';
+import { useConversation } from './ConversationContext';
 import { SpecProse } from './specProse';
 import './query.css';
 
@@ -30,11 +30,18 @@ export function ChatPanel() {
   const capabilities = useCapabilities();
   const urlState = useCollectionUrlState();
 
-  const [turns, setTurns] = useState<ConversationTurn[]>([]);
-  const [suspended, setSuspended] = useState<string[]>([]);
+  // Shared with the builder, which locks while a conversation owns the spec.
+  const conversation = useConversation();
+  const turns = conversation?.turns ?? [];
+  const suspended = conversation?.suspended ?? [];
+  const setTurns = conversation?.setTurns ?? (() => {});
+  const setSuspended = conversation?.setSuspended ?? (() => {});
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState<ConversationTurn | null>(null);
   const [pending, setPending] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const inFlight = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -42,6 +49,28 @@ export function ChatPanel() {
 
   const collections = state.status === 'ready' ? state.source.collections : [];
   const starters = useMemo(() => starterPrompts(collections), [collections]);
+
+  /**
+   * A real elapsed count, not fabricated progress. The planning call is one
+   * opaque HTTP round trip with no intermediate signal, so staged text
+   * ("drafting…", "validating…") would invent state that does not exist and
+   * can visibly desync from reality. A turn may legitimately run to the
+   * service's full timeout, and a silent wait that long reads as frozen —
+   * worse live in front of a room (design Decision 10).
+   */
+  useEffect(() => {
+    if (startedAt == null) {
+      setElapsed(0);
+      return;
+    }
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 250);
+    return () => clearInterval(id);
+  }, [startedAt]);
+
+  // Abandon any in-flight turn if the panel goes away, so an aborted request
+  // never resolves into an unmounted component.
+  useEffect(() => () => inFlight.current?.abort(), []);
 
   // Keep the newest turn in view: the transcript outgrows the column quickly,
   // and a reply the user never sees reads as a hang.
@@ -57,21 +86,44 @@ export function ChatPanel() {
   const source = state.source;
   const spec = currentQuerySpec(turns);
 
+  const cancel = () => {
+    const controller = inFlight.current;
+    if (!controller) return;
+    // Orphan the turn FIRST, then tear the UI down here rather than waiting for
+    // the request promise to settle: urql does not reliably settle an aborted
+    // operation, so a teardown that depended on `send`'s finally would leave
+    // the composer stuck "Planning" forever. The abort still fires, to release
+    // the connection — a turn can run to the planner's full timeout.
+    inFlight.current = null;
+    controller.abort();
+    setPending(false);
+    setStartedAt(null);
+  };
+
   const send = async (text?: string) => {
     const utterance = (text ?? draft).trim();
     if (utterance === '' || pending) return;
+    const controller = new AbortController();
+    inFlight.current = controller;
     setPending(true);
+    setStartedAt(Date.now());
     setError(null);
     try {
       // Turns are strictly ordered and the server derives the draft from the
       // whole list, so exactly one is ever in flight (the composer is disabled
       // meanwhile) and the response's list replaces ours wholesale.
-      const response = await source.converse({
-        utterance,
-        querySpec: spec,
-        turns,
-        editTurnId: editing?.id ?? null,
-      });
+      const response = await source.converse(
+        {
+          utterance,
+          querySpec: spec,
+          turns,
+          editTurnId: editing?.id ?? null,
+        },
+        controller.signal,
+      );
+      // A cancelled turn may still resolve late; it no longer owns the slot,
+      // so its response must not land on top of whatever replaced it.
+      if (inFlight.current !== controller) return;
       // An authoritative list replaces ours wholesale (the server recomputes
       // downstream turns after an edit). Its absence means append, not reset:
       // the boundary returns a bare error turn carrying no list when a
@@ -84,9 +136,19 @@ export function ChatPanel() {
       setDraft('');
       setEditing(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // An abort is the user's own choice, not a failure to report. The draft
+      // stays in the composer so the same utterance can be retried — which
+      // Mosaic's own timeout message explicitly sanctions as safe.
+      if (!controller.signal.aborted) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
-      setPending(false);
+      // A newer turn may already own the slot if this one was abandoned.
+      if (inFlight.current === controller) {
+        inFlight.current = null;
+        setPending(false);
+        setStartedAt(null);
+      }
     }
   };
 
@@ -97,8 +159,8 @@ export function ChatPanel() {
   };
 
   const reset = () => {
-    setTurns([]);
-    setSuspended([]);
+    // Clears the turn list AND the spec it produced (see ConversationContext).
+    conversation?.clear();
     setEditing(null);
     setError(null);
     setDraft('');
@@ -168,6 +230,12 @@ export function ChatPanel() {
               <i />
             </span>
             <span className="chat-pending-label">Planning</span>
+            <span className="chat-elapsed" aria-hidden="true">
+              {elapsed}s
+            </span>
+            <button type="button" className="chat-inline-link" onClick={cancel}>
+              Cancel
+            </button>
           </div>
         )}
 
@@ -331,9 +399,11 @@ function SpecPane({
   onToggleJson: () => void;
 }) {
   const urlState = useCollectionUrlState();
-  // A planning service emits v2 vocabulary already; `canonicalizeQuerySpec` is here
-  // for the v1 case (a spec replayed from an older transcript or endpoint).
-  const parsed = validateQuerySpecShape(spec) as QuerySpec | null;
+  // A planning service already emits the platform spelling; canonicalizing is
+  // for a spec replayed from an older transcript carrying the legacy dialect.
+  // Non-throwing: `spec` is arbitrary server JSON off the wire, and a throw
+  // here would unmount the app rather than degrade (no ErrorBoundary).
+  const parsed = readQuerySpec(spec);
   const shaped = parsed ? canonicalizeQuerySpec(parsed, [...collections]) : null;
 
   return (

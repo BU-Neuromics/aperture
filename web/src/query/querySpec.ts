@@ -106,6 +106,21 @@ export function emptyQuerySpec(anchorTypeName: string): QuerySpec {
  * `canonicalizeQuerySpec`.
  */
 export function validateQuerySpecShape(value: unknown): QuerySpec {
+  const spec = readQuerySpec(value);
+  if (!spec) throw new Error('not a QuerySpec');
+  return spec;
+}
+
+/**
+ * The same shape check, non-throwing.
+ *
+ * Use this wherever a spec arrives from somewhere other than the URL — above
+ * all the conversational wire, where `turn.query_spec` is `unknown` server JSON
+ * (`data/conversation.ts`). `validateQuerySpecShape` throws by design because
+ * nuqs catches for it; called during render it would take the tree down
+ * instead, and this app has no ErrorBoundary.
+ */
+export function readQuerySpec(value: unknown): QuerySpec | null {
   const spec = value as QuerySpec;
   if (
     typeof spec !== 'object' ||
@@ -115,7 +130,7 @@ export function validateQuerySpecShape(value: unknown): QuerySpec {
     (spec.mode !== 'AND' && spec.mode !== 'OR') ||
     !Array.isArray(spec.criteria)
   ) {
-    throw new Error('not a QuerySpec');
+    return null;
   }
   return spec;
 }
