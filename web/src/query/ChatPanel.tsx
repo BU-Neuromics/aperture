@@ -5,7 +5,7 @@ import { currentQuerySpec } from '../data/conversation';
 import type { CollectionModel } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import type { QuerySpec } from './querySpec';
-import { validateQuerySpecShape } from './querySpec';
+import { canonicalizeQuerySpec, validateQuerySpecShape } from './querySpec';
 import { SpecProse } from './specProse';
 import './query.css';
 
@@ -310,13 +310,14 @@ function TurnView({
 /**
  * The spec the conversation has built, read back in the builder's own words.
  *
- * The handoff degrades honestly rather than guessing: the planning service
- * names its anchor by schema type (`Sample`) while Aperture's `QuerySpec`
- * currently carries collection ids (`samples`) and derived `fwd:`/`rev:` edge
- * keys. Until that spelling is canonicalized (ADR-0039's sequenced
- * consequence) a spec whose anchor doesn't resolve is shown but not applied —
- * running one whose anchor silently didn't match would execute a different
- * query than the words above it describe.
+ * Since the v2 canonicalization the artifact is LinkML-spelled end to end, so
+ * a proposal naming `anchor: "Sample"` and `edge: "donor"` resolves directly
+ * against the introspected schema — no translation, and the handoff runs.
+ *
+ * The degradation stays for the case that is still real: an anchor this
+ * endpoint exposes no type for. Running a spec whose anchor silently didn't
+ * match would execute a different query than the words above it describe
+ * (ADR-0029).
  */
 function SpecPane({
   spec,
@@ -330,8 +331,10 @@ function SpecPane({
   onToggleJson: () => void;
 }) {
   const urlState = useCollectionUrlState();
-  const shaped = validateQuerySpecShape(spec) as QuerySpec | null;
-  const anchor = shaped ? collections.find((c) => c.id === shaped.anchor) : undefined;
+  // A planning service emits v2 vocabulary already; `canonicalizeQuerySpec` is here
+  // for the v1 case (a spec replayed from an older transcript or endpoint).
+  const parsed = validateQuerySpecShape(spec) as QuerySpec | null;
+  const shaped = parsed ? canonicalizeQuerySpec(parsed, [...collections]) : null;
 
   return (
     <section className="chat-spec" aria-label="Proposed query">
@@ -354,17 +357,20 @@ function SpecPane({
         <button
           type="button"
           className="chat-primary"
-          disabled={!shaped || !anchor}
+          disabled={!shaped}
           onClick={() => shaped && urlState.setQuerySpec(shaped)}
         >
           Use in builder
         </button>
-        {shaped && !anchor && (
+        {/* One branch, because canonicalization succeeding means the anchor
+            resolves by construction — it is built from a collection that was
+            just found. `null` is the only failure, and it means the anchor
+            matched neither a type nor a collection. */}
+        {parsed && !shaped && (
           <p className="chat-spec-note">
             <span className="chat-dot chat-dot-warning" aria-hidden="true" />
-            Anchor <code>{String(shaped.anchor)}</code> is a schema type name; this builder still
-            addresses collections by id. Canonicalizing the two spellings is sequenced work
-            (ADR-0039) — until it lands the query is shown but not run.
+            This endpoint exposes no type <code>{String(parsed.anchor)}</code> — shown, but not
+            run, since running it would query something other than what the words above describe.
           </p>
         )}
       </div>

@@ -127,6 +127,39 @@ scripting layer.
   explode is opt-in per path with the grain change and predicted row counts (once counts are
   cheap) stated visibly; the existing capped page-through exporter is reused.
 
+- **Amendment (2026-09-11) — the artifact is spelled in platform LinkML vocabulary, and `v` stays
+  1.** As first built, Aperture addressed the `anchor` by its own collection id (`"samples"`) and
+  prefixed forward edges `fwd:<graphqlField>`. That was a **local dialect of a shared artifact**,
+  and it had a concrete cost: a `QuerySpec` produced by the conversational planning service
+  (ADR-0039) names its anchor by LinkML class (`"Sample"`) and its edges by slot, so a proposal
+  could be displayed but never run. `anchor` is now the class name and a forward `edge` is the
+  reference slot's name; `slot` was already LinkML-spelled and is unchanged.
+
+  **The version is deliberately not bumped.** `v: 1` is the *platform* wire version, not
+  Aperture's to change: Mosaic's parser hard-requires it and re-validates every candidate spec
+  through that parser, and the planner's own tool schema declares "Always 1." A `v: 2` would come
+  back `INVALID_QUERYSPEC_SHAPE`. Since both dialects therefore carry `v: 1`, the version cannot
+  discriminate them and `canonicalizeQuerySpec` reads **content** instead, in a stated precedence:
+  an anchor matching a typeName is already canonical (checked first), one matching a collection id
+  is legacy, and a `fwd:` prefix marks a legacy edge anywhere it appears (LinkML slot names contain
+  no colon). An anchor matching neither yields `null` and the caller degrades honestly (ADR-0029)
+  rather than running a half-translated query.
+
+  Two scope notes, stated rather than implied. **Reverse edges keep the Aperture-local
+  `rev:<collectionId>.<field>` key**, because a reverse edge has no LinkML name until the schema
+  declares the inverting slot — which Mosaic ADR-0011 (`mosaic#204`) adds and which has not
+  merged. Naming one now would invent a vocabulary upstream has already settled differently, and
+  stripping the prefix would be wrong regardless: `rev:samples.donor` reduces to `donor`, a slot on
+  `Sample` rather than on the `Donor` anchor, colliding with the forward edge of the same name.
+  These keys never reach a server; they drive the client-side semijoin. And Aperture's shape
+  remains a documented **subset** of Mosaic's `QuerySpec`, which also carries `as_of` and `sort` —
+  a pre-existing gap this amendment does not close.
+
+  The only persisted specs are URLs. Saved views (ADR-0032) carry `collection/page/q/filters/sort`
+  and never a `QuerySpec`, so the migration surface is bookmarked and shared links, not stored
+  documents — narrower than `add-aperture-chat-panel` task 4.1 assumed when it called for "a
+  tolerant v1 read for existing saved views."
+
 ## Alternatives considered
 
 - **Client-side join/filter compensation as the primary strategy** (Rev 1 of the

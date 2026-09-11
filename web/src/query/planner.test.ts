@@ -81,7 +81,7 @@ describe('runQuerySpec', () => {
       source.capabilities,
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [
           { kind: 'field', slot: 'age_at_death', op: 'gt', value: 60 },
@@ -118,7 +118,7 @@ describe('runQuerySpec', () => {
       source.capabilities,
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [
           {
@@ -156,12 +156,12 @@ describe('runQuerySpec', () => {
       source.capabilities,
       {
         v: 1,
-        anchor: 'samples',
+        anchor: 'Sample',
         mode: 'AND',
         criteria: [
           {
             kind: 'related',
-            edge: 'fwd:donor',
+            edge: 'donor',
             quantifier: 'some',
             criteria: [{ kind: 'field', slot: 'age_at_death', op: 'gt', value: 60 }],
           },
@@ -192,7 +192,7 @@ describe('runQuerySpec', () => {
       source.capabilities,
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [
           { kind: 'related', edge: 'rev:samples.donor', quantifier: 'some', criteria: [] },
@@ -219,7 +219,7 @@ describe('runQuerySpec', () => {
       source.capabilities,
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [
           { kind: 'related', edge: 'rev:samples.donor', quantifier: 'some', criteria: [] },

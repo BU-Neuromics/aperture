@@ -9,7 +9,7 @@ const books = collections.find((c) => c.id === 'books')!;
 
 const spec = (over: Partial<QuerySpec> = {}): QuerySpec => ({
   v: 1,
-  anchor: books.id,
+  anchor: books.typeName,
   mode: 'AND',
   criteria: [],
   ...over,
@@ -58,7 +58,7 @@ describe('specProse (the artifact read back as language)', () => {
     const prose = specProse(
       spec({
         criteria: [
-          { kind: 'related', edge: 'fwd:author', quantifier: 'none', criteria: [] },
+          { kind: 'related', edge: 'author', quantifier: 'none', criteria: [] },
         ],
       }),
       collections,
@@ -66,11 +66,17 @@ describe('specProse (the artifact read back as language)', () => {
     expect(prose.clauses[0]).toMatchObject({ kind: 'related', lead: 'having no' });
   });
 
-  // The planner spells anchors by schema type; this builder addresses
-  // collections by id. Saying so is the whole point — never guess a match.
-  it('marks an anchor that resolves to nothing rather than inventing one', () => {
+  // Since v2 both sides speak LinkML, so a planner-produced anchor resolves.
+  it('resolves an anchor named by its LinkML class name', () => {
     const prose = specProse(spec({ anchor: 'Book' }), collections);
-    expect(prose.anchor).toBe('Book');
+    expect(prose.anchorResolved).toBe(true);
+    expect(prose.anchor).toBe(books.label);
+  });
+
+  // Still real after v2, and still the whole point: never guess a match.
+  it('marks an anchor that resolves to nothing rather than inventing one', () => {
+    const prose = specProse(spec({ anchor: 'NotAType' }), collections);
+    expect(prose.anchor).toBe('NotAType');
     expect(prose.anchorResolved).toBe(false);
   });
 

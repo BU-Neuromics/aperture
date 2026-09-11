@@ -1,7 +1,7 @@
 import type { CollectionModel } from '../data/schemaModel';
 import { humanize, slotName } from '../data/schemaModel';
 import type { Criterion, QueryOp, QuerySpec } from './querySpec';
-import { deriveEdges, edgeByKey } from './querySpec';
+import { deriveEdges, edgeByKey, resolveAnchor } from './querySpec';
 
 /**
  * Reading a `QuerySpec` back as language.
@@ -87,7 +87,7 @@ function conditionProse(
 
 /** The spec as structured language — no JSX, so the wording is unit-testable. */
 export function specProse(spec: QuerySpec, collections: readonly CollectionModel[]): ProseSpec {
-  const anchor = collections.find((c) => c.id === spec.anchor);
+  const anchor = resolveAnchor(spec, [...collections]);
   const edges = anchor ? deriveEdges(anchor, [...collections]) : [];
 
   const clauses = (spec.criteria ?? []).map((criterion: Criterion): ProseClause => {

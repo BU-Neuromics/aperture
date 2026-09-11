@@ -22,8 +22,9 @@ interface WireTurn {
  * proposes a spec, an unresolvable one asks for clarification, and an edit
  * replays the list so a turn that depended on the edited one suspends.
  */
-function conversationalClient(options: { anchor?: string } = {}) {
+function conversationalClient(options: { anchor?: string; criteria?: unknown[] } = {}) {
   const anchor = options.anchor ?? 'Book';
+  const criteria = options.criteria ?? [];
   const client = fakeClient(capableSchema({ conversational: true }), (query, variables) => {
     if (!query.includes('ApertureConverse')) {
       return { data: { books: [], authors: [] }, error: null } as GraphQLResult<unknown>;
@@ -38,7 +39,7 @@ function conversationalClient(options: { anchor?: string } = {}) {
         : {
             status: 'proposal',
             message: `Filtering to ${text}.`,
-            query_spec: { v: 1, anchor, mode: 'AND', criteria: [] },
+            query_spec: { v: 1, anchor, mode: 'AND', criteria },
           };
 
     if (editId) {
@@ -136,10 +137,11 @@ describe('ChatPanel (ADR-0039)', () => {
     expect(second.variables['querySpec']).toMatchObject({ anchor: 'Book' });
   });
 
-  it('hands a resolvable spec to the builder, and refuses one it cannot resolve', async () => {
+  // The v2 canonicalization (task 4.1) is what makes this work: the planner
+  // names its anchor by LinkML class (`Book`) and the artifact now speaks the
+  // same vocabulary, so the handoff runs instead of degrading.
+  it('hands a spec anchored by LinkML class name to the builder', async () => {
     const user = userEvent.setup();
-    // `Book` resolves to a collection id of `books`, so this spec's anchor
-    // does NOT match — exactly the pending v1→v2 spelling gap.
     const client = conversationalClient({ anchor: 'Book' });
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
 
@@ -148,8 +150,51 @@ describe('ChatPanel (ADR-0039)', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to recent books.');
 
+    expect(screen.getByRole('button', { name: 'Use in builder' })).toBeEnabled();
+    expect(screen.queryByText(/exposes no type/)).not.toBeInTheDocument();
+  });
+
+  // Honest degradation survives v2 for the case that is still real (ADR-0029):
+  // an anchor this endpoint has no type for.
+  it('refuses a spec whose anchor the endpoint exposes no type for', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient({ anchor: 'Ghost' });
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+
     expect(screen.getByRole('button', { name: 'Use in builder' })).toBeDisabled();
-    expect(screen.getByText(/is a schema type name/)).toBeInTheDocument();
+    expect(screen.getByText(/exposes no type/)).toBeInTheDocument();
+  });
+
+  /**
+   * The handoff writes the spec to the URL, which auto-runs it — but the
+   * builder's draft is its own state. Without an adopt-on-change sync the
+   * planner's criteria never appear in the editor, and the next Run silently
+   * executes whatever empty draft was on screen instead of the query the user
+   * just approved.
+   */
+  it('loads the proposed criteria into the builder, not just the URL', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient({
+      criteria: [{ kind: 'field', slot: 'title', op: 'eq', value: 'Dune' }],
+    });
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'books named Dune');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to books named Dune.');
+
+    expect(screen.queryAllByTestId('query-condition')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Use in builder' }));
+
+    const rows = await screen.findAllByTestId('query-condition');
+    expect(rows).toHaveLength(1);
+    expect(screen.getByRole('combobox', { name: 'Field' })).toHaveValue('title');
   });
 
   it('flags turns an edit invalidated instead of dropping them', async () => {

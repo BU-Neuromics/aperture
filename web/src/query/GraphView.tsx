@@ -6,6 +6,7 @@ import type { CollectionModel, ColumnModel } from '../data/schemaModel';
 import { slotName } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import { runQuerySpec } from './planner';
+import { resolveAnchor, canonicalizeQuerySpec } from './querySpec';
 import { readGraphTheme, useGraphTheme, type GraphTheme } from './graphTheme';
 import { typeColor } from '../data/typeColor';
 import './query.css';
@@ -235,9 +236,17 @@ export function GraphView({ source }: { source: HippoSource }) {
     void (async () => {
       setBusy(true);
       try {
-        const spec = urlState.querySpec;
-        const anchorId = spec?.anchor ?? urlState.collection ?? collections[0]?.id;
-        const anchor = anchorId ? byId.get(anchorId) : undefined;
+        // A v2 spec names its anchor by LinkML class name, not collection id,
+        // so resolve through the spec rather than treating the two as
+        // interchangeable. A bookmarked v1 spec upgrades first; one whose
+        // anchor no longer exists seeds from the browse collection instead of
+        // rendering an empty canvas.
+        const spec = urlState.querySpec
+          ? canonicalizeQuerySpec(urlState.querySpec, collections)
+          : null;
+        const anchor =
+          (spec ? resolveAnchor(spec, collections) : undefined) ??
+          byId.get(urlState.collection ?? collections[0]?.id ?? '');
         if (!anchor) return;
         const rows = spec
           ? (await runQuerySpec(source, collections, capabilities, spec, 1, SEED_LIMIT)).rows
