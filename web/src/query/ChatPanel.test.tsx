@@ -179,4 +179,69 @@ describe('ChatPanel (ADR-0039)', () => {
     // Flagged, not dropped — the original wording is still on screen.
     expect(screen.getByText('only hardbacks')).toBeInTheDocument();
   });
+
+  /**
+   * Mosaic's MCP boundary re-validates every candidate spec and, on failure,
+   * returns a bare error turn with NO `turns` list at all (`mcp/server.py`;
+   * the ADR-0010 relay re-validates the proposed turn and every recomputed
+   * one). Its own message says "Nothing was applied", so the conversation is
+   * still current — the error is one more turn on the end, not a reset. This
+   * is the reverse-edge case of mosaic#204 arriving as a real response.
+   */
+  it('keeps the transcript when the server rejects a spec with a listless error turn', async () => {
+    const user = userEvent.setup();
+    let calls = 0;
+    const client = fakeClient(capableSchema({ conversational: true }), (query, variables) => {
+      if (!query.includes('ApertureConverse')) {
+        return { data: { books: [], authors: [] }, error: null } as GraphQLResult<unknown>;
+      }
+      calls += 1;
+      const utterance = variables['utterance'] as string;
+      if (calls === 1) {
+        const turn = {
+          id: 't1',
+          utterance,
+          status: 'proposal',
+          message: 'Filtering to recent books.',
+          query_spec: { v: 1, anchor: 'Book', mode: 'AND', criteria: [] },
+        };
+        return {
+          data: { converseQuerySpec: { turn, turns: [turn], suspended_turn_ids: [] } },
+          error: null,
+        };
+      }
+      // The boundary's rejection shape: a turn, no list, no suspensions.
+      return {
+        data: {
+          converseQuerySpec: {
+            turn: {
+              id: 'err',
+              utterance,
+              status: 'error',
+              message: 'Planner proposed a QuerySpec that failed validation (UNKNOWN_EDGE). Nothing was applied.',
+              query_spec: null,
+            },
+            suspended_turn_ids: [],
+          },
+        },
+        error: null,
+      };
+    });
+
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+    await screen.findByTestId('chat-panel');
+    const input = screen.getByRole('textbox', { name: 'Describe the query' });
+
+    await user.type(input, 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+
+    await user.type(input, 'the donors of those samples');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText(/failed validation/);
+
+    // The first turn survived the rejection — both turns are on screen.
+    expect(screen.getByText('Filtering to recent books.')).toBeInTheDocument();
+    expect(screen.getAllByTestId('chat-turn')).toHaveLength(2);
+  });
 });

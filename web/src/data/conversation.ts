@@ -53,8 +53,14 @@ export interface ConverseRequest {
 export interface ConverseResponse {
   /** The turn this call was about. */
   turn: ConversationTurn;
-  /** The FULL conversation after this call — replace your list with it. */
-  turns: ConversationTurn[];
+  /**
+   * The FULL conversation after this call — replace your list with it.
+   *
+   * `null` when the response carried no list at all: either the endpoint does
+   * not advertise one, or it returned a bare error turn. Append in that case;
+   * never treat it as "the conversation is now empty".
+   */
+  turns: ConversationTurn[] | null;
   /** Turns an edit invalidated: flagged for re-prompting, never dropped. */
   suspendedTurnIds: string[];
 }
@@ -303,9 +309,15 @@ export function normalizeConverseResult(
   const rawSuspended = model.result.suspendedTurnIds ? row[model.result.suspendedTurnIds] : null;
   return {
     turn,
-    // Without the authoritative list the caller appends, which is correct for
-    // a plain new turn and is all this endpoint can support.
-    turns: turns.length > 0 ? turns : [turn],
+    // `null` means "this response carried no authoritative list" — NOT "the
+    // conversation is now just this turn". The distinction is load-bearing:
+    // Mosaic's boundary returns a bare error turn with no `turns` key when a
+    // candidate spec fails re-validation (mcp/server.py — the ADR-0010 relay
+    // re-validates the proposed turn *and* every recomputed one). Collapsing
+    // to `[turn]` there would discard the whole transcript on a server-side
+    // validation error, which is exactly what suspend-don't-discard forbids
+    // (ADR-0025, now Reel ADR-0004). The caller appends instead.
+    turns: turns.length > 0 ? turns : null,
     suspendedTurnIds: Array.isArray(rawSuspended) ? rawSuspended.map(String) : [],
   };
 }

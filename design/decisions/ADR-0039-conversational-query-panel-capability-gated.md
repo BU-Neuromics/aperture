@@ -63,6 +63,26 @@ Concretely:
   agent loop, provider keys, and config-mutation authority, none of which this adds. When the
   in-app agent surface is eventually built, this panel is one more client of it, not a competing
   foundation.
+
+  **Correction (2026-09-11):** the ADR-0026 half of that sentence was loosely worded. ADR-0026 is
+  not a live Aperture deferral this ADR could leave standing — it was **already superseded on
+  2026-06-22**, moved to Reel as **Reel ADR-0005** in the data-story-engine split, and what
+  remains here is a tombstone. The load-bearing citation is **ADR-0021**, which is Accepted and
+  still Aperture's own (its "⛔ Deferred from MVP" marker merely points at 0026 for the reason).
+  The argument is unchanged — this panel adds no agent loop, provider key, or config-mutation
+  authority, so nothing in either decision is reversed — but the reader should not be sent to a
+  tombstone for a live constraint.
+
+  **Reel boundary (2026-09-11).** Reel's design refresh (`reel#1`) lands three `Proposed` ADRs
+  that touch this panel's seam, and they agree with it rather than contest it: **Reel ADR-0006**
+  adopts the `QuerySpec` as Reel's v1 `State` and cites Aperture ADR-0035's seam verbatim —
+  "Aperture owns the noun and its execution; Reel composes instances of it" — which is exactly
+  where this panel sits (it produces a `QuerySpec` and hands it to Aperture's existing executor).
+  **Reel ADR-0008** claims the conversational turn model as Reel's `Instruction`, seeded from
+  Exon. That does not change this ADR, but it does sharpen the forward-compatibility sentence
+  above: the agent surface this panel will eventually be "one more client of" is most likely
+  **Reel**, not an Aperture-hosted loop. Nothing here needs to change until Reel exists; when it
+  does, the swap is the wire adapter (`data/conversation.ts`), not the panel.
 - **The proposal's `headerNavMainInspector` layout is not needed, but a workbench is.** Scoping
   found that `headerNavMain` already declares and renders `inspector`
   (`shell/layouts/HeaderNavMain.tsx`), `App.tsx` already binds it, and `FacetPanel` already

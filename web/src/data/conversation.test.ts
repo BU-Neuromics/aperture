@@ -215,10 +215,21 @@ describe('normalizeConverseResult', () => {
     expect(result.turn.id).toBe('t2');
   });
 
-  it('falls back to the single turn when no list comes back', () => {
+  // `null`, not `[turn]`. Mosaic's boundary returns a bare error turn with no
+  // `turns` key when a candidate spec fails re-validation, so "no list came
+  // back" must not be readable as "the conversation is now just this turn" —
+  // that would discard the transcript on a server-side rejection (ADR-0025).
+  // The caller appends; see ChatPanel.
+  it('reports an absent turn list as absent rather than as a one-turn conversation', () => {
     const result = normalizeConverseResult(model, { turn: wireTurn() });
-    expect(result.turns).toHaveLength(1);
+    expect(result.turns).toBeNull();
+    expect(result.turn.id).toBe('t1');
     expect(result.suspendedTurnIds).toEqual([]);
+  });
+
+  it('reads an empty list as absent too, rather than as an erased conversation', () => {
+    const result = normalizeConverseResult(model, { turn: wireTurn(), turns: [] });
+    expect(result.turns).toBeNull();
   });
 
   // A proposal is the only status that changes the draft, so an unreadable one

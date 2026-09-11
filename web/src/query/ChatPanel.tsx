@@ -72,7 +72,14 @@ export function ChatPanel() {
         turns,
         editTurnId: editing?.id ?? null,
       });
-      setTurns(response.turns);
+      // An authoritative list replaces ours wholesale (the server recomputes
+      // downstream turns after an edit). Its absence means append, not reset:
+      // the boundary returns a bare error turn carrying no list when a
+      // candidate spec fails re-validation, and its own message says "Nothing
+      // was applied" — so the prior transcript is still current and the error
+      // is one more turn on the end. Collapsing to the error alone would lose
+      // the user's conversation to a server-side rejection (ADR-0025).
+      setTurns(response.turns ?? [...turns, response.turn]);
       setSuspended(response.suspendedTurnIds);
       setDraft('');
       setEditing(null);
