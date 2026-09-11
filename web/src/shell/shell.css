@@ -24,15 +24,33 @@
   height: 100vh;
 }
 
-.hnm-header {
+/* Header and nav are *chrome*: the instrument frame around the data, in deep
+   ink so the light content surfaces read as lit from within. See the
+   --chrome-* token block for why this is a role and not a theme. */
+.hnm-header,
+.qwb-header {
   display: flex;
   align-items: center;
   gap: var(--space-4);
   padding: 0 var(--space-5);
   height: 56px;
   flex: 0 0 auto;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  border-bottom: 1px solid var(--chrome-border);
+  position: relative;
+  z-index: 2;
+}
+
+/* A hairline of accent along the very top — the one place the brand colour
+   touches the full width of the app. */
+.hnm-header::after,
+.qwb-header::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), #7aa2ff 45%, transparent);
 }
 
 .hnm-body {
@@ -57,29 +75,50 @@
   display: none;
 }
 
-.hnm-nav {
+.hnm-nav,
+.qwb-nav {
   display: flex;
   flex-direction: column;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border);
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  border-right: 1px solid var(--chrome-border);
   overflow-y: auto;
   min-height: 0;
 }
 
-.hnm-main {
+/* The rail's own scrollbar, so a light UA scrollbar doesn't cut a bright
+   stripe down the dark column. */
+.hnm-nav,
+.qwb-nav {
+  scrollbar-color: var(--chrome-border) transparent;
+  scrollbar-width: thin;
+}
+
+/* The working canvas carries a faint measured grid — plotting paper under the
+   data rather than blank white. It is two 1px gradients, so it costs no asset
+   and no extra element, and at 4% ink it reads as texture at a glance and
+   disappears behind any content laid on top. */
+.hnm-main,
+.qwb-main {
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: auto;
-  background: var(--bg-canvas);
+  background-color: var(--bg-canvas);
+  background-image:
+    linear-gradient(to right, rgb(27 31 36 / 4%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(27 31 36 / 4%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
 }
 
-.hnm-footer {
+.hnm-footer,
+.qwb-footer {
   flex: 0 0 auto;
   padding: var(--space-2) var(--space-5);
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border);
-  color: var(--text-tertiary);
+  background: var(--chrome-bg);
+  border-top: 1px solid var(--chrome-border);
+  color: var(--chrome-text-muted);
   font-size: 11px;
 }
 
@@ -91,18 +130,42 @@
   gap: 10px;
 }
 
+/* An aperture: concentric rings closing on a lit centre. Built from layered
+   gradients rather than an asset, so it inherits the accent and costs no
+   request. */
 .brand-mark {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--accent);
-  transform: rotate(45deg);
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0 2px, transparent 2.5px),
+    conic-gradient(
+      from 210deg,
+      var(--accent) 0deg 60deg,
+      #7aa2ff 60deg 120deg,
+      var(--accent) 120deg 180deg,
+      #5a8cff 180deg 240deg,
+      var(--accent) 240deg 300deg,
+      #7aa2ff 300deg 360deg
+    );
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 14%), 0 0 14px rgb(47 109 246 / 45%);
+}
+
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgb(20 26 34 / 55%);
 }
 
 .brand-wordmark {
   font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chrome-text);
 }
 
 /* Primary-nav collection list */
@@ -112,7 +175,7 @@
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--chrome-text-muted);
 }
 
 .nav-list {
@@ -131,21 +194,28 @@
   border-left: 2px solid transparent;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--chrome-text-muted);
   font-size: 0.95em;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .nav-item:hover {
-  background: var(--bg-hover);
+  background: var(--chrome-hover);
+  color: var(--chrome-text);
 }
 
+/* The active item is marked by the collection's *own* colour rather than a
+   single app accent, so the rail answers "which collection am I in" with the
+   same hue the graph and its badges use. */
 .nav-item[aria-current='true'] {
-  border-left-color: var(--accent);
-  background: var(--accent-weak);
-  color: var(--text-primary);
+  border-left-color: var(--type-color, var(--accent));
+  background: var(--chrome-active);
+  color: var(--chrome-text);
   font-weight: 600;
 }
 
@@ -159,13 +229,21 @@
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  background: var(--bg-subtle);
-  color: var(--text-tertiary);
+  /* Tinted at rest so every collection is identifiable without being
+     selected; the ring keeps it from reading as a filled button. */
+  background: color-mix(in srgb, var(--type-color, var(--accent)) 26%, transparent);
+  color: color-mix(in srgb, var(--type-color, var(--accent)) 55%, #ffffff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--type-color, var(--accent)) 45%, transparent);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
+.nav-item:hover .nav-item-chip,
 .nav-item[aria-current='true'] .nav-item-chip {
-  background: var(--accent);
+  background: var(--type-color, var(--accent));
   color: #fff;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 12%);
 }
 
 .nav-item-label {
@@ -181,7 +259,7 @@
   flex: 0 0 auto;
   margin-left: var(--space-2);
   font-size: 10.5px;
-  color: var(--text-tertiary, var(--text-secondary));
+  color: var(--chrome-text-muted);
   white-space: nowrap;
 }
 
@@ -214,7 +292,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-tertiary);
+  color: var(--chrome-text-muted);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -227,13 +305,13 @@
 }
 
 .nav-item-remove:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--chrome-hover);
+  color: var(--chrome-text);
 }
 
 .nav-status {
   padding: var(--space-2) var(--space-3) var(--space-3) 14px;
-  color: var(--text-tertiary);
+  color: var(--chrome-text-muted);
   font-size: 11.5px;
 }
 
@@ -249,7 +327,7 @@
 }
 
 .identity-name {
-  color: var(--text-secondary);
+  color: var(--chrome-text);
   max-width: 22ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -257,12 +335,14 @@
 }
 
 .identity-muted {
-  color: var(--text-tertiary, var(--text-secondary));
+  color: var(--chrome-text-muted);
 }
 
-/* A misconfigured identity endpoint must not look like a signed-out user. */
+/* A misconfigured identity endpoint must not look like a signed-out user.
+   Lightened for the chrome: the content-surface --error is too dark to carry
+   its own weight against deep ink. */
 .identity-error {
-  color: var(--text-danger, #b3261e);
+  color: #ff9d9d;
 }
 
 .identity-action {
@@ -294,30 +374,14 @@
   height: 100vh;
 }
 
-.qwb-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-5);
-  height: 56px;
-  flex: 0 0 auto;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-}
+/* .qwb-header, .qwb-nav and .qwb-footer take the shared chrome treatment
+   defined above with their headerNavMain counterparts — the frame is the same
+   instrument in both contexts; only the working columns differ. */
 
 .qwb-body {
   display: grid;
   grid-template-columns: 232px 400px minmax(0, 1fr);
   flex: 1;
-  min-height: 0;
-}
-
-.qwb-nav {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
   min-height: 0;
 }
 
@@ -333,22 +397,7 @@
   display: none;
 }
 
-.qwb-main {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  background: var(--bg-canvas);
-}
-
-.qwb-footer {
-  flex: 0 0 auto;
-  padding: var(--space-2) var(--space-5);
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border);
-  font-size: 11.5px;
-  color: var(--text-tertiary);
-}
+/* .qwb-main shares the plotting-paper canvas defined with .hnm-main above. */
 
 /* Below a working laptop width the composer stacks above the artifact rather
    than squeezing both into unusable columns. */

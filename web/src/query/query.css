@@ -11,6 +11,10 @@
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  /* Claim the main column's full height so the graph canvas (which grows into
+     whatever it is given) fills the screen instead of floating as a short card
+     over empty canvas. */
+  flex: 1 1 auto;
   /* .main-panel caps prose panels at 560px; the builder and the graph canvas
      are working surfaces and want the full main slot. */
   max-width: none;
@@ -23,6 +27,8 @@
   gap: 1rem;
 }
 
+/* The spec under construction — lifted off the canvas, because it is the one
+   editable artifact on the screen and everything else reports on it. */
 .query-frame {
   display: flex;
   flex-direction: column;
@@ -31,6 +37,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 0.75rem;
+  box-shadow: var(--shadow-md);
+  animation: rise var(--dur-base) var(--ease-out) both;
 }
 
 .query-condition {
@@ -221,9 +229,13 @@
   min-height: 24rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   /* Cytoscape renders into a transparent <canvas>, so this is the graph
-     backdrop. */
-  background: var(--bg-surface);
+     backdrop. A faint radial lift keeps a sparse graph from reading as a blank
+     panel; it must stay well under the node colours, which carry the meaning. */
+  background:
+    radial-gradient(ellipse at 50% 40%, rgb(47 109 246 / 4%), transparent 70%),
+    var(--bg-surface);
 
   /* Canvas-side palette. Cytoscape cannot resolve var(), so graphTheme.ts
      reads these computed values off this element and feeds them to the
@@ -851,6 +863,47 @@
   padding: var(--space-6);
   text-align: center;
   color: var(--text-tertiary);
+}
+
+/* Anchor → edge → match, as a diagram. The pulse is slow and low-contrast: a
+   sign of life on a waiting screen, not an attention-grab. */
+.query-blank-figure {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  opacity: 0.75;
+}
+
+.query-blank-node {
+  width: 11px;
+  height: 11px;
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+
+.query-blank-node-anchor {
+  width: 15px;
+  height: 15px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-weak);
+  animation: blank-pulse 2.8s var(--ease-out) infinite;
+}
+
+.query-blank-link {
+  width: 34px;
+  height: 1px;
+  background: var(--border-strong);
+}
+
+@keyframes blank-pulse {
+  0%,
+  70%,
+  100% {
+    box-shadow: 0 0 0 4px var(--accent-weak);
+  }
+  35% {
+    box-shadow: 0 0 0 8px var(--accent-weak);
+  }
 }
 
 .query-blank-lead {

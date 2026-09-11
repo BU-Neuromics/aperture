@@ -48,11 +48,23 @@
   gap: 10px;
 }
 
+/* A colour-bearing rule ahead of the title: the collection's hue, stated once
+   at full strength where the eye lands first. */
+.collection-title-row::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 3px;
+  align-self: stretch;
+  min-height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--type-color, var(--accent));
+}
+
 .collection-title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .collection-type-chip {
@@ -60,8 +72,11 @@
   font-size: 10.5px;
   padding: 2px 7px;
   border-radius: var(--radius-sm);
-  background: var(--bg-subtle);
-  color: var(--text-tertiary);
+  /* Tinted with the type's own colour rather than neutral grey — the chip
+     names the type, so it should look like the type. */
+  background: color-mix(in srgb, var(--type-color, var(--accent)) 10%, var(--bg-surface));
+  color: color-mix(in srgb, var(--type-color, var(--accent)) 78%, var(--text-primary));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--type-color, var(--accent)) 22%, transparent);
 }
 
 .collection-count {
@@ -72,14 +87,33 @@
 }
 
 .collection-card {
+  position: relative;
   margin: 0 22px 22px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  animation: rise var(--dur-base) var(--ease-out) both;
+}
+
+/* The card is capped with the collection's colour — a spine, so a table of
+   Samples is distinguishable from a table of Donors at a glance, before any
+   heading is read. */
+.collection-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--type-color, var(--accent)),
+    color-mix(in srgb, var(--type-color, var(--accent)) 35%, transparent)
+  );
+  z-index: 2;
 }
 
 .collection-scroll {
@@ -93,18 +127,21 @@
 
 .collection-table th {
   padding: 10px var(--cell-px);
-  border-bottom: 2px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
   text-align: left;
   color: var(--text-secondary);
   font-weight: 600;
   font-size: 0.76em;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: var(--bg-surface);
+  /* A faint wash of the type colour, so the header band belongs to this
+     collection rather than reading as generic grey. */
+  background: color-mix(in srgb, var(--type-color, var(--accent)) 5%, var(--bg-surface));
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 1;
+  backdrop-filter: blur(6px);
 }
 
 .collection-table td {
@@ -114,8 +151,15 @@
   white-space: nowrap;
 }
 
+.collection-table tbody tr {
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+/* Hover is marked on the left edge as well as by fill: the inset shadow costs
+   no layout and gives dense rows a positive read at a glance. */
 .collection-table tbody tr:hover {
-  background: var(--bg-hover);
+  background: color-mix(in srgb, var(--type-color, var(--accent)) 5%, var(--bg-surface));
+  box-shadow: inset 2px 0 0 var(--type-color, var(--accent));
 }
 
 .collection-table .align-right {
@@ -179,8 +223,13 @@
   border: 1px solid var(--border);
 }
 
+/* Measurements set in mono, so digits align down the column and a numeric
+   field reads as a quantity rather than as prose. */
 .cell-number {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
   font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 
 .cell-count {

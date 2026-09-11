@@ -483,6 +483,17 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
 
       {!run && !running && !error && (
         <div className="query-blank" role="status">
+          {/* A schematic of what a run produces — anchor, edge, matches. Drawn
+              in CSS from the anchor's own colour and hidden from assistive
+              tech, so the wide empty column reads as "waiting" rather than as
+              a failed render, without inventing data that isn't there. */}
+          <div className="query-blank-figure" aria-hidden="true">
+            <span className="query-blank-node query-blank-node-anchor" />
+            <span className="query-blank-link" />
+            <span className="query-blank-node" />
+            <span className="query-blank-link" />
+            <span className="query-blank-node" />
+          </div>
           <p className="query-blank-lead">Nothing run yet</p>
           <p className="query-blank-detail">
             Build the query above — or describe it in the composer — then Run to see matching{' '}

@@ -8,6 +8,7 @@ import {
 import { useCapabilities } from '../../data/DataSourceContext';
 import type { HippoSource } from '../../data/hippoSource';
 import type { CollectionModel } from '../../data/schemaModel';
+import { typeColorStyle } from '../../data/typeColor';
 import { isRightAligned, renderCell } from './cells';
 import { ExportButtons } from './ExportButtons';
 import { SaveViewButton } from './SaveViewButton';
@@ -121,7 +122,10 @@ export function CollectionTable({
   const showPager = capabilities.offsetPagination && result.status === 'ready';
 
   return (
-    <div className="collection-view">
+    // The collection's identity colour scopes the whole view, so the header
+    // rule, the type chip and the card's top edge all resolve to the same hue
+    // the nav and the graph use for this type.
+    <div className="collection-view" style={typeColorStyle(collection.typeName)}>
       <div className="collection-view-header">
         <div>
           <div className="collection-title-row">

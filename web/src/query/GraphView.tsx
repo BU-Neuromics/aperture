@@ -7,6 +7,7 @@ import { slotName } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import { runQuerySpec } from './planner';
 import { readGraphTheme, useGraphTheme, type GraphTheme } from './graphTheme';
+import { typeColor } from '../data/typeColor';
 import './query.css';
 
 /**
@@ -22,23 +23,6 @@ import './query.css';
 export const NODE_BUDGET = 250;
 const SEED_LIMIT = 50;
 const EXPAND_LIMIT = 25;
-
-const PALETTE = [
-  '#4f6b8f',
-  '#8f6b4f',
-  '#4f8f6b',
-  '#8f4f6b',
-  '#6b4f8f',
-  '#6b8f4f',
-  '#8f8f4f',
-  '#4f8f8f',
-];
-
-function colorFor(typeName: string): string {
-  let hash = 0;
-  for (const ch of typeName) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return PALETTE[hash % PALETTE.length]!;
-}
 
 /**
  * The Cytoscape stylesheet for a given resolved palette. Kept out of the mount
@@ -143,7 +127,7 @@ export function GraphView({ source }: { source: HippoSource }) {
           label,
           expanded: false,
         } satisfies GraphNodeData & { id: string },
-        style: { 'background-color': colorFor(collection.typeName) },
+        style: { 'background-color': typeColor(collection.typeName) },
       });
       setNodeCount(cy.nodes().length);
       return nodeId;
@@ -328,7 +312,7 @@ export function GraphView({ source }: { source: HippoSource }) {
           <div className="query-graph-legend">
             {typesShown.map((t) => (
               <span key={t} className="query-legend-item">
-                <span className="query-legend-dot" style={{ backgroundColor: colorFor(t) }} />
+                <span className="query-legend-dot" style={{ backgroundColor: typeColor(t) }} />
                 {t}
               </span>
             ))}
