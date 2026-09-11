@@ -23,6 +23,7 @@ import {
   filterOpMember,
   validateQuerySpec,
 } from './querySpec';
+import { OP_LABELS } from './specProse';
 import './query.css';
 
 /**
@@ -32,18 +33,6 @@ import './query.css';
  * ("having at least one … where …"). The QuerySpec artifact lives in the URL;
  * Run compiles it through the planner (server-first, semijoin compensation).
  */
-
-const OP_LABELS: Record<QueryOp, string> = {
-  eq: 'is',
-  neq: 'is not',
-  in: 'is any of',
-  gt: '>',
-  gte: '≥',
-  lt: '<',
-  lte: '≤',
-  contains: 'contains',
-  is_null: 'is empty',
-};
 
 const PAGE_SIZE = 25;
 const EXPORT_CAP = 5000;
@@ -490,6 +479,16 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             <li key={i}>{n}</li>
           ))}
         </ul>
+      )}
+
+      {!run && !running && !error && (
+        <div className="query-blank" role="status">
+          <p className="query-blank-lead">Nothing run yet</p>
+          <p className="query-blank-detail">
+            Build the query above — or describe it in the composer — then Run to see matching{' '}
+            {anchor.label.toLowerCase()}.
+          </p>
+        </div>
       )}
 
       {run && (

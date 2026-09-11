@@ -1,12 +1,16 @@
 import type { LayoutDefinition } from './slots';
 import { headerNavMain } from './layouts/HeaderNavMain';
+import { queryWorkbench } from './layouts/QueryWorkbench';
 
 /**
  * The layout registry: a closed, growable library of hard-coded layout
  * templates (ADR-0031). Portal config selects one by name; it never composes
  * arbitrary chrome. New layouts (masterDetail, dashboard, …) are added here.
  */
-const layouts = new Map<string, LayoutDefinition>([[headerNavMain.name, headerNavMain]]);
+const layouts = new Map<string, LayoutDefinition>([
+  [headerNavMain.name, headerNavMain],
+  [queryWorkbench.name, queryWorkbench],
+]);
 
 export const DEFAULT_LAYOUT = headerNavMain.name;
 

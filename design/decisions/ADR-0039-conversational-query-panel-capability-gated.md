@@ -43,8 +43,9 @@ Concretely:
    mutation — a name match alone is not a capability (ADR-0029, matching how `batchWrite` and
    `whereFilter` are derived). No `VITE_*` flag can force the panel on; an endpoint without the
    mutation renders no chat affordance at all, with no dead chrome.
-2. **The panel occupies the existing `inspector` slot**, alongside the query builder it feeds,
-   and only while a cross-class query view is open.
+2. **The panel occupies a composer column in the query context's own layout**, alongside the
+   artifact it feeds, and only while the cross-class query view is open (see the amended
+   consequence below on why this is a layout and not the existing inspector slot).
 3. **Aperture owns no conversation state beyond the session.** The turn list is the wire
    contract's own `turns` array, replaced wholesale from each response (the server is
    authoritative — it recomputes downstream turns after an edit). Nothing is persisted; a refresh
@@ -62,12 +63,23 @@ Concretely:
   agent loop, provider keys, and config-mutation authority, none of which this adds. When the
   in-app agent surface is eventually built, this panel is one more client of it, not a competing
   foundation.
-- **No new layout is required.** Scoping found that `headerNavMain` already declares and renders
-  `inspector` (`shell/layouts/HeaderNavMain.tsx`), `App.tsx` already binds it, and `FacetPanel`
-  already vacates it whenever a cross-class view is open (`FacetPanel.tsx:26` — `if
-  (urlState.view != null) return null`). The seam this panel needs exists; adding a
-  `headerNavMainInspector` variant (as `add-aperture-chat-panel`'s Decision 4 assumed) would be
-  redundant chrome. That proposal's task 4.2 should be struck on this finding.
+- **The proposal's `headerNavMainInspector` layout is not needed, but a workbench is.** Scoping
+  found that `headerNavMain` already declares and renders `inspector`
+  (`shell/layouts/HeaderNavMain.tsx`), `App.tsx` already binds it, and `FacetPanel` already
+  vacates it whenever a cross-class view is open (`FacetPanel.tsx:26` — `if (urlState.view !=
+  null) return null`). So a variant of the browse shell that merely adds an inspector — what
+  `add-aperture-chat-panel`'s Decision 4 assumed was missing — would be redundant chrome, and
+  that proposal's task 4.2 should be struck on this finding.
+
+  **Amended after building it:** the inspector column (264px) is the wrong *shape* for a
+  transcript, which is a different objection from the one above. Composing a query and browsing a
+  collection are genuinely different screens, which is the case ADR-0031 was written for ("one
+  screen can't serve master-detail browse, a dashboard landing, and full-bleed views without
+  contortions"). So this adds `queryWorkbench` — nav, a bounded composer column, and a wide main
+  for the artifact and its results — and the portal selects it by name for the query context
+  (`shell/contexts.ts`). Selection stays data: a table of layout names resolved through the
+  registry, never composition. `queryWorkbench` does not support `inspector`, since collection
+  facets have no meaning against a cross-class query.
 - An obligation lands on Mosaic: the capability must be reachable over GraphQL, since a browser
   cannot speak MCP without transport work Aperture's thin-client posture (ADR-0014/0016) rules
   out. Tracked in `mosaic-demo-small`'s `add-aperture-chat-panel` Phase 1 and cross-referenced

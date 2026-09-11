@@ -106,11 +106,13 @@ describe('ChatPanel (ADR-0039)', () => {
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
 
     await screen.findByTestId('chat-panel');
-    await user.type(screen.getByRole('textbox', { name: '' }), 'recent books');
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'recent books');
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(await screen.findByText('Filtering to recent books.')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Show QuerySpec/ })).toBeInTheDocument();
+    // The artifact reads back as language, in the builder's own words.
+    const prose = await screen.findByTestId('spec-prose');
+    expect(prose).toHaveTextContent('Rows are');
   });
 
   it('sends the prior turns and the draft back on the next turn', async () => {
@@ -119,7 +121,7 @@ describe('ChatPanel (ADR-0039)', () => {
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
 
     await screen.findByTestId('chat-panel');
-    const input = screen.getByRole('textbox', { name: '' });
+    const input = screen.getByRole('textbox', { name: 'Describe the query' });
     await user.type(input, 'recent books');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to recent books.');
@@ -142,7 +144,7 @@ describe('ChatPanel (ADR-0039)', () => {
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
 
     await screen.findByTestId('chat-panel');
-    await user.type(screen.getByRole('textbox', { name: '' }), 'recent books');
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'recent books');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to recent books.');
 
@@ -156,7 +158,7 @@ describe('ChatPanel (ADR-0039)', () => {
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
 
     await screen.findByTestId('chat-panel');
-    const input = screen.getByRole('textbox', { name: '' });
+    const input = screen.getByRole('textbox', { name: 'Describe the query' });
     await user.type(input, 'recent books');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to recent books.');
@@ -165,14 +167,14 @@ describe('ChatPanel (ADR-0039)', () => {
     await screen.findByText('Filtering to only hardbacks.');
 
     // Rewind turn 1; turn 2 depended on it.
-    await user.click(screen.getAllByRole('button', { name: 'edit' })[0]);
+    await user.click(screen.getAllByRole('button', { name: /Rewrite turn 1/ })[0]);
     await user.clear(input);
     await user.type(input, 'xyzzy');
     await user.click(screen.getByRole('button', { name: 'Redo turn' }));
 
     expect(await screen.findByText('No longer applies.')).toBeInTheDocument();
     expect(
-      await screen.findByRole('button', { name: /1 turn suspended by an edit/ }),
+      await screen.findByRole('button', { name: /1 turn needs re-wording/ }),
     ).toBeInTheDocument();
     // Flagged, not dropped — the original wording is still on screen.
     expect(screen.getByText('only hardbacks')).toBeInTheDocument();

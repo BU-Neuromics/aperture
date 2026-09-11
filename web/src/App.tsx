@@ -1,4 +1,5 @@
 import { AppShell } from './shell/AppShell';
+import { SHELL_LAYOUTS, shellContextFor } from './shell/contexts';
 import { Brand } from './shell/Brand';
 import type { AuthConfig } from './auth/config';
 import { resolveAuthConfig } from './auth/config';
@@ -16,6 +17,7 @@ import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
 import { ChatPanel } from './query/ChatPanel';
+import { useCollectionUrlState } from './features/collections/urlState';
 import type { ResolvedNavConfig } from './nav/config';
 import { resolveNavConfig } from './nav/config';
 import { NavConfigProvider } from './nav/NavConfigContext';
@@ -28,7 +30,6 @@ import { WorkflowsProvider } from './workflows/WorkflowsContext';
  * adapter → capability negotiation → schema-derived nav + table in the
  * configured layout's slots, with {collection, page} in the URL.
  */
-const shellConfig = { layout: 'headerNavMain' };
 
 interface AppProps {
   /** Test seams; production uses env config + the real network client. */
@@ -91,6 +92,12 @@ function AppBody({
   nav: ResolvedNavConfig;
 }) {
   const session = useSession();
+  // Browsing a collection and composing a cross-class query are different
+  // screen shapes, so the portal selects a different layout for each — by
+  // name, from the registry (ADR-0031). The bindings follow the context's
+  // shape: facets refine a collection, the conversation composes a query.
+  const context = shellContextFor(useCollectionUrlState().view);
+  const inQuery = context === 'query';
   return (
     <ControlPlaneProvider
       controlUrl={controlUrl}
@@ -103,7 +110,7 @@ function AppBody({
             {/* App-level, not layout chrome — so it needs no new slot (ADR-0031). */}
             <SessionExpiry />
             <AppShell
-              config={shellConfig}
+              config={{ layout: SHELL_LAYOUTS[context] }}
               slots={{
                 header: (
                   <>
@@ -113,16 +120,8 @@ function AppBody({
                 ),
                 primaryNav: <CollectionsNav />,
                 main: <CollectionMain />,
-                // Two inspector residents, each gating itself on a condition
-                // the other excludes: facets while browsing a collection, chat
-                // while a cross-class query view is open. Both render null
-                // otherwise, and the layout collapses the empty column.
-                inspector: (
-                  <>
-                    <FacetPanel />
-                    <ChatPanel />
-                  </>
-                ),
+                inspector: inQuery ? undefined : <FacetPanel />,
+                aside: inQuery ? <ChatPanel /> : undefined,
                 footer: <ControlPlaneStatus />,
               }}
             />

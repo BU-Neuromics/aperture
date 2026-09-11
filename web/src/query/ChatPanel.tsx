@@ -1,21 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCapabilities, useDataSource } from '../data/DataSourceContext';
 import type { ConversationTurn } from '../data/conversation';
 import { currentQuerySpec } from '../data/conversation';
+import type { CollectionModel } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import type { QuerySpec } from './querySpec';
 import { validateQuerySpecShape } from './querySpec';
+import { SpecProse } from './specProse';
 import './query.css';
 
 /**
  * The conversational query panel (ADR-0039): describe a query in prose, watch
  * the `QuerySpec` assemble, hand it to the builder to run.
  *
- * Capability-gated and slot-resident. It renders only while a cross-class query
- * view is open — the same condition under which `FacetPanel` vacates the
- * inspector column — so the two never contend for the slot, and only when the
- * endpoint advertises the conversational mutation, so an endpoint without one
- * shows no chat affordance at all (ADR-0029).
+ * Capability-gated and slot-resident. It renders only in the query context —
+ * where the `queryWorkbench` layout gives it a composer column beside the
+ * artifact it is building — and only when the endpoint advertises the
+ * conversational mutation, so an endpoint without one shows no chat
+ * affordance at all (ADR-0029).
  *
  * Aperture holds no conversation state beyond this component: the server owns
  * the turn list and returns it whole on every call (editing an earlier turn
@@ -34,9 +36,12 @@ export function ChatPanel() {
   const [editing, setEditing] = useState<ConversationTurn | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSpec, setShowSpec] = useState(false);
+  const [showJson, setShowJson] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  const collections = state.status === 'ready' ? state.source.collections : [];
+  const starters = useMemo(() => starterPrompts(collections), [collections]);
 
   // Keep the newest turn in view: the transcript outgrows the column quickly,
   // and a reply the user never sees reads as a hang.
@@ -52,14 +57,14 @@ export function ChatPanel() {
   const source = state.source;
   const spec = currentQuerySpec(turns);
 
-  const send = async () => {
-    const utterance = draft.trim();
+  const send = async (text?: string) => {
+    const utterance = (text ?? draft).trim();
     if (utterance === '' || pending) return;
     setPending(true);
     setError(null);
     try {
       // Turns are strictly ordered and the server derives the draft from the
-      // whole list, so exactly one is ever in flight (the input is disabled
+      // whole list, so exactly one is ever in flight (the composer is disabled
       // meanwhile) and the response's list replaces ours wholesale.
       const response = await source.converse({
         utterance,
@@ -84,53 +89,78 @@ export function ChatPanel() {
     inputRef.current?.focus();
   };
 
+  const reset = () => {
+    setTurns([]);
+    setSuspended([]);
+    setEditing(null);
+    setError(null);
+    setDraft('');
+  };
+
   return (
-    <div className="chat-panel" data-testid="chat-panel">
-      <div className="chat-header">
-        <span className="chat-title">Describe the query</span>
+    <section className="chat" data-testid="chat-panel" aria-label="Query composer">
+      <header className="chat-head">
+        <div className="chat-head-titles">
+          <span className="chat-eyebrow">Composer</span>
+          <h2 className="chat-title">Describe the query</h2>
+        </div>
         {turns.length > 0 && (
-          <button
-            type="button"
-            className="facet-clear-all"
-            onClick={() => {
-              setTurns([]);
-              setSuspended([]);
-              setEditing(null);
-              setError(null);
-            }}
-          >
+          <button type="button" className="chat-ghost" onClick={reset}>
             Clear
           </button>
         )}
-      </div>
+      </header>
 
       <div className="chat-body" ref={bodyRef}>
-        {turns.length === 0 && !pending && (
-          <p className="chat-empty">
-            Ask in plain language — “hippocampus tissue samples from donors over 60”. Each reply
-            proposes a QuerySpec you can inspect and run.
-          </p>
+        {turns.length === 0 && !pending ? (
+          <div className="chat-intro">
+            <p className="chat-intro-lead">
+              Ask in plain language. Each reply proposes a query you can read, refine, and run —
+              the wording stays editable, so you can go back and change any turn.
+            </p>
+            {starters.length > 0 && (
+              <div className="chat-starters">
+                <span className="chat-eyebrow">Starting points</span>
+                {starters.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="chat-starter"
+                    // Fills the composer rather than sending: these are shaped
+                    // from the live schema, but the planner still has to agree,
+                    // and a chip that fires blind would promise that it will.
+                    onClick={() => {
+                      setDraft(s);
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          turns.map((turn, i) => (
+            <TurnView
+              key={turn.id}
+              turn={turn}
+              index={i + 1}
+              suspended={suspended.includes(turn.id)}
+              editing={editing?.id === turn.id}
+              onEdit={() => beginEdit(turn)}
+            />
+          ))
         )}
 
-        {turns.map((turn, i) => (
-          <TurnView
-            key={turn.id}
-            turn={turn}
-            index={i + 1}
-            suspended={suspended.includes(turn.id)}
-            editing={editing?.id === turn.id}
-            onEdit={() => beginEdit(turn)}
-          />
-        ))}
-
         {pending && (
-          <div className="chat-turn chat-pending" role="status">
+          <div className="chat-reply chat-reply-pending" role="status">
             <span className="chat-dots" aria-hidden="true">
               <i />
               <i />
               <i />
             </span>
-            <span className="chat-pending-label">Planning…</span>
+            <span className="chat-pending-label">Planning</span>
           </div>
         )}
 
@@ -141,7 +171,14 @@ export function ChatPanel() {
         )}
       </div>
 
-      {spec != null && <SpecView spec={spec} expanded={showSpec} onToggle={() => setShowSpec(!showSpec)} />}
+      {spec != null && (
+        <SpecPane
+          spec={spec}
+          collections={collections}
+          showJson={showJson}
+          onToggleJson={() => setShowJson(!showJson)}
+        />
+      )}
 
       <div className="chat-compose">
         {/* The transcript scrolls, so an invalidated turn can sit out of view —
@@ -156,45 +193,67 @@ export function ChatPanel() {
               if (first) beginEdit(first);
             }}
           >
-            {suspended.length} turn{suspended.length > 1 ? 's' : ''} suspended by an edit — re-word
-            to bring {suspended.length > 1 ? 'them' : 'it'} back
+            <span className="chat-dot chat-dot-warning" aria-hidden="true" />
+            {suspended.length} turn{suspended.length > 1 ? 's' : ''} need
+            {suspended.length > 1 ? '' : 's'} re-wording after your edit
           </button>
         )}
         {editing && (
           <div className="chat-editing-note">
-            Rewriting turn {turns.findIndex((t) => t.id === editing.id) + 1}; later turns recompute.{' '}
-            <button type="button" className="chat-link" onClick={() => { setEditing(null); setDraft(''); }}>
+            <span className="chat-dot chat-dot-warning" aria-hidden="true" />
+            Rewriting turn {turns.findIndex((t) => t.id === editing.id) + 1} — later turns
+            recompute.{' '}
+            <button
+              type="button"
+              className="chat-inline-link"
+              onClick={() => {
+                setEditing(null);
+                setDraft('');
+              }}
+            >
               Cancel
             </button>
           </div>
         )}
-        <textarea
-          ref={inputRef}
-          className="chat-input"
-          rows={2}
-          value={draft}
-          disabled={pending}
-          placeholder={pending ? 'Waiting for the last turn…' : 'Describe what you want…'}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="query-add chat-send"
-          disabled={pending || draft.trim() === ''}
-          onClick={() => void send()}
-        >
-          {editing ? 'Redo turn' : 'Send'}
-        </button>
+        <div className="chat-field">
+          <textarea
+            ref={inputRef}
+            className="chat-input"
+            rows={2}
+            value={draft}
+            disabled={pending}
+            aria-label="Describe the query"
+            placeholder={pending ? 'Waiting for the last turn…' : 'Describe what you want…'}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+          />
+          <div className="chat-field-foot">
+            <span className="chat-hint">Enter to send · Shift+Enter for a new line</span>
+            <button
+              type="button"
+              className="chat-send"
+              disabled={pending || draft.trim() === ''}
+              onClick={() => void send()}
+            >
+              {editing ? 'Redo turn' : 'Send'}
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  proposal: 'proposed',
+  clarification: 'needs an answer',
+  suspended: 'needs re-wording',
+};
 
 function TurnView({
   turn,
@@ -211,77 +270,120 @@ function TurnView({
 }) {
   const status = suspended ? 'suspended' : turn.status;
   return (
-    <div className={`chat-turn chat-turn-${status}`} data-testid="chat-turn">
-      <div className="chat-utterance">
-        <span className="chat-turn-index">{index}</span>
-        <span className="chat-utterance-text">{turn.utterance}</span>
-        <button type="button" className="chat-link" onClick={onEdit} disabled={editing}>
-          {editing ? 'editing' : 'edit'}
+    <article className="chat-turn" data-testid="chat-turn" data-status={status}>
+      <div className="chat-said">
+        <p className="chat-bubble">{turn.utterance}</p>
+        <button
+          type="button"
+          className="chat-edit"
+          onClick={onEdit}
+          disabled={editing}
+          aria-label={`Rewrite turn ${index}`}
+        >
+          {editing ? 'editing…' : 'rewrite'}
         </button>
       </div>
-      <div className="chat-message">{turn.message}</div>
-      {status === 'suspended' && (
-        <div className="chat-suspended-note">
-          An earlier edit invalidated this turn — it was flagged, not dropped. Re-word it to bring
-          it back.
+      <div className={`chat-reply chat-reply-${status}`}>
+        <p className="chat-message">{turn.message}</p>
+        <div className="chat-meta">
+          <span className={`chat-dot chat-dot-${status}`} aria-hidden="true" />
+          <span className="chat-status">{STATUS_LABELS[status] ?? status}</span>
+          <span className="chat-turn-index">turn {index}</span>
         </div>
-      )}
-      {status === 'clarification' && <div className="chat-status-note">Needs an answer to go on.</div>}
-    </div>
+        {status === 'suspended' && (
+          <p className="chat-suspended-note">
+            An earlier edit invalidated this — flagged, not dropped. Re-word it to bring it back.
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
 
 /**
- * The spec the conversation has built, and the handoff into the builder.
+ * The spec the conversation has built, read back in the builder's own words.
  *
  * The handoff degrades honestly rather than guessing: the planning service
- * names its anchor by LinkML type (`Sample`) while Aperture's `QuerySpec`
+ * names its anchor by schema type (`Sample`) while Aperture's `QuerySpec`
  * currently carries collection ids (`samples`) and derived `fwd:`/`rev:` edge
- * keys. Until that spelling is canonicalized (ADR-0039's sequenced consequence)
- * a spec whose anchor doesn't resolve is shown but not applied — running a spec
- * whose anchor silently didn't match would execute the wrong query.
+ * keys. Until that spelling is canonicalized (ADR-0039's sequenced
+ * consequence) a spec whose anchor doesn't resolve is shown but not applied —
+ * running one whose anchor silently didn't match would execute a different
+ * query than the words above it describe.
  */
-function SpecView({
+function SpecPane({
   spec,
-  expanded,
-  onToggle,
+  collections,
+  showJson,
+  onToggleJson,
 }: {
   spec: unknown;
-  expanded: boolean;
-  onToggle: () => void;
+  collections: readonly CollectionModel[];
+  showJson: boolean;
+  onToggleJson: () => void;
 }) {
-  const state = useDataSource();
   const urlState = useCollectionUrlState();
-  const collections = state.status === 'ready' ? state.source.collections : [];
-
   const shaped = validateQuerySpecShape(spec) as QuerySpec | null;
   const anchor = shaped ? collections.find((c) => c.id === shaped.anchor) : undefined;
 
   return (
-    <div className="chat-spec">
-      <div className="chat-spec-header">
-        <button type="button" className="chat-link" onClick={onToggle}>
-          {expanded ? 'Hide' : 'Show'} QuerySpec
+    <section className="chat-spec" aria-label="Proposed query">
+      <header className="chat-spec-head">
+        <span className="chat-eyebrow">Proposed query</span>
+        <button type="button" className="chat-ghost" onClick={onToggleJson}>
+          {showJson ? 'Hide JSON' : 'JSON'}
         </button>
+      </header>
+
+      {shaped ? (
+        <SpecProse spec={shaped} collections={collections} />
+      ) : (
+        <p className="chat-spec-note">The proposed spec isn’t a shape this build reads.</p>
+      )}
+
+      {showJson && <pre className="chat-spec-json">{JSON.stringify(spec, null, 2)}</pre>}
+
+      <div className="chat-spec-foot">
         <button
           type="button"
-          className="query-add"
+          className="chat-primary"
           disabled={!shaped || !anchor}
           onClick={() => shaped && urlState.setQuerySpec(shaped)}
-          title={anchor ? 'Load this spec into the builder' : undefined}
         >
           Use in builder
         </button>
+        {shaped && !anchor && (
+          <p className="chat-spec-note">
+            <span className="chat-dot chat-dot-warning" aria-hidden="true" />
+            Anchor <code>{String(shaped.anchor)}</code> is a schema type name; this builder still
+            addresses collections by id. Canonicalizing the two spellings is sequenced work
+            (ADR-0039) — until it lands the query is shown but not run.
+          </p>
+        )}
       </div>
-      {expanded && <pre className="chat-spec-json">{JSON.stringify(spec, null, 2)}</pre>}
-      {shaped && !anchor && (
-        <p className="chat-spec-note">
-          Anchor “{String(shaped.anchor)}” is a schema type name; this builder still addresses
-          collections by id. Canonicalizing the two spellings is sequenced work (ADR-0039) — until
-          it lands the spec is shown but not run.
-        </p>
-      )}
-      {!shaped && <p className="chat-spec-note">The proposed spec isn’t a shape this build reads.</p>}
-    </div>
+    </section>
   );
+}
+
+/**
+ * Opening suggestions, shaped from the live schema rather than written in
+ * source — Aperture carries no domain nouns (ADR-0002), so these have to come
+ * from whatever the endpoint exposes. They fill the composer; they do not
+ * promise the planner will agree.
+ */
+function starterPrompts(collections: readonly CollectionModel[]): string[] {
+  const prompts: string[] = [];
+  for (const collection of collections.slice(0, 3)) {
+    const label = collection.label.toLowerCase();
+    const facet = collection.detailColumns.find(
+      (c) => c.kind === 'enum' && (c.enumValues?.length ?? 0) > 0,
+    );
+    if (facet?.enumValues?.[0]) {
+      prompts.push(`${label} where ${facet.label.toLowerCase()} is ${facet.enumValues[0]}`);
+    } else if (prompts.length === 0) {
+      prompts.push(`all ${label}`);
+    }
+    if (prompts.length === 2) break;
+  }
+  return prompts;
 }

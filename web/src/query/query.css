@@ -283,125 +283,247 @@
   color: var(--text-tertiary);
 }
 
-/* ── Conversational query panel (ADR-0039) ───────────────────────────────
-   Inspector-slot resident, so it matches the facet panel's column framing:
-   a fixed header, a scrolling body, and a compose box pinned to the bottom. */
+/* ═══ Conversational query composer (ADR-0039) ═══════════════════════════
+   Instrument, not messenger: restrained surfaces, a strict type split (prose
+   in sans, anything literal — values, identifiers, raw spellings — in mono),
+   and status carried by a labelled dot rather than colour alone. Everything
+   below uses the existing token set; the panel adds no palette of its own. */
 
-.chat-panel {
+.chat {
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  background: var(--bg-surface);
 }
 
-.chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid var(--border);
+.chat-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.chat-head {
   flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-head-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .chat-title {
-  font-size: 13px;
-  font-weight: 700;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.chat-ghost {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 3px var(--space-2);
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.chat-ghost:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .chat-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
-.chat-empty {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--text-tertiary);
+/* ── Empty state ─────────────────────────────────────────────────────── */
+
+.chat-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
+
+.chat-intro-lead {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.chat-starters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.chat-starter {
+  max-width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.chat-starter:hover {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+
+/* ── Turns: the asymmetry is the point ───────────────────────────────── */
 
 .chat-turn {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--border-strong);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--bg-subtle);
-}
-
-.chat-turn-proposal {
-  border-left-color: var(--accent);
-}
-
-.chat-turn-clarification {
-  border-left-color: var(--text-tertiary);
-}
-
-/* Flag, don't discard (ADR-0025): a suspended turn keeps its place and its
-   original wording, marked in place rather than relocated. */
-.chat-turn-suspended {
-  border-left-color: var(--warning);
-  background: var(--warning-bg);
-}
-
-.chat-utterance {
-  display: flex;
-  align-items: baseline;
   gap: var(--space-2);
 }
 
-.chat-turn-index {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--text-tertiary);
-  flex: 0 0 auto;
+.chat-said {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
-.chat-utterance-text {
-  flex: 1 1 auto;
-  font-weight: 600;
+.chat-bubble {
+  margin: 0;
+  max-width: 85%;
   font-size: 0.82rem;
-}
-
-.chat-message {
-  font-size: 0.8rem;
   line-height: 1.45;
-  color: var(--text-secondary);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--accent-weak);
+  border-radius: var(--radius-md) var(--radius-md) 2px var(--radius-md);
+  padding: var(--space-2) var(--space-3);
 }
 
-.chat-suspended-note {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: var(--warning);
-}
-
-.chat-status-note {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-}
-
-.chat-link {
+.chat-edit {
+  flex: 0 0 auto;
+  margin-top: 3px;
   background: none;
   border: none;
   padding: 0;
-  font-size: 0.75rem;
-  color: var(--accent);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
 }
 
-.chat-link:disabled {
-  color: var(--text-tertiary);
+.chat-turn:hover .chat-edit,
+.chat-edit:focus-visible,
+.chat-edit:disabled {
+  opacity: 1;
+}
+
+.chat-edit:hover {
+  color: var(--accent);
+}
+
+.chat-edit:disabled {
+  color: var(--warning);
   cursor: default;
 }
 
-.chat-pending {
+.chat-reply {
+  border-left: 2px solid var(--border-strong);
+  padding-left: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chat-reply-proposal {
+  border-left-color: var(--accent);
+}
+
+/* Flag, don't discard (ADR-0025): a suspended turn keeps its place and its
+   original wording, marked where the break happened. */
+.chat-reply-suspended {
+  border-left-color: var(--warning);
+}
+
+.chat-message {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.chat-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--text-tertiary);
+  flex: 0 0 auto;
+}
+
+.chat-dot-proposal {
+  background: var(--accent);
+}
+
+.chat-dot-suspended,
+.chat-dot-warning {
+  background: var(--warning);
+}
+
+.chat-status {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.chat-turn-index {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.chat-suspended-note {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--warning);
+}
+
+.chat-reply-pending {
   flex-direction: row;
   align-items: center;
   gap: var(--space-2);
@@ -409,8 +531,10 @@
 }
 
 .chat-pending-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
 }
 
 .chat-dots {
@@ -454,23 +578,28 @@
 
 .chat-error {
   font-size: 0.78rem;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--error);
   background: var(--error-bg);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
 }
 
+/* ── The artifact under construction ─────────────────────────────────── */
+
 .chat-spec {
   flex: 0 0 auto;
   border-top: 1px solid var(--border);
+  background: var(--bg-canvas);
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  max-height: 42%;
+  overflow-y: auto;
 }
 
-.chat-spec-header {
+.chat-spec-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -479,62 +608,55 @@
 
 .chat-spec-json {
   margin: 0;
-  max-height: 180px;
+  max-height: 160px;
   overflow: auto;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  line-height: 1.45;
-  background: var(--bg-subtle);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-2);
 }
 
+.chat-spec-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
 .chat-spec-note {
   margin: 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
+  font-size: 0.72rem;
+  line-height: 1.5;
   color: var(--text-tertiary);
 }
+
+.chat-spec-note code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
+
+/* ── Composer ────────────────────────────────────────────────────────── */
 
 .chat-compose {
   flex: 0 0 auto;
   border-top: 1px solid var(--border);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.chat-editing-note {
-  font-size: 0.74rem;
-  color: var(--warning);
-}
-
-.chat-input {
-  width: 100%;
-  resize: vertical;
-  font-family: inherit;
-  font-size: 0.82rem;
-  line-height: 1.4;
-  padding: var(--space-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-}
-
-.chat-input:disabled {
-  background: var(--bg-subtle);
-  color: var(--text-tertiary);
-}
-
-.chat-send {
-  align-self: flex-end;
-}
-
 .chat-suspended-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   width: 100%;
   text-align: left;
+  font: inherit;
   font-size: 0.74rem;
   line-height: 1.4;
   color: var(--warning);
@@ -547,4 +669,201 @@
 
 .chat-suspended-banner:hover {
   border-color: var(--warning);
+}
+
+.chat-editing-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.74rem;
+  color: var(--warning);
+}
+
+.chat-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.chat-field {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.chat-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.chat-input {
+  display: block;
+  width: 100%;
+  resize: none;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.chat-input:focus {
+  outline: none;
+}
+
+.chat-input:disabled {
+  color: var(--text-tertiary);
+}
+
+.chat-field-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2) var(--space-3);
+}
+
+.chat-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.chat-send,
+.chat-primary {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.chat-send:disabled,
+.chat-primary:disabled {
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  cursor: default;
+}
+
+/* ── The artifact, read back as language (shared with the builder) ───── */
+
+.prose-spec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.prose-lead {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.prose-keyword {
+  color: var(--text-tertiary);
+}
+
+.prose-anchor {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prose-clauses,
+.prose-subclauses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.prose-clauses {
+  border-left: 2px solid var(--border);
+  padding-left: var(--space-3);
+}
+
+.prose-subclauses {
+  margin-top: var(--space-1);
+  padding-left: var(--space-3);
+  border-left: 1px dashed var(--border-strong);
+}
+
+.prose-clause {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.prose-field,
+.prose-edge {
+  color: var(--text-primary);
+}
+
+.prose-op {
+  color: var(--text-tertiary);
+  margin-right: 0.35em;
+}
+
+/* Literals look like literals: anything from the schema or the data is mono. */
+.prose-value {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+.prose-unresolved {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--warning);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.prose-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+/* Nothing run yet: the workbench's main column is wide, so say plainly that
+   it is waiting rather than leaving a void that reads as a broken render. */
+.query-blank {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.query-blank-lead {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.query-blank-detail {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.8rem;
+  line-height: 1.55;
 }
