@@ -331,7 +331,7 @@
     },
     {
       "id": "conversational-converse-query-spec",
-      "description": "ADR-0039 conversational query panel: deriveConversationModel() binds to this mutation and ChatPanel renders nothing without it. GATED - Mosaic registers it only when a planning service is configured (MOSAIC_EXON_URL), so absence is a valid deployment; the shape is pinned for when it is present. Tracked upstream as BU-Neuromics/mosaic#205.",
+      "description": "ADR-0039 conversational query panel: deriveConversationModel() binds to this mutation and ChatPanel renders nothing without it. Arg names are camelCase - Strawberry auto-converts the resolver's snake_case (mosaic PR #206, issue #205); the MCP tool's own surface is snake_case, which is why data/conversation.ts resolves every name by role in both casings. GATED - Mosaic registers the field only when a planning service is configured (MOSAIC_EXON_URL), so absence is a valid deployment; the shape is pinned for when it is present.",
       "kind": "mutationField",
       "gated": true,
       "field": "converseQuerySpec",
@@ -341,7 +341,7 @@
           "type": "String!"
         },
         {
-          "name": "query_spec",
+          "name": "querySpec",
           "type": "JSON"
         },
         {
@@ -349,7 +349,7 @@
           "type": "[ConversationTurnInput!]"
         },
         {
-          "name": "edit_turn_id",
+          "name": "editTurnId",
           "type": "ID"
         }
       ]
