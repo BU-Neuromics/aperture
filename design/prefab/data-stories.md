@@ -1,8 +1,9 @@
 # Prefab — Data Stories → moved to Reel
 
 > **Moved to Reel (2026-06-22).** The conversational data-story keystone MVP moved to the **Reel**
-> component with the data-story engine split (boundary:
-> `drylims:platform/design/decisions/ADR-0001`; runbook `drylims:proposals/reel-split.md`).
+> component with the data-story engine split (boundary: DataHelix platform ADR-0003 —
+> `datahelix:platform/design/decisions/ADR-0003-reel-data-story-engine-separate-from-portal.md`,
+> whose **Outcome** section records the execution; no separate runbook landed).
 >
 > **Canonical home:** Reel `design/prefab/data-stories.md` —
 > <https://github.com/BU-Neuromics/reel/blob/main/design/prefab/data-stories.md>

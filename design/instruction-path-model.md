@@ -2,8 +2,9 @@
 
 > **Moved to Reel (2026-06-22).** The instruction-path / data-story model was split out of
 > Aperture into the **Reel** component when the AI-native data-story engine became its own
-> component (boundary: `drylims:platform/design/decisions/ADR-0001`; runbook
-> `drylims:proposals/reel-split.md`).
+> component (boundary: DataHelix platform ADR-0003 —
+> `datahelix:platform/design/decisions/ADR-0003-reel-data-story-engine-separate-from-portal.md`,
+> whose **Outcome** section records the execution; no separate runbook landed).
 >
 > **Canonical home:** Reel `design/instruction-path-model.md` —
 > <https://github.com/BU-Neuromics/reel/blob/main/design/instruction-path-model.md>
@@ -14,7 +15,7 @@ reproducibility, list-of-parents topology, and recompute-with-suspend editing. T
 are now **Reel ADR-0001–0004** (renumbered from Aperture ADR-0022–0025).
 
 Aperture, **re-scoped to the rendering portal**, consumes Reel's output via the **View Contract**
-(`drylims:platform/design/view-contract.md`) and no longer owns this model. The local
+(`datahelix:platform/design/view-contract.md`) and no longer owns this model. The local
 superseded tombstones remain at
 [`decisions/ADR-0022`](./decisions/ADR-0022-data-story-is-an-instruction-path.md) …
 [`ADR-0026`](./decisions/ADR-0026-headless-core-thin-shell.md).
