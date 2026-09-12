@@ -30,15 +30,33 @@ import { findType, namedType, typeRefToSDL } from './introspection';
  * takes with its own arg names.
  */
 
-export type TurnStatus = 'proposal' | 'clarification' | 'suspended';
+/**
+ * `error` is the boundary's own status for a turn it could not fulfil — the
+ * planning service unreachable, or a candidate spec that failed re-validation.
+ * It carries a human-readable reason and no spec. It must NOT fall through to
+ * the unrecognized-status fallback: a failure shown as "needs an answer" asks
+ * the user to reply to something that never asked them anything.
+ */
+export type TurnStatus = 'proposal' | 'clarification' | 'suspended' | 'error';
 
 export interface ConversationTurn {
+  /**
+   * Server-assigned where there is one. An `error` turn may carry none — the
+   * boundary returns `id: null` when it never got far enough to mint one — so
+   * this can be a locally synthesized key. `editable` says which it is.
+   */
   id: string;
   utterance: string;
   status: TurnStatus;
   message: string;
   /** Present on `proposal` turns; the full spec, never a diff. */
   querySpec: unknown | null;
+  /**
+   * False when the server assigned no id: rewind-and-edit addresses a turn by
+   * `editTurnId`, so a turn the server never named cannot be edited, and
+   * offering the affordance would send a key it has never seen.
+   */
+  editable: boolean;
 }
 
 export interface ConverseRequest {
@@ -268,7 +286,7 @@ export function buildConverseMutation(
   };
 }
 
-const STATUSES: readonly string[] = ['proposal', 'clarification', 'suspended'];
+const STATUSES: readonly string[] = ['proposal', 'clarification', 'suspended', 'error'];
 
 function normalizeTurn(model: ConversationModel, raw: unknown): ConversationTurn | null {
   if (raw == null || typeof raw !== 'object') return null;
@@ -276,10 +294,17 @@ function normalizeTurn(model: ConversationModel, raw: unknown): ConversationTurn
   const id = row[model.turnFields.id];
   const message = row[model.turnFields.message];
   const status = row[model.turnFields.status];
-  if (typeof id !== 'string' || typeof message !== 'string') return null;
+  // Only the message is load-bearing. An id is NOT required: Mosaic's error
+  // turns carry `id: null` (it never got far enough to mint one), and dropping
+  // those would replace a plain explanation the user needs — "could not reach
+  // the planning service" — with silence or a shape complaint about our own
+  // parsing. Found driving a real endpoint; the stub always set an id.
+  if (typeof message !== 'string') return null;
+  const editable = typeof id === 'string' && id !== '';
   const normalized = typeof status === 'string' ? status.toLowerCase() : '';
   return {
-    id,
+    id: editable ? (id as string) : `local:${normalized || 'turn'}:${message.slice(0, 24)}`,
+    editable,
     utterance: String(row[model.turnFields.utterance] ?? ''),
     // An unrecognized status is surfaced as a clarification rather than
     // guessed into a proposal — a proposal is the only status that changes

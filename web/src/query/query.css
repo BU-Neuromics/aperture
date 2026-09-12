@@ -958,3 +958,17 @@ fieldset.query-frame {
   min-width: 0;
   margin: 0;
 }
+
+/* An error turn is a failure, not a question: it gets the error vocabulary so
+   it cannot be mistaken for a clarification awaiting a reply. */
+.chat-dot-error {
+  background: var(--error);
+}
+
+.chat-reply-error {
+  border-left-color: var(--error);
+}
+
+.chat-reply-error .chat-message {
+  color: var(--error);
+}

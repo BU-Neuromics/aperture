@@ -175,6 +175,7 @@ describe('buildConverseMutation', () => {
   it('spells outgoing turns with the contract field names', () => {
     const turn: ConversationTurn = {
       id: 't1',
+      editable: true,
       utterance: 'samples',
       status: 'proposal',
       message: 'All samples.',
@@ -232,6 +233,34 @@ describe('normalizeConverseResult', () => {
     expect(result.turns).toBeNull();
   });
 
+  /**
+   * Mosaic's boundary returns `id: null` on an error turn — it never got far
+   * enough to mint one. Dropping the turn would replace a plain explanation the
+   * user needs ("could not reach the planning service") with silence or a
+   * complaint about our own parsing. Found driving a real endpoint; the stub
+   * always set an id, which is exactly why it hid.
+   */
+  it('keeps a turn the server assigned no id, and marks it non-editable', () => {
+    const result = normalizeConverseResult(model, {
+      turn: wireTurn({ id: null, status: 'error', message: 'Could not reach the planner.' }),
+    });
+    expect(result.turn.message).toBe('Could not reach the planner.');
+    expect(result.turn.status).toBe('error');
+    // Rewind addresses a turn by server id, so one without an id cannot be redone.
+    expect(result.turn.editable).toBe(false);
+    expect(result.turn.id).toBeTruthy();
+  });
+
+  // `error` is the boundary's own status; showing it as "needs an answer" would
+  // ask the user to reply to something that never asked them anything.
+  it('keeps error a first-class status rather than folding it into clarification', () => {
+    const result = normalizeConverseResult(model, {
+      turn: wireTurn({ id: 'e1', status: 'error', message: 'Validation failed.' }),
+    });
+    expect(result.turn.status).toBe('error');
+    expect(result.turn.editable).toBe(true);
+  });
+
   // A proposal is the only status that changes the draft, so an unreadable one
   // must never be guessed into one.
   it('treats an unrecognized status as a clarification', () => {
@@ -248,6 +277,7 @@ describe('normalizeConverseResult', () => {
 describe('currentQuerySpec', () => {
   const turn = (over: Partial<ConversationTurn>): ConversationTurn => ({
     id: 't',
+    editable: true,
     utterance: 'u',
     status: 'proposal',
     message: 'm',

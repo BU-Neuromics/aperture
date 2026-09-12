@@ -217,7 +217,7 @@ export function ChatPanel() {
               index={i + 1}
               suspended={suspended.includes(turn.id)}
               editing={editing?.id === turn.id}
-              onEdit={() => beginEdit(turn)}
+              onEdit={turn.editable ? () => beginEdit(turn) : undefined}
             />
           ))
         )}
@@ -328,6 +328,7 @@ const STATUS_LABELS: Record<string, string> = {
   proposal: 'proposed',
   clarification: 'needs an answer',
   suspended: 'needs re-wording',
+  error: "couldn't run",
 };
 
 function TurnView({
@@ -341,22 +342,27 @@ function TurnView({
   index: number;
   suspended: boolean;
   editing: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
 }) {
   const status = suspended ? 'suspended' : turn.status;
   return (
     <article className="chat-turn" data-testid="chat-turn" data-status={status}>
       <div className="chat-said">
         <p className="chat-bubble">{turn.utterance}</p>
-        <button
-          type="button"
-          className="chat-edit"
-          onClick={onEdit}
-          disabled={editing}
-          aria-label={`Rewrite turn ${index}`}
-        >
-          {editing ? 'editing…' : 'rewrite'}
-        </button>
+        {/* Rewind addresses a turn by its server id; a turn the server never
+            named (an error turn carries `id: null`) cannot be redone, so the
+            affordance is absent rather than present-and-broken. */}
+        {onEdit && (
+          <button
+            type="button"
+            className="chat-edit"
+            onClick={onEdit}
+            disabled={editing}
+            aria-label={`Rewrite turn ${index}`}
+          >
+            {editing ? 'editing…' : 'rewrite'}
+          </button>
+        )}
       </div>
       <div className={`chat-reply chat-reply-${status}`}>
         <p className="chat-message">{turn.message}</p>
