@@ -15,7 +15,11 @@ export interface Capabilities {
   fullTextSearch: boolean;
   /** Server-side ordering (order_by/sort arg) — Hippo X1; gated off until it lands. */
   sort: boolean;
-  /** Counts/totalCount/aggregation — Hippo X1; gated off until it lands. */
+  /**
+   * Per-value counts for equality facets are derivable — a genuine
+   * `<collection>FacetCounts(field: String!) -> [{value count}]` Query field
+   * is advertised (Mosaic ADR-0007/X1), not just a name match (ADR-0029).
+   */
   aggregation: boolean;
   /** Entity types expose resolved relationship fields. */
   relationshipTraversal: boolean;

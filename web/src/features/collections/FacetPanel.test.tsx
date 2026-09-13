@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
 import { App } from '../../App';
-import { bareSchema, capableSchema, fakeClient } from '../../data/testing/fixtures';
+import { bareSchema, capableSchema, facetCountsSchema, fakeClient } from '../../data/testing/fixtures';
 
 const endpoint = { url: 'http://example.test/graphql' };
 
@@ -116,6 +116,27 @@ describe('FacetPanel (R3.3 — equality facets + FTS, capability-gated)', () => 
     expect(await screen.findByText(/No matching books/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.queryByText(/· filtered/)).not.toBeInTheDocument();
+  });
+
+  it('shows per-value counts once the endpoint advertises a genuine facetCounts field (issue #20)', async () => {
+    const client = fakeClient(facetCountsSchema(), (query) =>
+      query.includes('ApertureFacetCounts')
+        ? {
+            data: {
+              f0: [
+                { value: 'ACTIVE', count: 3 },
+                { value: 'ARCHIVED', count: 1 },
+              ],
+            },
+            error: null,
+          }
+        : { data: { things: { items: [{ id: 'T-1', status: 'ACTIVE' }], total: 1 } }, error: null },
+    );
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText('Filters')).toBeInTheDocument();
+    const inspector = within(screen.getByRole('complementary', { name: 'Inspector' }));
+    expect(await inspector.findByTestId('facet-count-status-ACTIVE')).toHaveTextContent('3');
+    expect(inspector.getByTestId('facet-count-status-ARCHIVED')).toHaveTextContent('1');
   });
 
   it('renders no panel at all when the endpoint advertises neither facets nor search', async () => {

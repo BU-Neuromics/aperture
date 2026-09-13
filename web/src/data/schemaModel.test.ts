@@ -613,6 +613,69 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     expect(caps.sort).toBe(false);
   });
 
+  it('derives a genuine facetCounts field and gates aggregation on (Mosaic ADR-0007, issue #20)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+          ]),
+          field('thingsFacetCounts', nonNull(list(nonNull(object('FacetCount')))), [
+            arg('field', nonNull(scalar('String'))),
+            arg('filters', list(object('FilterInput'))),
+            arg('filterMode', enumRef('FilterMode')),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID')))]),
+        objectType('FacetCount', [field('value', scalar('String')), field('count', nonNull(scalar('Int')))]),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    expect(things.facetCounts).toEqual({
+      field: 'thingsFacetCounts',
+      fieldArgName: 'field',
+      fieldArgType: 'String!',
+      filtersArgName: 'filters',
+      filtersArgType: '[FilterInput]',
+      filterModeArgName: 'filterMode',
+      filterModeArgType: 'FilterMode',
+    });
+    expect(deriveCapabilities(schema, deriveCollections(schema)).aggregation).toBe(true);
+  });
+
+  it('does not derive facetCounts from a name match alone (ADR-0029)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+          ]),
+          // Right name, wrong shape: no `field` arg, and the row type lacks
+          // `count` — neither is a usable facetCounts primitive.
+          field('thingsFacetCounts', nonNull(list(nonNull(object('Thing'))))),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID')))]),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    expect(things.facetCounts).toBeUndefined();
+    expect(deriveCapabilities(schema, deriveCollections(schema)).aggregation).toBe(false);
+  });
+
   it('gates everything off for a bare endpoint', () => {
     const schema = bareSchema();
     const caps = deriveCapabilities(schema, deriveCollections(schema));
