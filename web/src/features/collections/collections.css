@@ -459,6 +459,12 @@
   color: var(--text-primary);
 }
 
+.facet-option-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
 .facet-search-input {
   width: 100%;
   height: 30px;

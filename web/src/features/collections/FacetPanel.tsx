@@ -6,13 +6,19 @@ import { useNavView } from '../../nav/NavConfigContext';
 import { useCollectionUrlState } from './urlState';
 import './collections.css';
 
+/** Per-value counts for one facet field, keyed by the option's string form. */
+type FacetCounts = Record<string, number>;
+
 /**
  * The filters panel (design-export inspector; R3.3): FTS box + equality
  * facets derived from the endpoint's filter surface. Capability-gated
  * (ADR-0029): renders nothing when the collection advertises neither facets
  * nor search (the layout collapses the empty inspector column). One value per
  * facet, AND across facets — the flat-equality semantics every conformant
- * filter input supports; facet counts stay absent until Hippo X1.
+ * filter input supports. Per-value counts (issue #20) appear once the
+ * endpoint advertises a genuine `facetCounts` field (Hippo X1) — each
+ * facet's own current selection is excluded from its own counts so its other
+ * options stay visible, while every other active filter still narrows them.
  */
 export function FacetPanel() {
   const state = useDataSource();
@@ -21,10 +27,44 @@ export function FacetPanel() {
   const urlState = useCollectionUrlState();
   const { collection, filters, search, toggleFilter, setSearch, clearFilters } = urlState;
 
+  const active =
+    state.status === 'ready' && view != null ? activeCollection(view, collection) : undefined;
+  const facets = active && capabilities.equalityFacets ? active.facets : [];
+  const countableFields = capabilities.aggregation && active?.facetCounts
+    ? facets.filter((f) => f.kind !== 'ref').map((f) => f.field)
+    : [];
+
+  const [counts, setCounts] = useState<Record<string, FacetCounts>>({});
+  useEffect(() => {
+    if (state.status !== 'ready' || !active || countableFields.length === 0) {
+      setCounts({});
+      return;
+    }
+    let cancelled = false;
+    state.source
+      .getFacetCounts(active.id, countableFields, filters)
+      .then((byField) => {
+        if (cancelled) return;
+        const next: Record<string, FacetCounts> = {};
+        for (const [field, buckets] of Object.entries(byField)) {
+          next[field] = Object.fromEntries(buckets.map((b) => [String(b.value), b.count]));
+        }
+        setCounts(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCounts({});
+      });
+    return () => {
+      cancelled = true;
+    };
+    // countableFields is a derived array (new identity each render); its
+    // content is exactly `active.id` + capability gates, already tracked.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status, active?.id, JSON.stringify(filters), countableFields.join(',')]);
+
   if (state.status !== 'ready' || view == null) return null;
   // The builder/graph views own the URL's filter semantics — hide the panel.
   if (urlState.view != null) return null;
-  const active = activeCollection(view, collection);
   if (!active) return null;
 
   // Progressive disclosure into the cross-class builder (ADR-0035): the
@@ -43,7 +83,6 @@ export function FacetPanel() {
     });
 
   const searchable = capabilities.fullTextSearch && Boolean(active.args.search || active.search);
-  const facets = capabilities.equalityFacets ? active.facets : [];
   if (!searchable && facets.length === 0) return null;
 
   const activeCount = Object.keys(filters).length + (search ? 1 : 0);
@@ -79,12 +118,16 @@ export function FacetPanel() {
             key={facet.field}
             facet={facet}
             value={filters[facet.field]}
+            counts={counts[facet.field]}
             onToggle={(value) => toggleFilter(facet.field, value)}
           />
         ))}
         <div className="facet-footnote">
           Facets derive from the endpoint’s filter surface: one value per facet, combined with
-          AND. Counts arrive with backend aggregation support.
+          AND.{' '}
+          {countableFields.length > 0
+            ? 'Counts reflect the other active filters.'
+            : 'Counts arrive with backend aggregation support.'}
         </div>
       </div>
     </div>
@@ -119,10 +162,13 @@ function SearchBox({ value, onApply }: { value: string; onApply: (q: string) => 
 function FacetGroup({
   facet,
   value,
+  counts,
   onToggle,
 }: {
   facet: FacetModel;
   value: string | boolean | undefined;
+  /** Per-value counts (issue #20), keyed by the option's string form. */
+  counts?: FacetCounts;
   onToggle: (value: string | boolean) => void;
 }) {
   if (facet.kind === 'ref') {
@@ -143,6 +189,7 @@ function FacetGroup({
       <div className="facet-options">
         {options.map((option) => {
           const selected = value === option.value;
+          const count = counts?.[String(option.value)];
           return (
             <button
               key={String(option.value)}
@@ -158,6 +205,11 @@ function FacetGroup({
                 {selected ? '✓' : ''}
               </span>
               <span className="facet-option-label">{option.label}</span>
+              {count != null && (
+                <span className="facet-option-count" data-testid={`facet-count-${facet.field}-${String(option.value)}`}>
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}

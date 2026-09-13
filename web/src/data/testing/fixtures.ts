@@ -373,6 +373,46 @@ export function sortableSchema(): IntrospectionSchema {
 }
 
 /**
+ * An envelope collection (live Hippo filterList shape) plus a genuine
+ * `thingsFacetCounts(field: String!, filters:, filterMode:) -> [FacetCount!]!`
+ * Query field (Mosaic ADR-0007/X1, issue #20) — `status` is an enum facet.
+ */
+export function facetCountsSchema(): IntrospectionSchema {
+  const filterArgs = [
+    arg('filters', list(nonNull(object('FilterInput')))),
+    arg('filterMode', nonNull(enumRef('FilterMode')), 'AND'),
+  ];
+  return {
+    queryType: { name: 'Query' },
+    mutationType: null,
+    types: [
+      objectType('Query', [
+        field('things', nonNull(object('ThingPage')), [
+          arg('limit', nonNull(scalar('Int'))),
+          arg('offset', nonNull(scalar('Int'))),
+          ...filterArgs,
+        ]),
+        field('thingsFacetCounts', nonNull(list(nonNull(object('FacetCount')))), [
+          arg('field', nonNull(scalar('String'))),
+          ...filterArgs,
+        ]),
+      ]),
+      objectType('ThingPage', [
+        field('items', nonNull(list(nonNull(object('Thing'))))),
+        field('total', nonNull(scalar('Int'))),
+      ]),
+      objectType('Thing', [
+        field('id', nonNull(scalar('ID'))),
+        field('status', enumRef('ThingStatus')),
+      ]),
+      objectType('FacetCount', [field('value', scalar('String')), field('count', nonNull(scalar('Int')))]),
+      enumType('FilterMode', ['AND', 'OR']),
+      enumType('ThingStatus', ['ACTIVE', 'ARCHIVED']),
+    ],
+  };
+}
+
+/**
  * A ScopedDataClient test double: introspection queries get the fixture
  * schema; anything else is answered by `respond` (which also records the
  * query documents + variables it sees).

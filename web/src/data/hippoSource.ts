@@ -85,6 +85,18 @@ export interface HippoSource {
   getEntity(collectionId: string, id: string, fresh?: boolean): Promise<Record<string, unknown> | null>;
   /** Entity change history, when the endpoint advertises it (R3.7). */
   getHistory(id: string): Promise<HistoryEntry[]>;
+  /**
+   * Per-value counts for a set of equality facets on one collection, under
+   * the collection's other active filters (each facet's own current
+   * selection is excluded from its own counts, so switching among a facet's
+   * options never zeroes out the alternatives — issue #20). Empty when the
+   * collection advertises no `facetCounts` field or `fields` is empty.
+   */
+  getFacetCounts(
+    collectionId: string,
+    fields: string[],
+    filters: FilterValues,
+  ): Promise<Record<string, { value: unknown; count: number }[]>>;
   /** Create via the derived write path; returns the new entity's id column value (W4.3). */
   createEntity(collectionId: string, values: WriteValues): Promise<string | null>;
   /** Partial-merge update: send only the given fields (W4.3). */
@@ -551,6 +563,50 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
         throw new Error(`Could not load history: ${historyResult.error?.message ?? 'empty response'}`);
       }
       return (historyResult.data[history.field] ?? []) as HistoryEntry[];
+    },
+
+    async getFacetCounts(collectionId, fields, filters) {
+      const collection = collectionFor(collectionId);
+      const fc = collection.facetCounts;
+      if (!fc || fields.length === 0) return {};
+
+      // One request for every visible facet, via an aliased field per facet
+      // (f0, f1, …) rather than N round-trips. Each alias counts its own
+      // field EXCLUDING that field's own current selection, so a facet's
+      // other options stay visible after picking one; other active filters
+      // still narrow it.
+      const varDefs: string[] = [];
+      const variables: Record<string, unknown> = {};
+      const selections = fields.map((slot, i) => {
+        const alias = `f${i}`;
+        const args = [`${fc.fieldArgName}: ${JSON.stringify(slot)}`];
+        if (fc.filtersArgName && fc.filtersArgType) {
+          const entries = Object.entries(filters)
+            .filter(([field]) => field !== slot)
+            .map(([field, value]) => ({ field, value }));
+          if (entries.length > 0) {
+            const varName = `${alias}Filters`;
+            varDefs.push(`$${varName}: ${fc.filtersArgType}`);
+            variables[varName] = entries;
+            args.push(`${fc.filtersArgName}: $${varName}`);
+            if (fc.filterModeArgName) args.push(`${fc.filterModeArgName}: AND`);
+          }
+        }
+        return `${alias}: ${fc.field}(${args.join(', ')}) { value count }`;
+      });
+      const document = `query ApertureFacetCounts${varDefs.length > 0 ? `(${varDefs.join(', ')})` : ''} { ${selections.join(' ')} }`;
+      const result = await client.query<Record<string, { value: unknown; count: number }[]>>(
+        document,
+        variables,
+      );
+      if (result.error || result.data == null) {
+        throw new Error(`Could not load facet counts: ${result.error?.message ?? 'empty response'}`);
+      }
+      const byField: Record<string, { value: unknown; count: number }[]> = {};
+      fields.forEach((slot, i) => {
+        byField[slot] = result.data![`f${i}`] ?? [];
+      });
+      return byField;
     },
   };
 }

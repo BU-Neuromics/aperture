@@ -11,6 +11,7 @@ import { deriveCollections } from './schemaModel';
 import {
   bareSchema,
   capableSchema,
+  facetCountsSchema,
   fakeClient,
   realIntrospection,
   sortableSchema,
@@ -460,5 +461,74 @@ describe('connectHippoSource', () => {
     await expect(source.listEntities('books', { page: 1, pageSize: 25 })).rejects.toThrow(
       /Could not list Books: timeout/,
     );
+  });
+});
+
+describe('getFacetCounts (Mosaic ADR-0007/X1, issue #20)', () => {
+  it('requests one aliased field per facet, excluding each field’s own current selection', async () => {
+    const client = fakeClient(facetCountsSchema(), (query) =>
+      query.includes('ApertureFacetCounts')
+        ? {
+            data: {
+              f0: [
+                { value: 'ACTIVE', count: 3 },
+                { value: 'ARCHIVED', count: 1 },
+              ],
+            },
+            error: null,
+          }
+        : { data: {}, error: null },
+    );
+    const source = await connectHippoSource(client);
+    expect(source.capabilities.aggregation).toBe(true);
+
+    const result = await source.getFacetCounts('things', ['status'], {
+      status: 'ACTIVE',
+      other: 'x',
+    });
+
+    expect(result).toEqual({
+      status: [
+        { value: 'ACTIVE', count: 3 },
+        { value: 'ARCHIVED', count: 1 },
+      ],
+    });
+    const sent = client.recorded.find((r) => r.document.includes('ApertureFacetCounts'))!;
+    expect(sent.document).toBe(
+      'query ApertureFacetCounts($f0Filters: [FilterInput!]) ' +
+        '{ f0: thingsFacetCounts(field: "status", filters: $f0Filters, filterMode: AND) { value count } }',
+    );
+    // The facet's own current selection ('status': 'ACTIVE') is excluded from
+    // its own count request; other active filters ('other') are kept.
+    expect(sent.variables).toEqual({ f0Filters: [{ field: 'other', value: 'x' }] });
+  });
+
+  it('omits the filters arg entirely when no other filters are active', async () => {
+    const client = fakeClient(facetCountsSchema(), () => ({
+      data: { f0: [] },
+      error: null,
+    }));
+    const source = await connectHippoSource(client);
+    await source.getFacetCounts('things', ['status'], {});
+    const sent = client.recorded.find((r) => r.document.includes('ApertureFacetCounts'))!;
+    expect(sent.document).toBe(
+      'query ApertureFacetCounts { f0: thingsFacetCounts(field: "status") { value count } }',
+    );
+    expect(sent.variables).toEqual({});
+  });
+
+  it('returns {} without a request when the endpoint advertises no facetCounts field', async () => {
+    const client = fakeClient(capableSchema());
+    const source = await connectHippoSource(client);
+    expect(source.capabilities.aggregation).toBe(false);
+    expect(await source.getFacetCounts('books', ['format'], {})).toEqual({});
+    expect(client.queries.some((q) => q.includes('ApertureFacetCounts'))).toBe(false);
+  });
+
+  it('returns {} without a request when fields is empty', async () => {
+    const client = fakeClient(facetCountsSchema());
+    const source = await connectHippoSource(client);
+    expect(await source.getFacetCounts('things', [], {})).toEqual({});
+    expect(client.queries.some((q) => q.includes('ApertureFacetCounts'))).toBe(false);
   });
 });

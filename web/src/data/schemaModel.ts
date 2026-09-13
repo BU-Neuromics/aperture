@@ -58,6 +58,24 @@ export interface FacetModel {
   options?: readonly string[];
 }
 
+/**
+ * A genuine `<collection>FacetCounts(field: String!) -> [{value count}]`
+ * Query field (Mosaic ADR-0007/X1, issue #20), when advertised — per-value
+ * counts for an equality facet under the collection's current filters.
+ */
+export interface FacetCountsModel {
+  /** The Query field, e.g. `biosamplesFacetCounts`. */
+  field: string;
+  /** The `field: String!` arg naming which facet to count (the slot name). */
+  fieldArgName: string;
+  fieldArgType: string;
+  /** The flat `filters:`/`filterMode:` args, when advertised beside it. */
+  filtersArgName?: string;
+  filtersArgType?: string;
+  filterModeArgName?: string;
+  filterModeArgType?: string;
+}
+
 /** How a single entity can be fetched for the detail view (R3.7). */
 export type DetailPath =
   | { kind: 'field'; field: string; argName: string; argType: string }
@@ -141,6 +159,8 @@ export interface CollectionModel {
   >;
   /** Equality facets the endpoint's filter input advertises. */
   facets: FacetModel[];
+  /** Per-value facet counts, when the endpoint advertises a genuine field (issue #20). */
+  facetCounts?: FacetCountsModel;
   /** All non-combinator fields of the filter input (equality-filterable). */
   filterFields: string[];
   /** How to fetch one entity, when the endpoint offers a way (else detail gates off). */
@@ -385,6 +405,45 @@ function deriveFacets(
     // Plain text/number inputs are not equality facets (range = Hippo X1).
   }
   return facets;
+}
+
+/**
+ * A `<collectionId>FacetCounts(field: String!) -> [{value count}]` Query
+ * field (Mosaic ADR-0007, issue #20), when genuinely advertised — a name
+ * match alone is not a capability (ADR-0029): the return type must actually
+ * be a list of an object type carrying `value`/`count`, and the aggregation
+ * target must be a required scalar `field` arg.
+ */
+function deriveFacetCounts(
+  schema: IntrospectionSchema,
+  queryFields: readonly IntrospectionField[],
+  collectionId: string,
+): FacetCountsModel | undefined {
+  const pattern = new RegExp(`^${collectionId}FacetCounts$`, 'i');
+  const field = queryFields.find((f) => pattern.test(f.name));
+  if (!field || !isListType(field.type)) return undefined;
+  const rowType = findType(schema, namedType(field.type).name);
+  if (rowType?.kind !== 'OBJECT') return undefined;
+  const rowFields = new Set((rowType.fields ?? []).map((f) => f.name));
+  if (!rowFields.has('value') || !rowFields.has('count')) return undefined;
+
+  const fieldArg = field.args.find(
+    (a) => a.name === 'field' && namedType(a.type).name === 'String',
+  );
+  if (!fieldArg) return undefined;
+
+  const filtersArg = field.args.find((a) => a.name === 'filters' && isListType(a.type));
+  const filterModeArg = field.args.find((a) => a.name === 'filterMode');
+
+  return {
+    field: field.name,
+    fieldArgName: fieldArg.name,
+    fieldArgType: typeRefToSDL(fieldArg.type),
+    filtersArgName: filtersArg?.name,
+    filtersArgType: filtersArg && typeRefToSDL(filtersArg.type),
+    filterModeArgName: filterModeArg?.name,
+    filterModeArgType: filterModeArg && typeRefToSDL(filterModeArg.type),
+  };
 }
 
 /**
@@ -785,6 +844,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         orderDir: args.orderDir && typeRefToSDL(args.orderDir.type),
       },
       facets: args.filter ? deriveColumnFacets(detailColumns) : [],
+      facetCounts: deriveFacetCounts(schema, queryFields, field.name),
       filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
       detail: deriveDetailPath(queryFields, entityType.name, undefined, idColumn),
       write: deriveWriteModel(schema, entityType.name, detailColumns),
@@ -936,6 +996,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         orderDir: args.orderDir && typeRefToSDL(args.orderDir.type),
       },
       facets: deriveFacets(schema, filterTypeName, detailColumns),
+      facetCounts: deriveFacetCounts(schema, queryFields, field.name),
       filterFields:
         filterType?.kind === 'INPUT_OBJECT'
           ? (filterType.inputFields ?? [])
@@ -1021,7 +1082,7 @@ export function deriveCapabilities(
     // actually resolved to an orderBy enum member — an advertised `orderBy`
     // arg whose enum matches none of the derived columns sorts nothing.
     sort: some((c) => c.args.orderBy && c.columns.some((col) => col.orderField != null)),
-    aggregation: (queryType?.fields ?? []).some((f) => /aggregate|count/i.test(f.name)),
+    aggregation: some((c) => c.facetCounts != null),
     relationshipTraversal,
     entityHistory: deriveHistory(schema) != null,
     // True only when the batch surface introspects to a usable shape —
