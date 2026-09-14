@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
 import { App } from '../App';
-import { capableSchema, fakeClient } from '../data/testing/fixtures';
+import { capableSchema, fakeClient, fieldRangeSchema } from '../data/testing/fixtures';
 import { sealPayload } from './store';
 
 const endpoint = { url: 'http://example.test/graphql' };
@@ -160,6 +160,38 @@ describe('saved views (Phase 4, R3.9)', () => {
     // No hard delete — the document survives, payload cleared.
     await vi.waitFor(() => expect(docs[0].payload).toBe(''));
     expect(within(nav).queryByText('Hardcovers p2')).not.toBeInTheDocument();
+  });
+
+  it('range facets round-trip through saved views (issue #61)', async () => {
+    const user = userEvent.setup();
+    // No apertureDocuments collection on this schema — the store falls back
+    // to localStorage; the round-trip should still carry `ranges`.
+    const client = fakeClient(fieldRangeSchema(), (query) =>
+      query.includes('ApertureFieldRange')
+        ? { data: { f0: { min: null, max: null } }, error: null }
+        : { data: { things: { items: [{ id: 'T-1', age: 42 }], total: 1 } }, error: null },
+    );
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText('Filters')).toBeInTheDocument();
+
+    const inspector = within(screen.getByRole('complementary', { name: 'Inspector' }));
+    const minInput = await inspector.findByTestId('facet-range-min-age');
+    await user.type(minInput, '10{Enter}');
+    await screen.findByText(/· filtered/);
+
+    await user.click(screen.getByRole('button', { name: 'Save view' }));
+    await user.type(screen.getByLabelText('View name'), 'Adults');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    // Clear the range, then reapply the saved view from the nav.
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
+    expect(screen.queryByText(/· filtered/)).not.toBeInTheDocument();
+
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    await user.click(await within(nav).findByText('Adults'));
+
+    expect(await screen.findByText(/· filtered/)).toBeInTheDocument();
+    expect(inspector.getByTestId('facet-range-min-age')).toHaveValue(10);
   });
 });
 

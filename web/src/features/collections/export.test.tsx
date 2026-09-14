@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import { App } from '../../App';
-import { capableSchema, fakeClient } from '../../data/testing/fixtures';
+import { capableSchema, fakeClient, fieldRangeSchema } from '../../data/testing/fixtures';
 import { connectHippoSource } from '../../data/hippoSource';
 import { deriveCollections } from '../../data/schemaModel';
 import { collectAllRows, downloadFile, toCSV, toJSONExport } from './export';
@@ -86,6 +86,20 @@ describe('collectAllRows', () => {
     const result = await collectAllRows(source, books, {}, '', 250);
     expect(result.rows).toHaveLength(250);
     expect(result.truncated).toBe(true);
+  });
+
+  it('inherits active range-facet conditions (issue #61)', async () => {
+    const client = fakeClient(fieldRangeSchema(), () => ({
+      data: { things: { items: [{ id: 'T-1', age: 42 }], total: 1 } },
+      error: null,
+    }));
+    const source = await connectHippoSource(client);
+    const [things] = source.collections;
+    await collectAllRows(source, things, {}, '', 100, undefined, [
+      { field: 'age', value: 18, op: 'GTE' },
+    ]);
+    const sent = client.recorded.find((r) => r.document.includes('ApertureList'))!;
+    expect(sent.variables['filters']).toEqual([{ field: 'age', value: 18, op: 'GTE' }]);
   });
 });
 

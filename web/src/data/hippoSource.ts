@@ -18,6 +18,14 @@ import { deriveCapabilities, deriveCollections, deriveHistory } from './schemaMo
 export type FilterValues = Record<string, string | boolean>;
 
 /**
+ * Active range-facet selections (issue #61): one `{gte?, lte?}` bound per
+ * numeric/date facet field — the serialized form `urlState.ts`'s `ranges`
+ * state and saved views carry; `rangeConditions` turns these into the typed
+ * `GTE`/`LTE` `FilterCondition` entries below.
+ */
+export type RangeValues = Record<string, { gte?: string | number; lte?: string | number }>;
+
+/**
  * One typed filter condition for the flat `filters:` list (Mosaic ADR-0006
  * increment 1). `op` is a member of the endpoint's introspected `FilterOp`
  * enum (`EQ`/`IN`/`NEQ`/`GT`/…); omit it (or pass `EQ`) for plain equality —
@@ -97,6 +105,17 @@ export interface HippoSource {
     fields: string[],
     filters: FilterValues,
   ): Promise<Record<string, { value: unknown; count: number }[]>>;
+  /**
+   * Advertised min/max bounds for a set of numeric/date range facets on one
+   * collection, under the collection's active equality filters (issue #61)
+   * — the bounds pre-fill a `RangeFacet` widget's inputs. Empty when the
+   * collection advertises no `fieldRange` field or `fields` is empty.
+   */
+  getFieldRange(
+    collectionId: string,
+    fields: string[],
+    filters: FilterValues,
+  ): Promise<Record<string, { min: unknown; max: unknown }>>;
   /** Create via the derived write path; returns the new entity's id column value (W4.3). */
   createEntity(collectionId: string, values: WriteValues): Promise<string | null>;
   /** Partial-merge update: send only the given fields (W4.3). */
@@ -605,6 +624,48 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       const byField: Record<string, { value: unknown; count: number }[]> = {};
       fields.forEach((slot, i) => {
         byField[slot] = result.data![`f${i}`] ?? [];
+      });
+      return byField;
+    },
+
+    async getFieldRange(collectionId, fields, filters) {
+      const collection = collectionFor(collectionId);
+      const fr = collection.fieldRange;
+      if (!fr || fields.length === 0) return {};
+
+      // One request for every visible range facet, via an aliased field per
+      // facet (f0, f1, …) rather than N round-trips — same shape as
+      // getFacetCounts. Unlike facetCounts, a range facet's own value isn't
+      // carried in `filters` (it lives in `conditions`/the URL's `ranges`
+      // state instead), so there's nothing of its own to exclude here.
+      const varDefs: string[] = [];
+      const variables: Record<string, unknown> = {};
+      const selections = fields.map((slot, i) => {
+        const alias = `f${i}`;
+        const args = [`${fr.fieldArgName}: ${JSON.stringify(slot)}`];
+        if (fr.filtersArgName && fr.filtersArgType) {
+          const entries = Object.entries(filters).map(([field, value]) => ({ field, value }));
+          if (entries.length > 0) {
+            const varName = `${alias}Filters`;
+            varDefs.push(`$${varName}: ${fr.filtersArgType}`);
+            variables[varName] = entries;
+            args.push(`${fr.filtersArgName}: $${varName}`);
+            if (fr.filterModeArgName) args.push(`${fr.filterModeArgName}: AND`);
+          }
+        }
+        return `${alias}: ${fr.field}(${args.join(', ')}) { min max }`;
+      });
+      const document = `query ApertureFieldRange${varDefs.length > 0 ? `(${varDefs.join(', ')})` : ''} { ${selections.join(' ')} }`;
+      const result = await client.query<Record<string, { min: unknown; max: unknown }>>(
+        document,
+        variables,
+      );
+      if (result.error || result.data == null) {
+        throw new Error(`Could not load field range: ${result.error?.message ?? 'empty response'}`);
+      }
+      const byField: Record<string, { min: unknown; max: unknown }> = {};
+      fields.forEach((slot, i) => {
+        byField[slot] = result.data![`f${i}`] ?? { min: null, max: null };
       });
       return byField;
     },

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FilterValues, HippoSource } from '../../data/hippoSource';
+import type { FilterCondition, FilterValues, HippoSource } from '../../data/hippoSource';
 import type { CollectionModel } from '../../data/schemaModel';
 import { EXPORT_CAP, collectAllRows, downloadFile, toCSV, toJSONExport } from './export';
 
@@ -12,6 +12,7 @@ export function ExportButtons({
   source,
   collection,
   filters,
+  conditions,
   search,
   orderBy,
   disabled,
@@ -19,6 +20,8 @@ export function ExportButtons({
   source: HippoSource;
   collection: CollectionModel;
   filters: FilterValues;
+  /** Active range-facet conditions (issue #61) — exports inherit them too. */
+  conditions?: FilterCondition[];
   search: string;
   orderBy?: { field: string; dir?: 'ASC' | 'DESC' };
   disabled: boolean;
@@ -37,6 +40,7 @@ export function ExportButtons({
         search,
         EXPORT_CAP,
         orderBy,
+        conditions,
       );
       const content = format === 'csv' ? toCSV(collection.columns, rows) : toJSONExport(rows);
       downloadFile(

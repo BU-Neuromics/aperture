@@ -21,7 +21,7 @@ export function SaveViewButton({
   collectionId: string;
 }) {
   const { save, views, canWrite } = useSavedViews();
-  const { page, search, filters, sort } = useCollectionUrlState();
+  const { page, search, filters, ranges, sort } = useCollectionUrlState();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -40,6 +40,7 @@ export function SaveViewButton({
           page,
           q: search || undefined,
           filters: Object.keys(filters).length > 0 ? filters : undefined,
+          ranges: Object.keys(ranges).length > 0 ? ranges : undefined,
           sort: sort ? formatSort(sort) : undefined,
         },
         schemaFingerprint: schemaFingerprint(source),

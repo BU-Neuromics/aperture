@@ -2,8 +2,22 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
+import type { IntrospectionSchema } from '../../data/introspection';
 import { App } from '../../App';
-import { bareSchema, capableSchema, facetCountsSchema, fakeClient } from '../../data/testing/fixtures';
+import {
+  arg,
+  bareSchema,
+  capableSchema,
+  facetCountsSchema,
+  fakeClient,
+  field,
+  fieldRangeSchema,
+  list,
+  nonNull,
+  object,
+  objectType,
+  scalar,
+} from '../../data/testing/fixtures';
 
 const endpoint = { url: 'http://example.test/graphql' };
 
@@ -147,5 +161,95 @@ describe('FacetPanel (R3.3 — equality facets + FTS, capability-gated)', () => 
     renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
     await screen.findByText('x');
     expect(screen.queryByText('Filters')).not.toBeInTheDocument();
+  });
+
+  it('shows a range facet pre-filled with the endpoint’s advertised bounds once a genuine fieldRange field is advertised (issue #61)', async () => {
+    const client = fakeClient(fieldRangeSchema(), (query) =>
+      query.includes('ApertureFieldRange')
+        ? { data: { f0: { min: 3, max: 88 } }, error: null }
+        : { data: { things: { items: [{ id: 'T-1', age: 42 }], total: 1 } }, error: null },
+    );
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText('Filters')).toBeInTheDocument();
+    const inspector = within(screen.getByRole('complementary', { name: 'Inspector' }));
+    expect(await inspector.findByTestId('facet-range-min-age')).toHaveAttribute('placeholder', '3');
+    expect(inspector.getByTestId('facet-range-max-age')).toHaveAttribute('placeholder', '88');
+  });
+
+  it('wires min/max entry to GTE/LTE conditions in the same flat filters list (issue #61)', async () => {
+    const user = userEvent.setup();
+    const client = fakeClient(fieldRangeSchema(), (query) =>
+      query.includes('ApertureFieldRange')
+        ? { data: { f0: { min: null, max: null } }, error: null }
+        : { data: { things: { items: [{ id: 'T-1', age: 42 }], total: 1 } }, error: null },
+    );
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText('Filters')).toBeInTheDocument();
+    const inspector = within(screen.getByRole('complementary', { name: 'Inspector' }));
+    const minInput = await inspector.findByTestId('facet-range-min-age');
+    await user.type(minInput, '10{Enter}');
+    await screen.findByText(/· filtered/);
+    expect(
+      client.recorded.some(
+        (q) =>
+          q.document.includes('ApertureList') &&
+          JSON.stringify(q.variables['filters']) === JSON.stringify([{ field: 'age', value: 10, op: 'GTE' }]),
+      ),
+    ).toBe(true);
+
+    const maxInput = inspector.getByTestId('facet-range-max-age');
+    await user.type(maxInput, '50{Enter}');
+    expect(
+      client.recorded.some(
+        (q) =>
+          q.document.includes('ApertureList') &&
+          JSON.stringify(q.variables['filters']) ===
+            JSON.stringify([
+              { field: 'age', value: 10, op: 'GTE' },
+              { field: 'age', value: 50, op: 'LTE' },
+            ]),
+      ),
+    ).toBe(true);
+
+    // Clear all resets the range too.
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
+    await screen.findByText(/Page 1 · 1 of 1 rows$/);
+    expect(inspector.getByTestId('facet-range-min-age')).toHaveValue(null);
+  });
+
+  it('shows no range widget without a genuine fieldRange field, even with numeric/date columns present (ADR-0029: never fake)', async () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+            arg('filters', list(nonNull(object('FilterInput')))),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [
+          field('id', nonNull(scalar('ID'))),
+          field('age', scalar('Int')),
+          // A boolean equality facet so the panel itself still renders —
+          // isolating the assertion to "no range widget for `age`".
+          field('active', scalar('Boolean')),
+        ]),
+      ],
+    };
+    const client = fakeClient(schema, () => ({
+      data: { things: { items: [{ id: 'T-1', age: 42, active: true }], total: 1 } },
+      error: null,
+    }));
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />);
+    expect(await screen.findByText('Filters')).toBeInTheDocument();
+    const inspector = within(screen.getByRole('complementary', { name: 'Inspector' }));
+    expect(inspector.getByText('Active')).toBeInTheDocument();
+    expect(inspector.queryByTestId('facet-range-min-age')).not.toBeInTheDocument();
   });
 });

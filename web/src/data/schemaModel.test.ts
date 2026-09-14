@@ -7,6 +7,7 @@ import {
   enumRef,
   enumType,
   field,
+  inputObjectType,
   list,
   nonNull,
   object,
@@ -532,6 +533,7 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       fullTextSearch: true,
       sort: false, // Hippo X1 not landed — stays off
       aggregation: false, // Hippo X1 not landed — stays off
+      rangeFacets: false, // Hippo X1 not landed — stays off
       relationshipTraversal: true,
       entityHistory: true,
       batchWrite: true,
@@ -676,6 +678,128 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
     expect(deriveCapabilities(schema, deriveCollections(schema)).aggregation).toBe(false);
   });
 
+  /** A filterList collection with a numeric + a date column, for range-facet tests. */
+  function rangeableSchema(withFieldRange: boolean): IntrospectionSchema {
+    const queryFields = [
+      field('things', nonNull(object('ThingPage')), [
+        arg('limit', nonNull(scalar('Int'))),
+        arg('offset', nonNull(scalar('Int'))),
+        arg('filters', list(nonNull(object('FilterInput')))),
+      ]),
+    ];
+    if (withFieldRange) {
+      queryFields.push(
+        field('thingsFieldRange', nonNull(object('FieldRange')), [
+          arg('field', nonNull(scalar('String'))),
+          arg('filters', list(object('FilterInput'))),
+          arg('filterMode', enumRef('FilterMode')),
+        ]),
+      );
+    }
+    return {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', queryFields),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [
+          field('id', nonNull(scalar('ID'))),
+          field('age', scalar('Int')),
+          field('joinedOn', scalar('Date')),
+        ]),
+        objectType('FieldRange', [field('min', scalar('Float')), field('max', scalar('Float'))]),
+      ],
+    };
+  }
+
+  it('derives a genuine fieldRange field and number-range/date-range facets, gates rangeFacets on (Mosaic ADR-0007, issue #61)', () => {
+    const schema = rangeableSchema(true);
+    const [things] = deriveCollections(schema);
+    expect(things.fieldRange).toEqual({
+      field: 'thingsFieldRange',
+      fieldArgName: 'field',
+      fieldArgType: 'String!',
+      filtersArgName: 'filters',
+      filtersArgType: '[FilterInput]',
+      filterModeArgName: 'filterMode',
+      filterModeArgType: 'FilterMode',
+    });
+    expect(things.facets).toEqual([
+      { field: 'age', label: 'Age', kind: 'number-range' },
+      { field: 'joined_on', label: 'Joined on', kind: 'date-range' },
+    ]);
+    expect(deriveCapabilities(schema, deriveCollections(schema)).rangeFacets).toBe(true);
+  });
+
+  it('derives no range facets — and gates rangeFacets off — without a genuine fieldRange field (ADR-0029: never fake)', () => {
+    const schema = rangeableSchema(false);
+    const [things] = deriveCollections(schema);
+    expect(things.fieldRange).toBeUndefined();
+    // Numeric/date columns exist, but with no FieldRange advertised a min/max
+    // widget could never actually filter — nothing changes.
+    expect(things.facets).toEqual([]);
+    expect(deriveCapabilities(schema, deriveCollections(schema)).rangeFacets).toBe(false);
+  });
+
+  it('does not derive fieldRange from a name match alone (ADR-0029)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(object('ThingPage')), [
+            arg('limit', nonNull(scalar('Int'))),
+            arg('offset', nonNull(scalar('Int'))),
+            arg('filters', list(nonNull(object('FilterInput')))),
+          ]),
+          // Right name, wrong shape: it returns a LIST (facetCounts' shape),
+          // not a single {min max} object.
+          field('thingsFieldRange', nonNull(list(nonNull(object('FieldRange')))), [
+            arg('field', nonNull(scalar('String'))),
+          ]),
+        ]),
+        objectType('ThingPage', [
+          field('items', nonNull(list(nonNull(object('Thing'))))),
+          field('total', nonNull(scalar('Int'))),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID'))), field('age', scalar('Int'))]),
+        objectType('FieldRange', [field('min', scalar('Float')), field('max', scalar('Float'))]),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    expect(things.fieldRange).toBeUndefined();
+    expect(deriveCapabilities(schema, deriveCollections(schema)).rangeFacets).toBe(false);
+  });
+
+  it('never derives range facets for the inputObject/stub shape, even with a fieldRange field (conditions have no representation there)', () => {
+    const schema: IntrospectionSchema = {
+      queryType: { name: 'Query' },
+      mutationType: null,
+      types: [
+        objectType('Query', [
+          field('things', nonNull(list(nonNull(object('Thing')))), [
+            arg('filter', { kind: 'INPUT_OBJECT', name: 'ThingFilter', ofType: null }),
+          ]),
+          field('thingsFieldRange', nonNull(object('FieldRange')), [
+            arg('field', nonNull(scalar('String'))),
+          ]),
+        ]),
+        objectType('Thing', [field('id', nonNull(scalar('ID'))), field('age', scalar('Int'))]),
+        objectType('FieldRange', [field('min', scalar('Float')), field('max', scalar('Float'))]),
+        inputObjectType('ThingFilter', [arg('age', scalar('Int'))]),
+      ],
+    };
+    const [things] = deriveCollections(schema);
+    // The capability model is still honestly derived…
+    expect(things.fieldRange).toBeDefined();
+    // …but no widget: the stub filter shape never sends `conditions`.
+    expect(things.facets).toEqual([]);
+    expect(deriveCapabilities(schema, deriveCollections(schema)).rangeFacets).toBe(false);
+  });
+
   it('gates everything off for a bare endpoint', () => {
     const schema = bareSchema();
     const caps = deriveCapabilities(schema, deriveCollections(schema));
@@ -686,6 +810,7 @@ describe('deriveCapabilities (negotiated, never faked — ADR-0029)', () => {
       fullTextSearch: false,
       sort: false,
       aggregation: false,
+      rangeFacets: false,
       relationshipTraversal: false,
       entityHistory: false,
       batchWrite: false,

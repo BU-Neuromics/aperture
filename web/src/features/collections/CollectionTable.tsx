@@ -11,7 +11,7 @@ import type { CollectionModel } from '../../data/schemaModel';
 import { isRightAligned, renderCell } from './cells';
 import { ExportButtons } from './ExportButtons';
 import { SaveViewButton } from './SaveViewButton';
-import { useCollectionUrlState } from './urlState';
+import { rangeConditions, useCollectionUrlState } from './urlState';
 import { useEntityPage } from './useEntityPage';
 import './collections.css';
 
@@ -40,6 +40,7 @@ export function CollectionTable({
     page,
     setPage,
     filters,
+    ranges,
     search,
     sort,
     toggleSort,
@@ -48,6 +49,9 @@ export function CollectionTable({
     openIn,
     openCreateForm,
   } = useCollectionUrlState();
+  // Active range facets (issue #61) ride the same typed `conditions`
+  // mechanism the cross-class query-builder planner already uses.
+  const conditions = useMemo(() => rangeConditions(ranges), [ranges]);
   const columnByField = useMemo(
     () => new Map(collection.columns.map((c) => [c.field, c])),
     [collection],
@@ -60,8 +64,17 @@ export function CollectionTable({
     if (!orderField) return undefined;
     return { field: orderField, dir: sort.dir === 'desc' ? ('DESC' as const) : ('ASC' as const) };
   }, [sort, columnByField]);
-  const result = useEntityPage(source, collection.id, page, PAGE_SIZE, filters, search, activeOrderBy);
-  const isFiltered = Object.keys(filters).length > 0 || search !== '';
+  const result = useEntityPage(
+    source,
+    collection.id,
+    page,
+    PAGE_SIZE,
+    filters,
+    search,
+    activeOrderBy,
+    conditions,
+  );
+  const isFiltered = Object.keys(filters).length > 0 || Object.keys(ranges).length > 0 || search !== '';
 
   const columns = useMemo(
     () =>
@@ -149,6 +162,7 @@ export function CollectionTable({
             source={source}
             collection={collection}
             filters={filters}
+            conditions={conditions}
             search={search}
             orderBy={activeOrderBy}
             disabled={result.status !== 'ready'}

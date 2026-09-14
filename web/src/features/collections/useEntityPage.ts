@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { EntityPage, FilterValues, HippoSource } from '../../data/hippoSource';
+import type { EntityPage, FilterCondition, FilterValues, HippoSource } from '../../data/hippoSource';
 
 export type EntityPageState =
   | { status: 'loading' }
@@ -15,6 +15,8 @@ export function useEntityPage(
   filters?: FilterValues,
   search?: string,
   orderBy?: { field: string; dir?: 'ASC' | 'DESC' },
+  /** Typed range conditions (issue #61): `GTE`/`LTE` entries from active range facets. */
+  conditions?: FilterCondition[],
 ): EntityPageState & { retry: () => void } {
   const [state, setState] = useState<EntityPageState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -25,6 +27,12 @@ export function useEntityPage(
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content, not identity
     [filtersKey],
   );
+  const conditionsKey = JSON.stringify(conditions ?? []);
+  const stableConditions = useMemo(
+    () => (conditions && conditions.length > 0 ? conditions : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content, not identity
+    [conditionsKey],
+  );
 
   const orderByKey = orderBy ? `${orderBy.field}:${orderBy.dir ?? 'ASC'}` : '';
 
@@ -32,7 +40,14 @@ export function useEntityPage(
     let cancelled = false;
     setState({ status: 'loading' });
     source
-      .listEntities(collectionId, { page, pageSize, filters: stableFilters, search, orderBy })
+      .listEntities(collectionId, {
+        page,
+        pageSize,
+        filters: stableFilters,
+        conditions: stableConditions,
+        search,
+        orderBy,
+      })
       .then((result) => {
         if (!cancelled) setState({ status: 'ready', page: result });
       })
@@ -48,7 +63,17 @@ export function useEntityPage(
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- orderBy keyed by content, not identity
-  }, [source, collectionId, page, pageSize, stableFilters, search, orderByKey, attempt]);
+  }, [
+    source,
+    collectionId,
+    page,
+    pageSize,
+    stableFilters,
+    stableConditions,
+    search,
+    orderByKey,
+    attempt,
+  ]);
 
   return { ...state, retry };
 }
