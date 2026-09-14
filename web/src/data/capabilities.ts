@@ -21,6 +21,14 @@ export interface Capabilities {
    * is advertised (Mosaic ADR-0007/X1), not just a name match (ADR-0029).
    */
   aggregation: boolean;
+  /**
+   * Numeric/date range facets are derivable — a genuine
+   * `<collection>FieldRange(field: String!) -> {min max}` Query field is
+   * advertised (Mosaic ADR-0007/X1, issue #61), not just a name match
+   * (ADR-0029). Independent of `aggregation` (facetCounts) — an endpoint may
+   * advertise one without the other.
+   */
+  rangeFacets: boolean;
   /** Entity types expose resolved relationship fields. */
   relationshipTraversal: boolean;
   /** An entityHistory-style query is advertised (detail-view history, R3.7). */
@@ -46,6 +54,7 @@ export const NO_CAPABILITIES: Capabilities = {
   fullTextSearch: false,
   sort: false,
   aggregation: false,
+  rangeFacets: false,
   relationshipTraversal: false,
   entityHistory: false,
   batchWrite: false,

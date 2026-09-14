@@ -13,6 +13,7 @@ import {
   capableSchema,
   facetCountsSchema,
   fakeClient,
+  fieldRangeSchema,
   realIntrospection,
   sortableSchema,
 } from './testing/fixtures';
@@ -530,5 +531,71 @@ describe('getFacetCounts (Mosaic ADR-0007/X1, issue #20)', () => {
     const source = await connectHippoSource(client);
     expect(await source.getFacetCounts('things', [], {})).toEqual({});
     expect(client.queries.some((q) => q.includes('ApertureFacetCounts'))).toBe(false);
+  });
+});
+
+describe('getFieldRange (Mosaic ADR-0007/X1, issue #61)', () => {
+  it('requests one aliased field per range facet, carrying the active equality filters', async () => {
+    const client = fakeClient(fieldRangeSchema(), (query) =>
+      query.includes('ApertureFieldRange')
+        ? { data: { f0: { min: 3, max: 88 } }, error: null }
+        : { data: {}, error: null },
+    );
+    const source = await connectHippoSource(client);
+    expect(source.capabilities.rangeFacets).toBe(true);
+
+    const result = await source.getFieldRange('things', ['age'], { status: 'ACTIVE' });
+
+    expect(result).toEqual({ age: { min: 3, max: 88 } });
+    const sent = client.recorded.find((r) => r.document.includes('ApertureFieldRange'))!;
+    expect(sent.document).toBe(
+      'query ApertureFieldRange($f0Filters: [FilterInput!]) ' +
+        '{ f0: thingsFieldRange(field: "age", filters: $f0Filters, filterMode: AND) { min max } }',
+    );
+    expect(sent.variables).toEqual({ f0Filters: [{ field: 'status', value: 'ACTIVE' }] });
+  });
+
+  it('omits the filters arg entirely when no equality filters are active', async () => {
+    const client = fakeClient(fieldRangeSchema(), () => ({
+      data: { f0: { min: null, max: null } },
+      error: null,
+    }));
+    const source = await connectHippoSource(client);
+    await source.getFieldRange('things', ['age'], {});
+    const sent = client.recorded.find((r) => r.document.includes('ApertureFieldRange'))!;
+    expect(sent.document).toBe(
+      'query ApertureFieldRange { f0: thingsFieldRange(field: "age") { min max } }',
+    );
+    expect(sent.variables).toEqual({});
+  });
+
+  it('requests multiple range facets as separate aliases in one round-trip', async () => {
+    const client = fakeClient(fieldRangeSchema(), (query) =>
+      query.includes('ApertureFieldRange')
+        ? { data: { f0: { min: 3, max: 88 }, f1: { min: '2020-01-01', max: '2026-01-01' } }, error: null }
+        : { data: {}, error: null },
+    );
+    const source = await connectHippoSource(client);
+    const result = await source.getFieldRange('things', ['age', 'joined_on'], {});
+    expect(result).toEqual({
+      age: { min: 3, max: 88 },
+      joined_on: { min: '2020-01-01', max: '2026-01-01' },
+    });
+    expect(client.queries.filter((q) => q.includes('ApertureFieldRange'))).toHaveLength(1);
+  });
+
+  it('returns {} without a request when the endpoint advertises no fieldRange field', async () => {
+    const client = fakeClient(facetCountsSchema());
+    const source = await connectHippoSource(client);
+    expect(source.capabilities.rangeFacets).toBe(false);
+    expect(await source.getFieldRange('things', ['status'], {})).toEqual({});
+    expect(client.queries.some((q) => q.includes('ApertureFieldRange'))).toBe(false);
+  });
+
+  it('returns {} without a request when fields is empty', async () => {
+    const client = fakeClient(fieldRangeSchema());
+    const source = await connectHippoSource(client);
+    expect(await source.getFieldRange('things', [], {})).toEqual({});
+    expect(client.queries.some((q) => q.includes('ApertureFieldRange'))).toBe(false);
   });
 });

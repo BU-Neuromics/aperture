@@ -1,4 +1,4 @@
-import type { FilterValues } from '../data/hippoSource';
+import type { FilterValues, RangeValues } from '../data/hippoSource';
 import type { ControlPlaneDocument, Visibility } from './store';
 import { openPayload, sealPayload } from './store';
 
@@ -15,6 +15,8 @@ export interface SavedViewState {
   page: number;
   q?: string;
   filters?: FilterValues;
+  /** Active range-facet selections (issue #61) — absent for endpoints without range facets. */
+  ranges?: RangeValues;
   /** `<column field>:<asc|desc>` (issue #20) — absent for endpoints/columns without sort. */
   sort?: string;
 }
@@ -41,6 +43,18 @@ function isFilterValues(value: unknown): value is FilterValues {
   );
 }
 
+function isRangeValues(value: unknown): value is RangeValues {
+  if (typeof value !== 'object' || value == null || Array.isArray(value)) return false;
+  return Object.values(value).every((range) => {
+    if (typeof range !== 'object' || range == null || Array.isArray(range)) return false;
+    const { gte, lte } = range as Record<string, unknown>;
+    return (
+      (gte === undefined || typeof gte === 'string' || typeof gte === 'number') &&
+      (lte === undefined || typeof lte === 'string' || typeof lte === 'number')
+    );
+  });
+}
+
 function isSavedViewData(data: unknown): data is Omit<SavedView, 'name'> {
   if (typeof data !== 'object' || data == null) return false;
   const d = data as Record<string, unknown>;
@@ -53,6 +67,7 @@ function isSavedViewData(data: unknown): data is Omit<SavedView, 'name'> {
     typeof state['page'] === 'number' &&
     (state['q'] === undefined || typeof state['q'] === 'string') &&
     (state['filters'] === undefined || isFilterValues(state['filters'])) &&
+    (state['ranges'] === undefined || isRangeValues(state['ranges'])) &&
     (state['sort'] === undefined || typeof state['sort'] === 'string')
   );
 }

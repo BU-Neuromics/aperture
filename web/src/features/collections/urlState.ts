@@ -5,7 +5,7 @@ import {
   parseAsStringLiteral,
   useQueryStates,
 } from 'nuqs';
-import type { FilterValues } from '../../data/hippoSource';
+import type { FilterCondition, FilterValues, RangeValues } from '../../data/hippoSource';
 import type { QuerySpec } from '../../query/querySpec';
 import { validateQuerySpecShape } from '../../query/querySpec';
 
@@ -29,6 +29,42 @@ function validateFilters(value: unknown): FilterValues {
 
 const EMPTY_FILTERS: FilterValues = {};
 
+function isRangeBound(value: unknown): value is string | number {
+  return typeof value === 'string' || typeof value === 'number';
+}
+
+function validateRanges(value: unknown): RangeValues {
+  if (typeof value !== 'object' || value == null || Array.isArray(value)) {
+    throw new Error('ranges must be an object');
+  }
+  for (const range of Object.values(value)) {
+    if (typeof range !== 'object' || range == null || Array.isArray(range)) {
+      throw new Error('each range must be an object');
+    }
+    const { gte, lte, ...rest } = range as Record<string, unknown>;
+    if (Object.keys(rest).length > 0) throw new Error('a range may only have gte/lte');
+    if (gte !== undefined && !isRangeBound(gte)) throw new Error('gte must be a string or number');
+    if (lte !== undefined && !isRangeBound(lte)) throw new Error('lte must be a string or number');
+  }
+  return value as RangeValues;
+}
+
+const EMPTY_RANGES: RangeValues = {};
+
+/**
+ * Active ranges → typed `GTE`/`LTE` conditions for the existing `conditions`
+ * mechanism (issue #61) — the same flat `filters:` list equality facets use
+ * (`listFilterEntries` in hippoSource.ts), so no new query-building path.
+ */
+export function rangeConditions(ranges: RangeValues): FilterCondition[] {
+  const conditions: FilterCondition[] = [];
+  for (const [field, range] of Object.entries(ranges)) {
+    if (range.gte !== undefined) conditions.push({ field, value: range.gte, op: 'GTE' });
+    if (range.lte !== undefined) conditions.push({ field, value: range.lte, op: 'LTE' });
+  }
+  return conditions;
+}
+
 /** `<column field>:<asc|desc>` — the column field, not the orderBy enum member (issue #20). */
 export interface SortState {
   field: string;
@@ -51,6 +87,8 @@ export function useCollectionUrlState() {
     page: parseAsInteger.withDefault(1),
     q: parseAsString,
     filters: parseAsJson(validateFilters),
+    /** Active range-facet selections (issue #61): `{field: {gte?, lte?}}`. */
+    ranges: parseAsJson(validateRanges),
     entity: parseAsString,
     form: parseAsStringLiteral(['new', 'edit'] as const),
     workflow: parseAsString,
@@ -63,6 +101,7 @@ export function useCollectionUrlState() {
   });
 
   const filters = state.filters ?? EMPTY_FILTERS;
+  const ranges = state.ranges ?? EMPTY_RANGES;
   const sort = state.sort ? parseSort(state.sort) : null;
 
   return {
@@ -70,6 +109,7 @@ export function useCollectionUrlState() {
     page: Math.max(1, state.page),
     search: state.q ?? '',
     filters,
+    ranges,
     entity: state.entity,
     form: state.form,
     workflow: state.workflow,
@@ -83,6 +123,7 @@ export function useCollectionUrlState() {
         page: 1,
         q: null,
         filters: null,
+        ranges: null,
         entity: null,
         form: null,
         workflow: null,
@@ -114,7 +155,14 @@ export function useCollectionUrlState() {
       else next[field] = value;
       void setState({ filters: Object.keys(next).length > 0 ? next : null, page: 1 });
     },
-    clearFilters: () => void setState({ filters: null, q: null, page: 1 }),
+    /** Range-facet min/max (issue #61): undefined bounds clear that field entirely. */
+    setRange: (field: string, range: { gte?: string | number; lte?: string | number }) => {
+      const next: RangeValues = { ...ranges };
+      if (range.gte === undefined && range.lte === undefined) delete next[field];
+      else next[field] = range;
+      void setState({ ranges: Object.keys(next).length > 0 ? next : null, page: 1 });
+    },
+    clearFilters: () => void setState({ filters: null, ranges: null, q: null, page: 1 }),
     openEntity: (entity: string) => void setState({ entity, form: null }),
     closeEntity: () => void setState({ entity: null, form: null }),
     /** Cross-link: open another collection's entity detail (R3.8). */
@@ -125,6 +173,7 @@ export function useCollectionUrlState() {
         page: 1,
         q: null,
         filters: null,
+        ranges: null,
         form: null,
         workflow: null,
         sort: null,
@@ -134,6 +183,7 @@ export function useCollectionUrlState() {
       void setState({
         collection,
         filters: { [field]: value },
+        ranges: null,
         page: 1,
         q: null,
         entity: null,
@@ -165,6 +215,7 @@ export function useCollectionUrlState() {
       page: number;
       q?: string;
       filters?: FilterValues;
+      ranges?: RangeValues;
       sort?: string;
     }) =>
       void setState({
@@ -172,6 +223,7 @@ export function useCollectionUrlState() {
         page: Math.max(1, view.page),
         q: view.q ?? null,
         filters: view.filters && Object.keys(view.filters).length > 0 ? view.filters : null,
+        ranges: view.ranges && Object.keys(view.ranges).length > 0 ? view.ranges : null,
         entity: null,
         form: null,
         workflow: null,

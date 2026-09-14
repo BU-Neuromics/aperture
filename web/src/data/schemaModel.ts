@@ -45,15 +45,16 @@ export interface ColumnModel {
 }
 
 /**
- * An equality facet derived from the collection's filter input type (R3.3):
- * enum → checklist, boolean → true/false, ref-id → id equality. Range facets
- * and counts are Hippo X1 and stay underived until advertised (ADR-0029).
+ * An equality or range facet derived from the collection's filter surface
+ * (R3.3): enum → checklist, boolean → true/false, ref-id → id equality,
+ * numeric/date → a min/max range (issue #61, gated on a genuine `FieldRange`
+ * field — ADR-0029). Per-value counts are a separate overlay (issue #20).
  */
 export interface FacetModel {
   /** The filter input field name (what the server filters on). */
   field: string;
   label: string;
-  kind: 'enum' | 'boolean' | 'ref';
+  kind: 'enum' | 'boolean' | 'ref' | 'number-range' | 'date-range';
   /** For enum facets: the advertised values. */
   options?: readonly string[];
 }
@@ -67,6 +68,25 @@ export interface FacetCountsModel {
   /** The Query field, e.g. `biosamplesFacetCounts`. */
   field: string;
   /** The `field: String!` arg naming which facet to count (the slot name). */
+  fieldArgName: string;
+  fieldArgType: string;
+  /** The flat `filters:`/`filterMode:` args, when advertised beside it. */
+  filtersArgName?: string;
+  filtersArgType?: string;
+  filterModeArgName?: string;
+  filterModeArgType?: string;
+}
+
+/**
+ * A genuine `<collection>FieldRange(field: String!) -> {min max}` Query
+ * field (Mosaic ADR-0007/X1, issue #61), when advertised — the advertised
+ * min/max bounds for a numeric/date range facet under the collection's
+ * current filters. Same arg shape as `FacetCountsModel`, mirrored.
+ */
+export interface FieldRangeModel {
+  /** The Query field, e.g. `biosamplesFieldRange`. */
+  field: string;
+  /** The `field: String!` arg naming which facet to bound (the slot name). */
   fieldArgName: string;
   fieldArgType: string;
   /** The flat `filters:`/`filterMode:` args, when advertised beside it. */
@@ -161,6 +181,8 @@ export interface CollectionModel {
   facets: FacetModel[];
   /** Per-value facet counts, when the endpoint advertises a genuine field (issue #20). */
   facetCounts?: FacetCountsModel;
+  /** Advertised min/max bounds for range facets, when genuinely advertised (issue #61). */
+  fieldRange?: FieldRangeModel;
   /** All non-combinator fields of the filter input (equality-filterable). */
   filterFields: string[];
   /** How to fetch one entity, when the endpoint offers a way (else detail gates off). */
@@ -444,6 +466,70 @@ function deriveFacetCounts(
     filterModeArgName: filterModeArg?.name,
     filterModeArgType: filterModeArg && typeRefToSDL(filterModeArg.type),
   };
+}
+
+/**
+ * A `<collectionId>FieldRange(field: String!) -> {min max}` Query field
+ * (Mosaic ADR-0007, issue #61), when genuinely advertised — mirrors
+ * `deriveFacetCounts`'s ADR-0029 discipline: the return type must actually
+ * be an OBJECT carrying `min`/`max` (a single range, never a list of
+ * buckets), and the aggregation target must be a required scalar `field` arg.
+ */
+function deriveFieldRange(
+  schema: IntrospectionSchema,
+  queryFields: readonly IntrospectionField[],
+  collectionId: string,
+): FieldRangeModel | undefined {
+  const pattern = new RegExp(`^${collectionId}FieldRange$`, 'i');
+  const field = queryFields.find((f) => pattern.test(f.name));
+  if (!field || isListType(field.type)) return undefined;
+  const rowType = findType(schema, namedType(field.type).name);
+  if (rowType?.kind !== 'OBJECT') return undefined;
+  const rowFields = new Set((rowType.fields ?? []).map((f) => f.name));
+  if (!rowFields.has('min') || !rowFields.has('max')) return undefined;
+
+  const fieldArg = field.args.find(
+    (a) => a.name === 'field' && namedType(a.type).name === 'String',
+  );
+  if (!fieldArg) return undefined;
+
+  const filtersArg = field.args.find((a) => a.name === 'filters' && isListType(a.type));
+  const filterModeArg = field.args.find((a) => a.name === 'filterMode');
+
+  return {
+    field: field.name,
+    fieldArgName: fieldArg.name,
+    fieldArgType: typeRefToSDL(fieldArg.type),
+    filtersArgName: filtersArg?.name,
+    filtersArgType: filtersArg && typeRefToSDL(filtersArg.type),
+    filterModeArgName: filterModeArg?.name,
+    filterModeArgType: filterModeArg && typeRefToSDL(filterModeArg.type),
+  };
+}
+
+/**
+ * Numeric/date range facets (issue #61): derived from a 'filterList'
+ * collection's own columns — the only shape whose typed `conditions`
+ * mechanism can carry GTE/LTE (hippoSource.ts `listFilterEntries`; the
+ * inputObject/stub shape carries equality filters only and never sees
+ * conditions). Gated on a genuine `FieldRange` field (ADR-0029): without it,
+ * nothing changes even though the FilterOp vocabulary may already advertise
+ * GTE/LTE independent of this aggregation gate (ADR-0006, predates X1).
+ */
+function deriveRangeFacets(
+  columns: ColumnModel[],
+  fieldRange: FieldRangeModel | undefined,
+): FacetModel[] {
+  if (!fieldRange) return [];
+  const facets: FacetModel[] = [];
+  for (const column of columns) {
+    if (column.kind === 'number') {
+      facets.push({ field: slotName(column.field), label: column.label, kind: 'number-range' });
+    } else if (column.kind === 'date') {
+      facets.push({ field: slotName(column.field), label: column.label, kind: 'date-range' });
+    }
+  }
+  return facets;
 }
 
 /**
@@ -813,6 +899,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     if (detailColumns.length === 0) continue;
     const columns = detailColumns.slice(0, MAX_COLUMNS);
     const idColumn = pickIdColumn(columns);
+    const fieldRange = deriveFieldRange(schema, queryFields, field.name);
 
     collections.push({
       id: field.name,
@@ -843,8 +930,11 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
         orderBy: args.orderBy && typeRefToSDL(args.orderBy.type),
         orderDir: args.orderDir && typeRefToSDL(args.orderDir.type),
       },
-      facets: args.filter ? deriveColumnFacets(detailColumns) : [],
+      facets: args.filter
+        ? [...deriveColumnFacets(detailColumns), ...deriveRangeFacets(detailColumns, fieldRange)]
+        : [],
       facetCounts: deriveFacetCounts(schema, queryFields, field.name),
+      fieldRange,
       filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
       detail: deriveDetailPath(queryFields, entityType.name, undefined, idColumn),
       write: deriveWriteModel(schema, entityType.name, detailColumns),
@@ -997,6 +1087,11 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
       },
       facets: deriveFacets(schema, filterTypeName, detailColumns),
       facetCounts: deriveFacetCounts(schema, queryFields, field.name),
+      // No `deriveRangeFacets` here: the inputObject/stub shape carries
+      // equality filters only (hippoSource.ts) — a widget wired to GTE/LTE
+      // would silently do nothing, which ADR-0029 forbids. `fieldRange` is
+      // still derived so the capability model is honest either way.
+      fieldRange: deriveFieldRange(schema, queryFields, field.name),
       filterFields:
         filterType?.kind === 'INPUT_OBJECT'
           ? (filterType.inputFields ?? [])
@@ -1083,6 +1178,10 @@ export function deriveCapabilities(
     // arg whose enum matches none of the derived columns sorts nothing.
     sort: some((c) => c.args.orderBy && c.columns.some((col) => col.orderField != null)),
     aggregation: some((c) => c.facetCounts != null),
+    // Only counts collections whose facets actually include a range facet —
+    // a `fieldRange` field with no usable filterList facets to attach to
+    // (the stub/inputObject shape) advertises no rangeFacets capability.
+    rangeFacets: some((c) => c.facets.some((f) => f.kind === 'number-range' || f.kind === 'date-range')),
     relationshipTraversal,
     entityHistory: deriveHistory(schema) != null,
     // True only when the batch surface introspects to a usable shape —

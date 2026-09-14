@@ -413,6 +413,47 @@ export function facetCountsSchema(): IntrospectionSchema {
 }
 
 /**
+ * An envelope collection (live Hippo filterList shape) plus a genuine
+ * `thingsFieldRange(field: String!, filters:, filterMode:) -> {min max}`
+ * Query field (Mosaic ADR-0007/X1, issue #61) — `age` is a numeric range
+ * facet, `joinedOn` a date range facet.
+ */
+export function fieldRangeSchema(): IntrospectionSchema {
+  const filterArgs = [
+    arg('filters', list(nonNull(object('FilterInput')))),
+    arg('filterMode', nonNull(enumRef('FilterMode')), 'AND'),
+  ];
+  return {
+    queryType: { name: 'Query' },
+    mutationType: null,
+    types: [
+      objectType('Query', [
+        field('things', nonNull(object('ThingPage')), [
+          arg('limit', nonNull(scalar('Int'))),
+          arg('offset', nonNull(scalar('Int'))),
+          ...filterArgs,
+        ]),
+        field('thingsFieldRange', nonNull(object('FieldRange')), [
+          arg('field', nonNull(scalar('String'))),
+          ...filterArgs,
+        ]),
+      ]),
+      objectType('ThingPage', [
+        field('items', nonNull(list(nonNull(object('Thing'))))),
+        field('total', nonNull(scalar('Int'))),
+      ]),
+      objectType('Thing', [
+        field('id', nonNull(scalar('ID'))),
+        field('age', scalar('Int')),
+        field('joinedOn', scalar('Date')),
+      ]),
+      objectType('FieldRange', [field('min', scalar('Float')), field('max', scalar('Float'))]),
+      enumType('FilterMode', ['AND', 'OR']),
+    ],
+  };
+}
+
+/**
  * A ScopedDataClient test double: introspection queries get the fixture
  * schema; anything else is answered by `respond` (which also records the
  * query documents + variables it sees).

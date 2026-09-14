@@ -1,4 +1,4 @@
-import type { FilterValues, HippoSource } from '../../data/hippoSource';
+import type { FilterCondition, FilterValues, HippoSource } from '../../data/hippoSource';
 import type { CollectionModel, ColumnModel } from '../../data/schemaModel';
 
 /**
@@ -23,6 +23,8 @@ export async function collectAllRows(
   search: string,
   cap: number = EXPORT_CAP,
   orderBy?: { field: string; dir?: 'ASC' | 'DESC' },
+  /** Active range-facet conditions (issue #61) — exports inherit them too. */
+  conditions?: FilterCondition[],
 ): Promise<CollectedRows> {
   // Without offset pagination the first fetch is all the endpoint offers.
   if (!source.capabilities.offsetPagination) {
@@ -30,6 +32,7 @@ export async function collectAllRows(
       page: 1,
       pageSize: EXPORT_PAGE_SIZE,
       filters,
+      conditions,
       search,
       orderBy,
     });
@@ -43,6 +46,7 @@ export async function collectAllRows(
       page,
       pageSize: EXPORT_PAGE_SIZE,
       filters,
+      conditions,
       search,
       orderBy,
     });
