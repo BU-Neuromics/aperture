@@ -1,6 +1,8 @@
 import type { Capabilities } from './capabilities';
 import type { BatchModel, BatchOperation, BatchResult } from './batch';
 import { buildIngestBatch, deriveBatchModel, normalizeBatchResult } from './batch';
+import type { ConversationModel, ConverseRequest, ConverseResponse } from './conversation';
+import { buildConverseMutation, deriveConversationModel, normalizeConverseResult } from './conversation';
 import type { IntrospectionData } from './introspection';
 import { INTROSPECTION_QUERY } from './introspection';
 import type { ScopedDataClient } from './scopedClient';
@@ -138,6 +140,15 @@ export interface HippoSource {
   batch?: BatchModel;
   /** Whole-set dry-run (dryRun=true) or atomic commit of a staged set (W4.7). */
   runBatch(operations: BatchOperation[], dryRun: boolean): Promise<BatchResult>;
+  /** The introspected conversational query surface, when usable (ADR-0039). */
+  conversation?: ConversationModel;
+  /** One conversational turn; the response's `turns` replaces the caller's list. */
+  /**
+   * `signal` aborts the round trip. A conversational turn can legitimately run
+   * to the planning service's full timeout, so abandoning one must release the
+   * request, not merely stop rendering it (ADR-0039 / design Decision 10).
+   */
+  converse(request: ConverseRequest, signal?: AbortSignal): Promise<ConverseResponse>;
 }
 
 function selectionFor(column: ColumnModel): string {
@@ -422,6 +433,7 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
   const capabilities = deriveCapabilities(schema, collections);
   const history = deriveHistory(schema);
   const batch = deriveBatchModel(schema);
+  const conversation = deriveConversationModel(schema);
 
   const collectionFor = (collectionId: string): CollectionModel => {
     const collection = collections.find((c) => c.id === collectionId);
@@ -434,6 +446,25 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
     collections,
     history,
     batch,
+    conversation,
+
+    async converse(request, signal) {
+      if (!conversation) {
+        throw new Error('The endpoint does not advertise a conversational query surface');
+      }
+      const built = buildConverseMutation(conversation, request);
+      const result = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+        signal ? { signal } : undefined,
+      );
+      if (result.error || result.data == null) {
+        throw new Error(
+          `The conversational turn failed: ${result.error?.message ?? 'empty response'}`,
+        );
+      }
+      return normalizeConverseResult(conversation, result.data[conversation.field]);
+    },
 
     async runBatch(operations, dryRun) {
       if (!batch) throw new Error('The endpoint does not advertise a batch unit-of-work');
@@ -554,7 +585,10 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       const collection = collectionFor(collectionId);
       const built = buildSetAvailabilityMutation(collection, id, isAvailable, reason);
       if (!built) throw new Error(`${collection.label} does not support availability transitions`);
-      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      const result = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
       if (result.error) {
         throw new Error(
           `Could not update availability for ${collection.typeName} “${id}”: ${result.error.message}`,
@@ -566,7 +600,10 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
       const collection = collectionFor(collectionId);
       const built = buildSupersedeMutation(collection, id, replacementId, reason);
       if (!built) throw new Error(`${collection.label} does not support supersede`);
-      const result = await client.mutate<Record<string, unknown>>(built.document, built.variables);
+      const result = await client.mutate<Record<string, unknown>>(
+        built.document,
+        built.variables,
+      );
       if (result.error) {
         throw new Error(
           `Could not supersede ${collection.typeName} “${id}”: ${result.error.message}`,

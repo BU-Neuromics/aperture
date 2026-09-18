@@ -6,7 +6,9 @@ import type { CollectionModel, ColumnModel } from '../data/schemaModel';
 import { slotName } from '../data/schemaModel';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import { runQuerySpec } from './planner';
+import { resolveAnchor, canonicalizeQuerySpec } from './querySpec';
 import { readGraphTheme, useGraphTheme, type GraphTheme } from './graphTheme';
+import { typeColor } from '../data/typeColor';
 import './query.css';
 
 /**
@@ -22,23 +24,6 @@ import './query.css';
 export const NODE_BUDGET = 250;
 const SEED_LIMIT = 50;
 const EXPAND_LIMIT = 25;
-
-const PALETTE = [
-  '#4f6b8f',
-  '#8f6b4f',
-  '#4f8f6b',
-  '#8f4f6b',
-  '#6b4f8f',
-  '#6b8f4f',
-  '#8f8f4f',
-  '#4f8f8f',
-];
-
-function colorFor(typeName: string): string {
-  let hash = 0;
-  for (const ch of typeName) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return PALETTE[hash % PALETTE.length]!;
-}
 
 /**
  * The Cytoscape stylesheet for a given resolved palette. Kept out of the mount
@@ -143,7 +128,7 @@ export function GraphView({ source }: { source: HippoSource }) {
           label,
           expanded: false,
         } satisfies GraphNodeData & { id: string },
-        style: { 'background-color': colorFor(collection.typeName) },
+        style: { 'background-color': typeColor(collection.typeName) },
       });
       setNodeCount(cy.nodes().length);
       return nodeId;
@@ -251,9 +236,17 @@ export function GraphView({ source }: { source: HippoSource }) {
     void (async () => {
       setBusy(true);
       try {
-        const spec = urlState.querySpec;
-        const anchorId = spec?.anchor ?? urlState.collection ?? collections[0]?.id;
-        const anchor = anchorId ? byId.get(anchorId) : undefined;
+        // A v2 spec names its anchor by LinkML class name, not collection id,
+        // so resolve through the spec rather than treating the two as
+        // interchangeable. A bookmarked v1 spec upgrades first; one whose
+        // anchor no longer exists seeds from the browse collection instead of
+        // rendering an empty canvas.
+        const spec = urlState.querySpec
+          ? canonicalizeQuerySpec(urlState.querySpec, collections)
+          : null;
+        const anchor =
+          (spec ? resolveAnchor(spec, collections) : undefined) ??
+          byId.get(urlState.collection ?? collections[0]?.id ?? '');
         if (!anchor) return;
         const rows = spec
           ? (await runQuerySpec(source, collections, capabilities, spec, 1, SEED_LIMIT)).rows
@@ -328,7 +321,7 @@ export function GraphView({ source }: { source: HippoSource }) {
           <div className="query-graph-legend">
             {typesShown.map((t) => (
               <span key={t} className="query-legend-item">
-                <span className="query-legend-dot" style={{ backgroundColor: colorFor(t) }} />
+                <span className="query-legend-dot" style={{ backgroundColor: typeColor(t) }} />
                 {t}
               </span>
             ))}

@@ -45,6 +45,12 @@ export interface Capabilities {
   filterOps: readonly string[];
   /** Generated `where: <Type>Filter` inputs advertised (Mosaic ADR-0006 inc. 2). */
   whereFilter: boolean;
+  /**
+   * A usable conversational query mutation is advertised (ADR-0039). The
+   * endpoint hosts the planning service; Aperture only sends turns and renders
+   * what comes back, so absence simply means no chat affordance at all.
+   */
+  conversationalQuery: boolean;
 }
 
 export const NO_CAPABILITIES: Capabilities = {
@@ -60,4 +66,5 @@ export const NO_CAPABILITIES: Capabilities = {
   batchWrite: false,
   filterOps: [],
   whereFilter: false,
+  conversationalQuery: false,
 };

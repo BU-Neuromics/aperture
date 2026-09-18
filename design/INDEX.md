@@ -92,6 +92,8 @@ a status flip to `Accepted`, not a new document. Decisions are never deleted —
 | [0036](./decisions/ADR-0036-global-search-heterogeneous-fanout.md) | Global search is a heterogeneous fan-out surface (server `searchAll` → client fan-out degradation) | 🟡 Proposed | `cross-class-query.md` §6(c)/§7 M4; mosaic#158 |
 | [0037](./decisions/ADR-0037-graph-view-primitive.md) | Graph exploration view — Cytoscape; `neighbors`-fed with an honest client one-hop fallback; catalog promotion after ADR-0010 | 🟡 Proposed | `cross-class-query.md` §8; mosaic#158 |
 | [0038](./decisions/ADR-0038-identity-is-presentation-not-enforcement.md) | Aperture presents an identity it is given; it never authenticates, holds no token, enforces nothing | ✅ Accepted | 2026-08-28; fills ADR-0032's viewer seam; platform ADR-0006 supplies the identity |
+| [0039](./decisions/ADR-0039-conversational-query-panel-capability-gated.md) | Conversational query panel — additive, gated on an introspected `converseQuerySpec`; Aperture hosts no agent loop, so ADR-0021/0026 stand unreversed | 🟡 Proposed | 2026-09-11; Mosaic `converse_query_spec` (mosaic#186, PR #199); `mosaic-demo-small` `add-aperture-chat-panel` |
+| [0040](./decisions/ADR-0040-visual-system-type-colour-and-chrome.md) | Visual system: colour carries type identity app-wide (one palette, one hash); chrome is deep ink and distinct from light content surfaces; depth/motion systemic in tokens | 🟡 Proposed | 2026-09-11; promotes ADR-0037's graph palette out of the canvas; no new deps (ADR-0030) |
 
 ## Decision Queue (open — resolve in dependency order)
 

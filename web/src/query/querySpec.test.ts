@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Capabilities } from '../data/capabilities';
 import { NO_CAPABILITIES } from '../data/capabilities';
 import type { CollectionModel } from '../data/schemaModel';
+import type { QuerySpec } from './querySpec';
 import {
   deriveEdges,
   emptyQuerySpec,
   filterSlots,
   validateQuerySpec,
   validateQuerySpecShape,
+  canonicalizeQuerySpec,
 } from './querySpec';
 
 const donors: CollectionModel = {
@@ -77,7 +79,7 @@ describe('deriveEdges', () => {
     const sampleEdges = deriveEdges(samples, collections);
     expect(sampleEdges).toEqual([
       expect.objectContaining({
-        key: 'fwd:donor',
+        key: 'donor',
         direction: 'forward',
         relatedCollectionId: 'donors',
       }),
@@ -100,7 +102,7 @@ describe('validateQuerySpec', () => {
     const result = validateQuerySpec(
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [
           { kind: 'field', slot: 'age_at_death', op: 'gt', value: 60 },
@@ -122,7 +124,7 @@ describe('validateQuerySpec', () => {
     const result = validateQuerySpec(
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [{ kind: 'field', slot: 'age_at_death', op: 'gt', value: 60 }],
       },
@@ -136,7 +138,7 @@ describe('validateQuerySpec', () => {
     const result = validateQuerySpec(
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [{ kind: 'field', slot: 'name', op: 'gt', value: 'x' }],
       },
@@ -150,7 +152,7 @@ describe('validateQuerySpec', () => {
     const result = validateQuerySpec(
       {
         v: 1,
-        anchor: 'donors',
+        anchor: 'Donor',
         mode: 'AND',
         criteria: [
           { kind: 'related', edge: 'rev:samples.donor', quantifier: 'none', criteria: [] },
@@ -164,13 +166,13 @@ describe('validateQuerySpec', () => {
 
   it('rejects unknown anchors, slots, and edges', () => {
     expect(
-      validateQuerySpec(emptyQuerySpec('nope'), collections, caps).errors[0],
-    ).toContain('Unknown anchor');
+      validateQuerySpec(emptyQuerySpec('Nope'), collections, caps).errors[0],
+    ).toContain('exposes no type');
     expect(
       validateQuerySpec(
         {
           v: 1,
-          anchor: 'donors',
+          anchor: 'Donor',
           mode: 'AND',
           criteria: [{ kind: 'field', slot: 'ghost', op: 'eq', value: 1 }],
         },
@@ -182,9 +184,9 @@ describe('validateQuerySpec', () => {
       validateQuerySpec(
         {
           v: 1,
-          anchor: 'donors',
+          anchor: 'Donor',
           mode: 'AND',
-          criteria: [{ kind: 'related', edge: 'fwd:ghost', quantifier: 'some', criteria: [] }],
+          criteria: [{ kind: 'related', edge: 'ghost', quantifier: 'some', criteria: [] }],
         },
         collections,
         caps,
@@ -195,7 +197,7 @@ describe('validateQuerySpec', () => {
   it('rejects OR mode without a FilterMode combinator', () => {
     const noMode = { ...donors, filterModeArg: undefined };
     const result = validateQuerySpec(
-      { v: 1, anchor: 'donors', mode: 'OR', criteria: [] },
+      { v: 1, anchor: 'Donor', mode: 'OR', criteria: [] },
       [noMode, samples],
       caps,
     );
@@ -207,7 +209,88 @@ describe('validateQuerySpecShape', () => {
   it('round-trips a valid spec and rejects junk', () => {
     const spec = emptyQuerySpec('donors');
     expect(validateQuerySpecShape(spec)).toEqual(spec);
-    expect(() => validateQuerySpecShape({ v: 2 })).toThrow();
+    expect(() => validateQuerySpecShape({ v: 1 })).toThrow();
     expect(() => validateQuerySpecShape('nope')).toThrow();
+  });
+});
+
+/**
+ * Both dialects carry `v: 1` — the platform wire version, which Mosaic's parser
+ * hard-requires and Aperture does not get to bump. The legacy Aperture dialect
+ * addressed the anchor by collection id and prefixed forward edges with the
+ * GraphQL field name; the platform spelling is LinkML throughout. A bookmarked
+ * legacy URL still has to open, and content is the only discriminator.
+ */
+describe('canonicalizeQuerySpec (legacy dialect → platform spelling)', () => {
+  it('rewrites a legacy anchor from collection id to LinkML class name', () => {
+    const upgraded = canonicalizeQuerySpec(
+      { v: 1, anchor: 'donors', mode: 'AND', criteria: [] },
+      collections,
+    );
+    expect(upgraded).toEqual({ v: 1, anchor: 'Donor', mode: 'AND', criteria: [] });
+  });
+
+  it('renames a forward edge through the camelCase → slot translation', () => {
+    // `fwd:sampleType` is the GraphQL spelling; v2 carries the LinkML slot.
+    const upgraded = canonicalizeQuerySpec(
+      {
+        v: 1,
+        anchor: 'samples',
+        mode: 'AND',
+        criteria: [{ kind: 'related', edge: 'fwd:sampleType', quantifier: 'some', criteria: [] }],
+      },
+      collections,
+    );
+    expect(upgraded?.criteria[0]).toMatchObject({ edge: 'sample_type' });
+  });
+
+  // Reverse edges have no LinkML name until the schema declares the inverting
+  // slot (Mosaic ADR-0011 / mosaic#204). Stripping `rev:samples.donor` to
+  // `donor` would name a slot on Sample, not on the Donor anchor — and collide
+  // with the forward edge of the same name.
+  it('passes a reverse edge through untouched', () => {
+    const upgraded = canonicalizeQuerySpec(
+      {
+        v: 1,
+        anchor: 'donors',
+        mode: 'AND',
+        criteria: [
+          { kind: 'related', edge: 'rev:samples.donor', quantifier: 'some', criteria: [] },
+        ],
+      },
+      collections,
+    );
+    expect(upgraded?.criteria[0]).toMatchObject({ edge: 'rev:samples.donor' });
+  });
+
+  it('leaves an already-canonical spec untouched, by identity', () => {
+    const spec: QuerySpec = { v: 1, anchor: 'Donor', mode: 'AND', criteria: [] };
+    expect(canonicalizeQuerySpec(spec, collections)).toBe(spec);
+  });
+
+  // The version cannot discriminate, so the anchor is read as a type name
+  // first. Mosaic generates lowercase-plural ids and PascalCase classes, so
+  // this precedence is belt-and-braces — but it is stated, not incidental.
+  it('prefers a typeName match over a collection-id match', () => {
+    const odd = [{ ...donors, id: 'Sample' }, samples];
+    expect(canonicalizeQuerySpec(
+      { v: 1, anchor: 'Sample', mode: 'AND', criteria: [] }, odd,
+    )).toMatchObject({ anchor: 'Sample' });
+  });
+
+  // The canonical version IS 1 — bumping it would be rejected on the wire.
+  it('never emits a version other than 1', () => {
+    const out = canonicalizeQuerySpec(
+      { v: 1, anchor: 'donors', mode: 'AND', criteria: [] }, collections,
+    );
+    expect(out?.v).toBe(1);
+  });
+
+  // Honest degradation (ADR-0029): a half-translated spec would run a query
+  // other than the one the user saved.
+  it('returns null when the anchor matches neither a type nor a collection', () => {
+    expect(
+      canonicalizeQuerySpec({ v: 1, anchor: 'gone', mode: 'AND', criteria: [] }, collections),
+    ).toBeNull();
   });
 });

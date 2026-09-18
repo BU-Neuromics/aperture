@@ -3,7 +3,7 @@ import type { FilterCondition, HippoSource } from '../data/hippoSource';
 import type { CollectionModel } from '../data/schemaModel';
 import { slotName } from '../data/schemaModel';
 import type { FieldCondition, QuerySpec } from './querySpec';
-import { deriveEdges, edgeByKey, filterOpMember } from './querySpec';
+import { deriveEdges, edgeByKey, filterOpMember, resolveAnchor } from './querySpec';
 
 /**
  * The QuerySpec planner (ADR-0035): server-first execution with one declared
@@ -47,8 +47,8 @@ export async function runQuerySpec(
   page: number,
   pageSize: number,
 ): Promise<QueryRunResult> {
-  const anchor = collections.find((c) => c.id === spec.anchor);
-  if (!anchor) throw new Error(`Unknown anchor collection “${spec.anchor}”`);
+  const anchor = resolveAnchor(spec, collections);
+  if (!anchor) throw new Error(`This endpoint exposes no type “${spec.anchor}”`);
   const edges = deriveEdges(anchor, collections);
   const notes: string[] = [];
   let relationshipTier: QueryRunResult['relationshipTier'] = null;

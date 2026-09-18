@@ -1,6 +1,7 @@
 import { useSavedViews } from '../../control/SavedViewsContext';
 import { useDataSource } from '../../data/DataSourceContext';
 import type { CollectionModel } from '../../data/schemaModel';
+import { typeColorStyle } from '../../data/typeColor';
 import { useNavView } from '../../nav/NavConfigContext';
 import { schemaFingerprint, workflowAvailability } from '../../workflows/engine';
 import { useWorkflows } from '../../workflows/WorkflowsContext';
@@ -50,6 +51,9 @@ export function CollectionsNav() {
             key={c.id}
             type="button"
             className="nav-item"
+            // The collection's identity colour, the same hue it wears as a
+            // graph node and a type badge. CSS reads it off the element.
+            style={typeColorStyle(c.typeName)}
             title={`${c.label} → type: ${c.typeName}`}
             aria-current={c.id === active}
             onClick={() => selectCollection(c.id)}

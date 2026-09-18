@@ -87,6 +87,8 @@ export function capableSchema(
     documentOwnership?: boolean;
     /** Adds Book's availability-transition + supersede mutations (W4.4). */
     bookLifecycle?: boolean;
+    /** Adds the conversational query mutation (ADR-0039). */
+    conversational?: boolean;
   } = {},
 ): IntrospectionSchema {
   const queryFields = [
@@ -216,6 +218,40 @@ export function capableSchema(
         arg('name', scalar('String')),
         arg('payload', scalar('String')),
         ...ownershipArgs,
+      ]),
+    );
+  }
+  if (options.conversational) {
+    // The shape mosaic-demo-small's add-aperture-chat-panel contract pins:
+    // `{utterance, query_spec, turns, edit_turn_id}` in, `{turn, turns,
+    // suspended_turn_ids}` out.
+    mutationExtras.push(
+      field('converseQuerySpec', nonNull(object('ConverseResult')), [
+        arg('utterance', nonNull(scalar('String'))),
+        arg('query_spec', scalar('JSON')),
+        arg('turns', list(nonNull({ kind: 'INPUT_OBJECT', name: 'ConversationTurnInput', ofType: null }))),
+        arg('edit_turn_id', scalar('ID')),
+      ]),
+    );
+    typeExtras.push(
+      objectType('ConverseResult', [
+        field('turn', nonNull(object('ConversationTurn'))),
+        field('turns', nonNull(list(nonNull(object('ConversationTurn'))))),
+        field('suspended_turn_ids', nonNull(list(nonNull(scalar('ID'))))),
+      ]),
+      objectType('ConversationTurn', [
+        field('id', nonNull(scalar('ID'))),
+        field('utterance', nonNull(scalar('String'))),
+        field('status', nonNull(scalar('String'))),
+        field('message', nonNull(scalar('String'))),
+        field('query_spec', scalar('JSON')),
+      ]),
+      inputObjectType('ConversationTurnInput', [
+        arg('id', nonNull(scalar('ID'))),
+        arg('utterance', nonNull(scalar('String'))),
+        arg('status', nonNull(scalar('String'))),
+        arg('message', nonNull(scalar('String'))),
+        arg('query_spec', scalar('JSON')),
       ]),
     );
   }

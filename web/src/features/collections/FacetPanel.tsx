@@ -109,7 +109,10 @@ export function FacetPanel() {
   const openAdvanced = () =>
     urlState.openQueryBuilder({
       v: 1,
-      anchor: active.id,
+      // The platform spelling is the LinkML class name, not the collection id
+      // (ADR-0035 amendment). Readers canonicalize either dialect, but a
+      // producer emitting the legacy one keeps it alive for no reason.
+      anchor: active.typeName,
       mode: 'AND',
       criteria: Object.entries(filters).map(([slot, value]) => ({
         kind: 'field',

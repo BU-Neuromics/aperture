@@ -39,7 +39,21 @@ export interface FieldCondition {
 
 export interface RelatedCondition {
   kind: 'related';
-  /** A derived edge key (see QueryEdge.key). */
+  /**
+   * v2: the LinkML slot name of a forward reference the anchor itself holds
+   * (`donor`) — the same vocabulary Mosaic's `RelatedCondition.edge` validates
+   * against, so a spec from a planning service needs no translation.
+   *
+   * Reverse edges keep the Aperture-local `rev:<collectionId>.<field>` key.
+   * That is deliberate, not an oversight: a reverse edge has no LinkML name
+   * until the schema declares the inverting slot (`Donor.samples` with
+   * `inverse: donor`), which Mosaic ADR-0011 / `mosaic#204` add. Naming one
+   * now would invent a vocabulary upstream has already decided differently —
+   * and dropping the prefix would be wrong besides, since `rev:samples.donor`
+   * strips to `donor`, a slot on `Sample` rather than on the `Donor` anchor,
+   * colliding with the forward edge of the same name. These keys never reach
+   * a server: they drive the client-side semijoin in `planner.ts`.
+   */
   edge: string;
   /** "having ≥1" / "having exactly 0" related records (ADR-0035). */
   quantifier: 'some' | 'none';
@@ -49,21 +63,64 @@ export interface RelatedCondition {
 
 export type Criterion = FieldCondition | RelatedCondition;
 
+/**
+ * The artifact, spelled in LinkML vocabulary: `anchor` is the **class name**
+ * (`"Sample"`), `slot` is the slot name, and a forward `edge` is the reference
+ * slot's name.
+ *
+ * **`v` stays 1, deliberately (2026-09-11, task 4.1).** This is not Aperture's
+ * version to bump: `v: 1` is the *platform* wire version. Mosaic's parser hard-
+ * requires it (`core/query_spec.py` — "'v' must be 1") and re-validates every
+ * candidate spec through it, and the planning service's own tool schema says
+ * "QuerySpec version. Always 1." A `v: 2` would come back
+ * `INVALID_QUERYSPEC_SHAPE`.
+ *
+ * What changed is not the version but the **dialect**. Aperture used to address
+ * the anchor by its own collection id (`"samples"`) and prefix forward edges
+ * `fwd:<graphqlField>` — a local dialect of a shared artifact, which is why a
+ * spec from a planning service could be displayed but never run. Aperture now
+ * speaks the platform spelling. Since both dialects carry `v: 1`, the version
+ * cannot tell them apart and `canonicalizeQuerySpec` discriminates by content.
+ *
+ * Aperture's shape remains a documented **subset** of Mosaic's `QuerySpec`,
+ * which also carries `as_of` and `sort` — a pre-existing gap, not a new one.
+ */
 export interface QuerySpec {
   v: 1;
-  /** The anchor collection id (list field) — a result row IS one of these. */
+  /** LinkML class name of the anchor — a result row IS one of these. */
   anchor: string;
   /** Combinator across the top-level criteria. */
   mode: 'AND' | 'OR';
   criteria: Criterion[];
 }
 
-export function emptyQuerySpec(anchor: string): QuerySpec {
-  return { v: 1, anchor, mode: 'AND', criteria: [] };
+export function emptyQuerySpec(anchorTypeName: string): QuerySpec {
+  return { v: 1, anchor: anchorTypeName, mode: 'AND', criteria: [] };
 }
 
-/** Shape guard for the `qs` URL parameter (nuqs parseAsJson validator). */
+/**
+ * Shape guard for the `qs` URL parameter (nuqs parseAsJson validator).
+ *
+ * Deliberately schema-*un*aware: nuqs calls this with no app context, and
+ * telling the two dialects apart needs `collections`. Shape here, dialect in
+ * `canonicalizeQuerySpec`.
+ */
 export function validateQuerySpecShape(value: unknown): QuerySpec {
+  const spec = readQuerySpec(value);
+  if (!spec) throw new Error('not a QuerySpec');
+  return spec;
+}
+
+/**
+ * The same shape check, non-throwing.
+ *
+ * Use this wherever a spec arrives from somewhere other than the URL — above
+ * all the conversational wire, where `turn.query_spec` is `unknown` server JSON
+ * (`data/conversation.ts`). `validateQuerySpecShape` throws by design because
+ * nuqs catches for it; called during render it would take the tree down
+ * instead, and this app has no ErrorBoundary.
+ */
+export function readQuerySpec(value: unknown): QuerySpec | null {
   const spec = value as QuerySpec;
   if (
     typeof spec !== 'object' ||
@@ -73,9 +130,56 @@ export function validateQuerySpecShape(value: unknown): QuerySpec {
     (spec.mode !== 'AND' && spec.mode !== 'OR') ||
     !Array.isArray(spec.criteria)
   ) {
-    throw new Error('not a QuerySpec');
+    return null;
   }
   return spec;
+}
+
+/**
+ * Bring a spec onto the platform spelling, whichever dialect it arrives in.
+ *
+ * Both dialects carry `v: 1`, so this reads content, in a stated precedence:
+ *
+ * 1. an `anchor` matching a **typeName** is already canonical (checked first —
+ *    Mosaic generates lowercase-plural list ids and PascalCase class names, so
+ *    a collision is not expected, but precedence should not be left to
+ *    `find` order);
+ * 2. an `anchor` matching a **collection id** is the legacy dialect;
+ * 3. a `fwd:` prefix marks a legacy edge wherever it appears — LinkML slot
+ *    names contain no colon, so the marker is unambiguous.
+ *
+ * Returns `null` when the anchor matches neither, so callers degrade honestly
+ * (ADR-0029) rather than running a half-translated query.
+ */
+export function canonicalizeQuerySpec(
+  spec: QuerySpec,
+  collections: CollectionModel[],
+): QuerySpec | null {
+  const anchor =
+    collections.find((c) => c.typeName === spec.anchor) ??
+    collections.find((c) => c.id === spec.anchor);
+  if (!anchor) return null;
+
+  // Legacy forward keys carried the GraphQL field name (`fwd:sampleType`); the
+  // platform spelling is the LinkML slot (`sample_type`), so this is a real
+  // translation, not a prefix strip. Reverse keys pass through untouched.
+  let rewrote = false;
+  const criteria = spec.criteria.map((criterion) => {
+    if (criterion.kind !== 'related' || !criterion.edge.startsWith('fwd:')) return criterion;
+    rewrote = true;
+    return { ...criterion, edge: slotName(criterion.edge.slice('fwd:'.length)) };
+  });
+
+  if (!rewrote && anchor.typeName === spec.anchor) return spec;
+  return { v: 1, anchor: anchor.typeName, mode: spec.mode, criteria };
+}
+
+/** The anchor collection a spec names, by LinkML class name. */
+export function resolveAnchor(
+  spec: QuerySpec,
+  collections: CollectionModel[],
+): CollectionModel | undefined {
+  return collections.find((c) => c.typeName === spec.anchor);
 }
 
 /**
@@ -113,7 +217,10 @@ export function deriveEdges(
     const related = byType(column.targetType);
     if (!related) continue;
     edges.push({
-      key: `fwd:${column.field}`,
+      // v2: the LinkML slot name, unprefixed — the vocabulary a planning
+      // service emits and Mosaic validates. `column.field` is the GraphQL
+      // camelCase rename, so this is a real translation, not a prefix strip.
+      key: slotName(column.field),
       label: `${humanize(column.targetType)} (its ${column.label.toLowerCase()})`,
       direction: 'forward',
       relatedCollectionId: related.id,
@@ -224,9 +331,9 @@ export function validateQuerySpec(
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const anchor = collections.find((c) => c.id === spec.anchor);
+  const anchor = resolveAnchor(spec, collections);
   if (!anchor) {
-    return { errors: [`Unknown anchor collection “${spec.anchor}”.`], warnings };
+    return { errors: [`This endpoint exposes no type “${spec.anchor}”.`], warnings };
   }
   if (!anchor.args.filter) {
     errors.push(`${anchor.label} advertises no filter argument.`);

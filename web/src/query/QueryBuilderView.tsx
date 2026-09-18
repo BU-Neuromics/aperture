@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HippoSource } from '../data/hippoSource';
 import type { CollectionModel } from '../data/schemaModel';
 import { renderCell, isRightAligned } from '../features/collections/cells';
@@ -21,8 +21,12 @@ import {
   filterSlots,
   opsForKind,
   filterOpMember,
+  resolveAnchor,
+  canonicalizeQuerySpec,
   validateQuerySpec,
 } from './querySpec';
+import { useConversation } from './ConversationContext';
+import { OP_LABELS } from './specProse';
 import './query.css';
 
 /**
@@ -32,18 +36,6 @@ import './query.css';
  * ("having at least one … where …"). The QuerySpec artifact lives in the URL;
  * Run compiles it through the planner (server-first, semijoin compensation).
  */
-
-const OP_LABELS: Record<QueryOp, string> = {
-  eq: 'is',
-  neq: 'is not',
-  in: 'is any of',
-  gt: '>',
-  gte: '≥',
-  lt: '<',
-  lte: '≤',
-  contains: 'contains',
-  is_null: 'is empty',
-};
 
 const PAGE_SIZE = 25;
 const EXPORT_CAP = 5000;
@@ -266,12 +258,19 @@ function RelatedEditor({
 export function QueryBuilderView({ source }: { source: HippoSource }) {
   const { collections, capabilities } = source;
   const urlState = useCollectionUrlState();
+  const conversation = useConversation();
+  const locked = conversation?.locked ?? false;
   const anchored = collections.filter((c) => c.args.filter);
+  // The URL may still carry a v1 spec from a bookmarked or shared link, so
+  // upgrade on the way in (schema-aware — v1 addressed the anchor by
+  // collection id). `null` means the v1 anchor names a collection this
+  // endpoint no longer exposes; fall back to a fresh spec rather than run a
+  // half-translated query.
   const initial =
-    urlState.querySpec ??
+    (urlState.querySpec ? canonicalizeQuerySpec(urlState.querySpec, collections) : null) ??
     emptyQuerySpec(
-      (urlState.collection && anchored.find((c) => c.id === urlState.collection)?.id) ||
-        anchored[0]?.id ||
+      (urlState.collection && anchored.find((c) => c.id === urlState.collection)?.typeName) ||
+        anchored[0]?.typeName ||
         '',
     );
 
@@ -281,7 +280,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   const [error, setError] = useState<string | null>(null);
   const [exportNote, setExportNote] = useState<string | null>(null);
 
-  const anchor = collections.find((c) => c.id === draft.anchor);
+  const anchor = resolveAnchor(draft, collections);
   const slots = useMemo(() => (anchor ? filterSlots(anchor) : []), [anchor]);
   const edges = useMemo(
     () => (anchor ? deriveEdges(anchor, collections) : []),
@@ -313,6 +312,27 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   useEffect(() => {
     if (executed) void execute(executed, page);
   }, [executed, page, execute]);
+
+  /**
+   * Adopt a spec that arrives in the URL from somewhere other than this
+   * builder — the chat panel's "Use in builder" being the one that matters
+   * (ADR-0039). Without this the handoff would set the URL and auto-run while
+   * the visible builder still showed an empty draft, so the next Run would
+   * silently replace the planner's query with whatever was on screen.
+   *
+   * Keyed on the URL value *changing*, not on it differing from the draft: the
+   * user editing rows must not be clobbered by a re-sync, and Run writes
+   * draft → URL, which lands here as a no-op adopt of the same value.
+   */
+  const urlSpecJson = executed ? JSON.stringify(executed) : null;
+  const lastUrlSpec = useRef(urlSpecJson);
+  useEffect(() => {
+    if (urlSpecJson === lastUrlSpec.current) return;
+    lastUrlSpec.current = urlSpecJson;
+    if (!executed) return;
+    const canonical = canonicalizeQuerySpec(executed, collections);
+    if (canonical) setDraft(canonical); // regression-guarded in ChatPanel.test.tsx
+  }, [urlSpecJson, executed, collections]);
 
   if (!anchor) {
     return (
@@ -372,7 +392,25 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
         </button>
       </div>
 
-      <div className="query-frame">
+      {/* Once a conversation owns the spec the manual form goes read-only
+          (design Decision 11). Not presentation: Mosaic asserts the wire
+          `query_spec` agrees with what it derives from `turns` and 400s
+          otherwise, so a hand-edit underneath a live conversation would break
+          the next turn. It stays visible rather than disappearing, with an
+          explicit way back to manual editing. */}
+      {locked && (
+        <div className="query-locked-note" role="status">
+          <span className="chat-dot chat-dot-warning" aria-hidden="true" />
+          <span>
+            The composer is building this query. Editing it by hand would
+            disagree with the conversation.
+          </span>
+          <button type="button" className="chat-inline-link" onClick={() => conversation?.clear()}>
+            Clear conversation &amp; edit manually
+          </button>
+        </div>
+      )}
+      <fieldset className="query-frame" disabled={locked} data-locked={locked || undefined}>
         <div className="query-condition">
           <span className="query-keyword">Rows are</span>
           <select
@@ -383,7 +421,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             onChange={(e) => setDraft(emptyQuerySpec(e.target.value))}
           >
             {anchored.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.typeName}>
                 {c.label}
               </option>
             ))}
@@ -477,7 +515,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             ))}
           </ul>
         )}
-      </div>
+      </fieldset>
 
       {error && (
         <div className="query-notes" role="alert">
@@ -490,6 +528,27 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             <li key={i}>{n}</li>
           ))}
         </ul>
+      )}
+
+      {!run && !running && !error && (
+        <div className="query-blank" role="status">
+          {/* A schematic of what a run produces — anchor, edge, matches. Drawn
+              in CSS from the anchor's own colour and hidden from assistive
+              tech, so the wide empty column reads as "waiting" rather than as
+              a failed render, without inventing data that isn't there. */}
+          <div className="query-blank-figure" aria-hidden="true">
+            <span className="query-blank-node query-blank-node-anchor" />
+            <span className="query-blank-link" />
+            <span className="query-blank-node" />
+            <span className="query-blank-link" />
+            <span className="query-blank-node" />
+          </div>
+          <p className="query-blank-lead">Nothing run yet</p>
+          <p className="query-blank-detail">
+            Build the query above — or describe it in the composer — then Run to see matching{' '}
+            {anchor.label.toLowerCase()}.
+          </p>
+        </div>
       )}
 
       {run && (

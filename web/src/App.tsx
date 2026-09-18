@@ -1,4 +1,5 @@
 import { AppShell } from './shell/AppShell';
+import { SHELL_LAYOUTS, shellContextFor } from './shell/contexts';
 import { Brand } from './shell/Brand';
 import type { AuthConfig } from './auth/config';
 import { resolveAuthConfig } from './auth/config';
@@ -15,6 +16,9 @@ import { SavedViewsProvider } from './control/SavedViewsContext';
 import { CollectionsNav } from './features/collections/CollectionsNav';
 import { CollectionMain } from './features/collections/CollectionMain';
 import { FacetPanel } from './features/collections/FacetPanel';
+import { ChatPanel } from './query/ChatPanel';
+import { ConversationProvider } from './query/ConversationContext';
+import { useCollectionUrlState } from './features/collections/urlState';
 import type { ResolvedNavConfig } from './nav/config';
 import { resolveNavConfig } from './nav/config';
 import { NavConfigProvider } from './nav/NavConfigContext';
@@ -27,7 +31,6 @@ import { WorkflowsProvider } from './workflows/WorkflowsContext';
  * adapter → capability negotiation → schema-derived nav + table in the
  * configured layout's slots, with {collection, page} in the URL.
  */
-const shellConfig = { layout: 'headerNavMain' };
 
 interface AppProps {
   /** Test seams; production uses env config + the real network client. */
@@ -90,6 +93,12 @@ function AppBody({
   nav: ResolvedNavConfig;
 }) {
   const session = useSession();
+  // Browsing a collection and composing a cross-class query are different
+  // screen shapes, so the portal selects a different layout for each — by
+  // name, from the registry (ADR-0031). The bindings follow the context's
+  // shape: facets refine a collection, the conversation composes a query.
+  const context = shellContextFor(useCollectionUrlState().view);
+  const inQuery = context === 'query';
   return (
     <ControlPlaneProvider
       controlUrl={controlUrl}
@@ -101,8 +110,11 @@ function AppBody({
           <NavConfigProvider value={nav}>
             {/* App-level, not layout chrome — so it needs no new slot (ADR-0031). */}
             <SessionExpiry />
+            {/* Above the shell because the composer (aside) and the builder
+                (main) are different slots that share one conversation. */}
+            <ConversationProvider>
             <AppShell
-              config={shellConfig}
+              config={{ layout: SHELL_LAYOUTS[context] }}
               slots={{
                 header: (
                   <>
@@ -112,10 +124,12 @@ function AppBody({
                 ),
                 primaryNav: <CollectionsNav />,
                 main: <CollectionMain />,
-                inspector: <FacetPanel />,
+                inspector: inQuery ? undefined : <FacetPanel />,
+                aside: inQuery ? <ChatPanel /> : undefined,
                 footer: <ControlPlaneStatus />,
               }}
             />
+            </ConversationProvider>
           </NavConfigProvider>
         </WorkflowsProvider>
       </SavedViewsProvider>

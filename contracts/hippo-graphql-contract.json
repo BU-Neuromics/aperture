@@ -14,8 +14,14 @@
       "kind": "inputFields",
       "on": "FilterInput",
       "fields": [
-        { "name": "field", "type": "String!" },
-        { "name": "value", "type": "JSON!" }
+        {
+          "name": "field",
+          "type": "String!"
+        },
+        {
+          "name": "value",
+          "type": "JSON!"
+        }
       ]
     },
     {
@@ -23,7 +29,10 @@
       "description": "AND/OR combinator for multi-filter composition.",
       "kind": "enumValues",
       "on": "FilterMode",
-      "values": ["AND", "OR"]
+      "values": [
+        "AND",
+        "OR"
+      ]
     },
     {
       "id": "aperture-document-type",
@@ -31,12 +40,30 @@
       "kind": "fields",
       "on": "ApertureDocument",
       "fields": [
-        { "name": "id", "type": "ID!" },
-        { "name": "kind", "type": "String!" },
-        { "name": "name", "type": "String!" },
-        { "name": "payload", "type": "String!" },
-        { "name": "isAvailable", "type": "Boolean!" },
-        { "name": "supersededBy", "type": "ID" }
+        {
+          "name": "id",
+          "type": "ID!"
+        },
+        {
+          "name": "kind",
+          "type": "String!"
+        },
+        {
+          "name": "name",
+          "type": "String!"
+        },
+        {
+          "name": "payload",
+          "type": "String!"
+        },
+        {
+          "name": "isAvailable",
+          "type": "Boolean!"
+        },
+        {
+          "name": "supersededBy",
+          "type": "ID"
+        }
       ]
     },
     {
@@ -44,9 +71,18 @@
       "kind": "inputFields",
       "on": "ApertureDocumentCreateInput",
       "fields": [
-        { "name": "kind", "type": "String!" },
-        { "name": "name", "type": "String!" },
-        { "name": "payload", "type": "String!" }
+        {
+          "name": "kind",
+          "type": "String!"
+        },
+        {
+          "name": "name",
+          "type": "String!"
+        },
+        {
+          "name": "payload",
+          "type": "String!"
+        }
       ]
     },
     {
@@ -55,10 +91,22 @@
       "kind": "queryField",
       "field": "apertureDocuments",
       "args": [
-        { "name": "filters", "type": "[FilterInput!]" },
-        { "name": "filterMode", "type": "FilterMode!" },
-        { "name": "limit", "type": "Int!" },
-        { "name": "offset", "type": "Int!" }
+        {
+          "name": "filters",
+          "type": "[FilterInput!]"
+        },
+        {
+          "name": "filterMode",
+          "type": "FilterMode!"
+        },
+        {
+          "name": "limit",
+          "type": "Int!"
+        },
+        {
+          "name": "offset",
+          "type": "Int!"
+        }
       ]
     },
     {
@@ -66,35 +114,61 @@
       "description": "schemaModel.ts DetailPath 'field' kind: fetch-by-id for a collection's detail view.",
       "kind": "queryField",
       "field": "apertureDocument",
-      "args": [{ "name": "id", "type": "ID!" }]
+      "args": [
+        {
+          "name": "id",
+          "type": "ID!"
+        }
+      ]
     },
     {
       "id": "query-search-twin-pattern",
       "description": "schemaModel.ts SearchTwinModel: a bare-list search field for the same entity type.",
       "kind": "queryField",
       "field": "searchApertureDocuments",
-      "args": [{ "name": "q", "type": "String!" }]
+      "args": [
+        {
+          "name": "q",
+          "type": "String!"
+        }
+      ]
     },
     {
       "id": "query-entity-history",
       "description": "schemaModel.ts deriveHistory - provenance rows for any entity.",
       "kind": "queryField",
       "field": "entityHistory",
-      "args": [{ "name": "entityId", "type": "ID!" }]
+      "args": [
+        {
+          "name": "entityId",
+          "type": "ID!"
+        }
+      ]
     },
     {
       "id": "query-superseded-by",
       "kind": "queryField",
       "field": "supersededBy",
-      "args": [{ "name": "id", "type": "ID!" }]
+      "args": [
+        {
+          "name": "id",
+          "type": "ID!"
+        }
+      ]
     },
     {
       "id": "query-find-by-xref",
       "kind": "queryField",
       "field": "findByXref",
       "args": [
-        { "name": "system", "type": "String!" },
-        { "name": "value", "type": "String!" }
+        {
+          "name": "system",
+          "type": "String!"
+        },
+        {
+          "name": "value",
+          "type": "String!"
+        }
       ]
     },
     {
@@ -102,15 +176,26 @@
       "description": "WriteModel.create: schemaModel.ts derives the create form from this mutation's input type.",
       "kind": "mutationField",
       "field": "createApertureDocument",
-      "args": [{ "name": "data", "type": "ApertureDocumentCreateInput!" }]
+      "args": [
+        {
+          "name": "data",
+          "type": "ApertureDocumentCreateInput!"
+        }
+      ]
     },
     {
       "id": "mutation-update-pattern",
       "kind": "mutationField",
       "field": "updateApertureDocument",
       "args": [
-        { "name": "id", "type": "ID!" },
-        { "name": "data", "type": "ApertureDocumentUpdateInput!" }
+        {
+          "name": "id",
+          "type": "ID!"
+        },
+        {
+          "name": "data",
+          "type": "ApertureDocumentUpdateInput!"
+        }
       ]
     },
     {
@@ -119,8 +204,14 @@
       "kind": "mutationField",
       "field": "setApertureDocumentAvailability",
       "args": [
-        { "name": "id", "type": "ID!" },
-        { "name": "isAvailable", "type": "Boolean!" }
+        {
+          "name": "id",
+          "type": "ID!"
+        },
+        {
+          "name": "isAvailable",
+          "type": "Boolean!"
+        }
       ]
     },
     {
@@ -128,8 +219,14 @@
       "kind": "mutationField",
       "field": "setApertureDocumentAvailabilityBulk",
       "args": [
-        { "name": "ids", "type": "[ID!]!" },
-        { "name": "isAvailable", "type": "Boolean!" }
+        {
+          "name": "ids",
+          "type": "[ID!]!"
+        },
+        {
+          "name": "isAvailable",
+          "type": "Boolean!"
+        }
       ]
     },
     {
@@ -138,8 +235,14 @@
       "kind": "mutationField",
       "field": "supersedeApertureDocument",
       "args": [
-        { "name": "id", "type": "ID!" },
-        { "name": "replacementId", "type": "ID!" }
+        {
+          "name": "id",
+          "type": "ID!"
+        },
+        {
+          "name": "replacementId",
+          "type": "ID!"
+        }
       ]
     },
     {
@@ -148,8 +251,14 @@
       "kind": "inputFields",
       "on": "BatchEntityInput",
       "fields": [
-        { "name": "entityType", "type": "String!" },
-        { "name": "data", "type": "JSON!" }
+        {
+          "name": "entityType",
+          "type": "String!"
+        },
+        {
+          "name": "data",
+          "type": "JSON!"
+        }
       ]
     },
     {
@@ -157,9 +266,18 @@
       "kind": "inputFields",
       "on": "BatchRelationshipInput",
       "fields": [
-        { "name": "sourceId", "type": "ID!" },
-        { "name": "targetId", "type": "ID!" },
-        { "name": "relationshipType", "type": "String!" }
+        {
+          "name": "sourceId",
+          "type": "ID!"
+        },
+        {
+          "name": "targetId",
+          "type": "ID!"
+        },
+        {
+          "name": "relationshipType",
+          "type": "String!"
+        }
       ]
     },
     {
@@ -167,25 +285,73 @@
       "kind": "mutationField",
       "field": "ingestBatch",
       "args": [
-        { "name": "entities", "type": "[BatchEntityInput!]!" },
-        { "name": "relationships", "type": "[BatchRelationshipInput!]" },
-        { "name": "dryRun", "type": "Boolean!" }
+        {
+          "name": "entities",
+          "type": "[BatchEntityInput!]!"
+        },
+        {
+          "name": "relationships",
+          "type": "[BatchRelationshipInput!]"
+        },
+        {
+          "name": "dryRun",
+          "type": "Boolean!"
+        }
       ]
     },
     {
       "id": "mutation-validate-batch",
       "kind": "mutationField",
       "field": "validateBatch",
-      "args": [{ "name": "entities", "type": "[BatchEntityInput!]!" }]
+      "args": [
+        {
+          "name": "entities",
+          "type": "[BatchEntityInput!]!"
+        }
+      ]
     },
     {
       "id": "batch-write-result-shape",
       "kind": "fields",
       "on": "BatchWriteGraphQLResult",
       "fields": [
-        { "name": "committed", "type": "Boolean!" },
-        { "name": "dryRun", "type": "Boolean!" },
-        { "name": "validation", "type": "BatchValidationGraphQLResult!" }
+        {
+          "name": "committed",
+          "type": "Boolean!"
+        },
+        {
+          "name": "dryRun",
+          "type": "Boolean!"
+        },
+        {
+          "name": "validation",
+          "type": "BatchValidationGraphQLResult!"
+        }
+      ]
+    },
+    {
+      "id": "conversational-converse-query-spec",
+      "description": "ADR-0039 conversational query panel: deriveConversationModel() binds to this mutation and ChatPanel renders nothing without it. Arg names are camelCase - Strawberry auto-converts the resolver's snake_case (mosaic PR #206, issue #205); the MCP tool's own surface is snake_case, which is why data/conversation.ts resolves every name by role in both casings. GATED - Mosaic registers the field only when a planning service is configured (MOSAIC_EXON_URL), so absence is a valid deployment; the shape is pinned for when it is present.",
+      "kind": "mutationField",
+      "gated": true,
+      "field": "converseQuerySpec",
+      "args": [
+        {
+          "name": "utterance",
+          "type": "String!"
+        },
+        {
+          "name": "querySpec",
+          "type": "JSON"
+        },
+        {
+          "name": "turns",
+          "type": "[ConversationTurnInput!]"
+        },
+        {
+          "name": "editTurnId",
+          "type": "ID"
+        }
       ]
     }
   ]
