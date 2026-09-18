@@ -1,7 +1,7 @@
 # ADR-0039: A conversational query panel, gated on an endpoint-advertised capability
 
-- **Status:** Proposed
-- **Date:** 2026-09-11
+- **Status:** Accepted
+- **Date:** 2026-09-11 (ratified 2026-09-17; see aperture#60)
 - **Deciders:** labadorf, design session
 - **Related:** ADR-0021 (defer in-app chat), ADR-0026 (portal-first MVP), ADR-0029 (capability-gated honest degradation), ADR-0031 (app-shell layout library), ADR-0035 (typed `QuerySpec`), ADR-0017 (data plane vs control plane); Mosaic `converse_query_spec` (`BU-Neuromics/mosaic#186`, shipped PR #199) and the `mosaic-demo-small` change `add-aperture-chat-panel`
 
@@ -105,11 +105,15 @@ Concretely:
   out. Tracked in `mosaic-demo-small`'s `add-aperture-chat-panel` Phase 1 and cross-referenced
   there; until it ships, the panel is exercised against a stub endpoint the way every other phase
   of this app was (`web/.claude/skills/verify`).
-- A spelling dependency is now explicit and **sequenced before the panel can run a spec it
+- A spelling dependency was explicit and **sequenced before the panel could run a spec it
   receives**: Exon emits LinkML names (`anchor: "Sample"`, `edge: "donor"`), while Aperture's
-  `QuerySpec` today carries collection ids and derived `fwd:`/`rev:` edge keys. Until that is
-  canonicalized (`add-aperture-chat-panel` task 4.1), a received proposal is displayed but its
-  Run affordance degrades honestly rather than executing the wrong thing.
+  `QuerySpec` carried collection ids and derived `fwd:`/`rev:` edge keys. **Resolved in
+  `e0064aa`**: `QuerySpec` now speaks LinkML names, and `canonicalizeQuerySpec()`
+  (`web/src/query/querySpec.ts`) provides a tolerant read of the legacy spelling for existing
+  saved views, discriminating by content rather than by a version field. A received proposal now
+  runs. Reverse edges remain the exception — they keep the Aperture-local
+  `rev:<collectionId>.<field>` key, because no LinkML name exists for them until Mosaic ADR-0011
+  (`mosaic#204`) lands inverse slots.
 
 ## Alternatives considered
 
