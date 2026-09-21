@@ -150,7 +150,7 @@ describe('ChatPanel (ADR-0039)', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to recent books.');
 
-    expect(screen.getByRole('button', { name: 'Use in builder' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run this query' })).toBeEnabled();
     expect(screen.queryByText(/exposes no type/)).not.toBeInTheDocument();
   });
 
@@ -166,7 +166,7 @@ describe('ChatPanel (ADR-0039)', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to recent books.');
 
-    expect(screen.getByRole('button', { name: 'Use in builder' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Run this query' })).toBeDisabled();
     expect(screen.getByText(/exposes no type/)).toBeInTheDocument();
   });
 
@@ -189,12 +189,31 @@ describe('ChatPanel (ADR-0039)', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('Filtering to books named Dune.');
 
-    expect(screen.queryAllByTestId('query-condition')).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: 'Use in builder' }));
-
+    // No second click: a proposal reaches the builder on arrival. Leaving it
+    // behind a transfer button produced a locked builder ("the composer is
+    // building this query") still showing the previous anchor, beside a
+    // proposal it claimed to own -- which reads as nothing having happened.
     const rows = await screen.findAllByTestId('query-condition');
     expect(rows).toHaveLength(1);
     expect(screen.getByRole('combobox', { name: 'Field' })).toHaveValue('title');
+  });
+
+  it('still requires an explicit Run — planning is not executing (ADR-0039)', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient({
+      criteria: [{ kind: 'field', slot: 'title', op: 'eq', value: 'Dune' }],
+    });
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'books named Dune');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to books named Dune.');
+    await screen.findAllByTestId('query-condition');
+
+    // The spec is in the builder, and nothing has run. Auto-applying removes a
+    // transfer step; it must not remove the user's decision to execute.
+    expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
   });
 
   /**

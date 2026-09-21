@@ -23,8 +23,10 @@ import {
   filterOpMember,
   resolveAnchor,
   canonicalizeQuerySpec,
+  readQuerySpec,
   validateQuerySpec,
 } from './querySpec';
+import { currentQuerySpec } from '../data/conversation';
 import { useConversation } from './ConversationContext';
 import { OP_LABELS } from './specProse';
 import './query.css';
@@ -324,6 +326,36 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    * user editing rows must not be clobbered by a re-sync, and Run writes
    * draft → URL, which lands here as a no-op adopt of the same value.
    */
+  /**
+   * Show the conversation's current proposal in the builder, as a DRAFT.
+   *
+   * The builder treats a spec in the URL as already executed, so the chat
+   * panel's handoff button both populated and ran. That left the panel's
+   * proposal invisible until the user found the button: a locked builder
+   * saying "the composer is building this query" while still displaying the
+   * previous anchor, beside a results pane reading "Nothing run yet". A user
+   * reasonably reads that as nothing having happened.
+   *
+   * Adopting into the DRAFT fixes the contradiction without touching what
+   * ADR-0039 actually protects. The proposal is visible the moment it arrives;
+   * it still does not execute until the user presses Run, "exactly like a spec
+   * they built by hand". Model plans, user runs — unchanged.
+   *
+   * Keyed on the proposal changing, so a user editing rows between turns is not
+   * clobbered by a re-sync.
+   */
+  const proposal = currentQuerySpec(conversation?.turns ?? []);
+  const proposalJson = proposal ? JSON.stringify(proposal) : null;
+  const lastProposal = useRef<string | null>(null);
+  useEffect(() => {
+    if (proposalJson === lastProposal.current) return;
+    lastProposal.current = proposalJson;
+    if (!proposal) return;
+    const parsed = readQuerySpec(proposal);
+    const canonical = parsed ? canonicalizeQuerySpec(parsed, collections) : null;
+    if (canonical) setDraft(canonical);
+  }, [proposalJson, proposal, collections]);
+
   const urlSpecJson = executed ? JSON.stringify(executed) : null;
   const lastUrlSpec = useRef(urlSpecJson);
   useEffect(() => {
