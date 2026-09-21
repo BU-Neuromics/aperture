@@ -324,9 +324,16 @@ export function ChatPanel() {
   );
 }
 
+// `clarification` covers two different turns that the wire cannot tell apart:
+// a question back, and a schema-discovery reply that ANSWERED what was asked.
+// Exon distinguishes them internally (`resolution: "answered"`), but that marker
+// is deliberately not on the wire -- Mosaic's ConversationTurn does not carry it
+// -- so the label has to be true of both. What they genuinely share is that the
+// draft did not move, which is what this says. Labelling it "needs an answer"
+// told a user who had just been answered that they still owed a reply.
 const STATUS_LABELS: Record<string, string> = {
   proposal: 'proposed',
-  clarification: 'needs an answer',
+  clarification: 'no query change',
   suspended: 'needs re-wording',
   error: "couldn't run",
 };
