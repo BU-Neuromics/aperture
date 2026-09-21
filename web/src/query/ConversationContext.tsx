@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { currentQuerySpec } from '../data/conversation';
 import type { ConversationTurn } from '../data/conversation';
 import { useCollectionUrlState } from '../features/collections/urlState';
 
@@ -23,7 +24,17 @@ export interface ConversationState {
   suspended: string[];
   setTurns: (turns: ConversationTurn[]) => void;
   setSuspended: (ids: string[]) => void;
-  /** A conversation owns the current spec, so manual editing is locked out. */
+  /**
+   * A conversation owns the current spec, so manual editing is locked out.
+   *
+   * Keyed on the conversation having actually PRODUCED a spec, not on it
+   * having turns. A schema-discovery turn answers a question about what the
+   * data holds and deliberately leaves the draft alone, so until some turn
+   * proposes a spec there is nothing for the conversation to own and nothing
+   * for a hand edit to disagree with. Locking on `turns.length > 0` left the
+   * builder disabled AND empty after a discovery turn — a dead panel saying it
+   * was busy building something that did not exist.
+   */
   locked: boolean;
   /**
    * Drop the conversation and release the lock, clearing the spec it produced.
@@ -51,7 +62,14 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   }, [urlState]);
 
   const value = useMemo(
-    () => ({ turns, suspended, setTurns, setSuspended, locked: turns.length > 0, clear }),
+    () => ({
+      turns,
+      suspended,
+      setTurns,
+      setSuspended,
+      locked: currentQuerySpec(turns) != null,
+      clear,
+    }),
     [turns, suspended, clear],
   );
 
