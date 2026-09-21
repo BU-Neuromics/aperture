@@ -437,13 +437,21 @@ function SpecPane({
       {showJson && <pre className="chat-spec-json">{JSON.stringify(spec, null, 2)}</pre>}
 
       <div className="chat-spec-foot">
+        {/*
+          Naming what the click does. Writing the spec to the URL IS execution
+          in this builder -- `executed = urlState.querySpec` -- so "Use in
+          builder" undersold it: the query ran. ADR-0039 wants the user's run to
+          be a deliberate act, which it cannot be while the button describes a
+          transfer. The builder's own Run does the same thing; this is the copy
+          of it that sits beside the proposal.
+        */}
         <button
           type="button"
           className="chat-primary"
           disabled={!shaped}
           onClick={() => shaped && urlState.setQuerySpec(shaped)}
         >
-          Use in builder
+          Run this query
         </button>
         {/* One branch, because canonicalization succeeding means the anchor
             resolves by construction — it is built from a collection that was
