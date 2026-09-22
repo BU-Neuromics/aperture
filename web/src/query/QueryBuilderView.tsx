@@ -3,6 +3,7 @@ import type { HippoSource } from '../data/hippoSource';
 import type { CollectionModel } from '../data/schemaModel';
 import { renderCell, isRightAligned } from '../features/collections/cells';
 import { useCollectionUrlState } from '../features/collections/urlState';
+import { useNavView } from '../nav/NavConfigContext';
 import { downloadFile, toCSV, toJSONExport } from '../features/collections/export';
 import type { QueryRunResult } from './planner';
 import { runQuerySpec, SEMIJOIN_CAP } from './planner';
@@ -31,7 +32,7 @@ import { useConversation } from './ConversationContext';
 import { OP_LABELS } from './specProse';
 import type { ColumnModel } from '../data/schemaModel';
 import { FieldsPanel } from './FieldsPanel';
-import { namedSlots } from './namedSlots';
+import { namedSlots, subjectCollection } from './namedSlots';
 import './query.css';
 
 /**
@@ -263,6 +264,7 @@ function RelatedEditor({
 export function QueryBuilderView({ source }: { source: HippoSource }) {
   const { collections, capabilities } = source;
   const urlState = useCollectionUrlState();
+  const navView = useNavView();
   const conversation = useConversation();
   const locked = conversation?.locked ?? false;
   const anchored = collections.filter((c) => c.args.filter);
@@ -271,10 +273,21 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   // collection id). `null` means the v1 anchor names a collection this
   // endpoint no longer exposes; fall back to a fresh spec rather than run a
   // half-translated query.
+  // Cold start: the deployment's declared default, not `anchored[0]`. That
+  // index is alphabetical, so growing the schema silently moved the opening
+  // screen to whichever collection happened to sort first -- a page that lands
+  // on `Aliquot` because A precedes D tells the reader nothing about the
+  // deployment. `defaultId` is the same answer the collections nav already
+  // opens on, so the two agree. Falls back to `anchored[0]` when nothing is
+  // declared, or when what is declared cannot anchor a query.
+  const navDefault = navView?.defaultId
+    ? anchored.find((c) => c.id === navView.defaultId)?.typeName
+    : undefined;
   const initial =
     (urlState.querySpec ? canonicalizeQuerySpec(urlState.querySpec, collections) : null) ??
     emptyQuerySpec(
       (urlState.collection && anchored.find((c) => c.id === urlState.collection)?.typeName) ||
+        navDefault ||
         anchored[0]?.typeName ||
         '',
     );
@@ -320,9 +333,29 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    */
   const latestTurn = conversation?.turns[conversation.turns.length - 1];
   const highlightedSlots = useMemo(() => {
-    const known = (anchor?.detailColumns ?? []).map((c) => c.slot ?? c.field);
+    // Matched against EVERY collection's slots, not just the anchor's. Scoping this to
+    // the anchor meant a turn about another collection highlighted nothing and, worse,
+    // left `subject` below with nothing to go on -- the panel could not follow an answer
+    // it could not see.
+    const known = collections.flatMap((c) => c.detailColumns.map((col) => col.slot ?? col.field));
     return namedSlots(latestTurn?.message, currentQuerySpec(conversation?.turns ?? []), known);
-  }, [latestTurn?.message, conversation?.turns, anchor]);
+  }, [latestTurn?.message, conversation?.turns, collections]);
+
+  /**
+   * The collection the panel shows: what the last answer was about, falling back to the
+   * anchor. Never the draft's anchor by itself -- see `subjectCollection`.
+   */
+  const subject = useMemo(
+    () => subjectCollection(collections, highlightedSlots, anchor) ?? anchor,
+    [collections, highlightedSlots, anchor],
+  );
+  const subjectIsAside = subject != null && anchor != null && subject.typeName !== anchor.typeName;
+
+  /** Adopt the shown collection as the anchor. Draft only -- Run stays the only execution. */
+  const adoptSubject = useCallback(() => {
+    if (!subject) return;
+    setDraft((prev) => ({ ...prev, anchor: subject.typeName, criteria: [] }));
+  }, [subject]);
 
   const addFilterFor = useCallback(
     (column: ColumnModel) => {
@@ -650,12 +683,14 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
           builds no query finally has somewhere to land. */}
       {!run && !running && !error && (
         <FieldsPanel
-          collection={anchor}
+          collection={subject ?? anchor}
           highlighted={highlightedSlots}
           hiddenFields={hiddenFields}
           onAddFilter={addFilterFor}
           onToggleField={toggleField}
           showColumnToggles={false}
+          asideFromAnchor={subjectIsAside}
+          onAdoptAnchor={subjectIsAside ? adoptSubject : undefined}
         />
       )}
 
@@ -707,6 +742,9 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               toggles: "which fields exist" and "which do I want to see" are one question
               asked twice, and the standalone picker that answered the second half is
               retired into this. */}
+          {/* `anchor`, not `subject`: these toggles hide columns of the table below,
+              which is the anchor's rows. Showing another collection's fields beside
+              toggles that cannot affect them would be a lie. */}
           {pickingFields && (
             <FieldsPanel
               collection={anchor}

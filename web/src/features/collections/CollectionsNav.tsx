@@ -23,8 +23,15 @@ function initialFor(label: string): string {
 export function CollectionsNav() {
   const state = useDataSource();
   const view = useNavView();
-  const { collection, workflow, selectCollection, openWorkflow, applyView, openQueryBuilder } =
-    useCollectionUrlState();
+  const {
+    collection,
+    workflow,
+    view: openView,
+    selectCollection,
+    openWorkflow,
+    applyView,
+    openQueryBuilder,
+  } = useCollectionUrlState();
   const { workflows, error: workflowsError } = useWorkflows();
   const savedViews = useSavedViews();
 
@@ -39,7 +46,13 @@ export function CollectionsNav() {
     );
   }
 
-  const active = workflow == null ? (collection ?? view.defaultId) : null;
+  // Exactly one entry is current. `collection` survives in the URL while a
+  // query view is open -- that is deliberate, it is how "back to collections"
+  // knows where to return -- so marking it current here left the nav pointing
+  // at one collection while the anchor control pointed at another. Two
+  // controls disagreeing about where you are is worse than either being wrong.
+  const inQueryView = openView === 'query' || openView === 'graph';
+  const active = workflow == null && !inQueryView ? (collection ?? view.defaultId) : null;
 
   return (
     <>
@@ -70,6 +83,7 @@ export function CollectionsNav() {
           className="nav-item"
           data-testid="nav-query-builder"
           title="Cross-class criteria query (ADR-0035)"
+          aria-current={inQueryView}
           onClick={() => openQueryBuilder()}
         >
           <span className="nav-item-chip">Qy</span>

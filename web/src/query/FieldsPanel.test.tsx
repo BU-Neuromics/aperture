@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App';
 import { capableSchema, fakeClient } from '../data/testing/fixtures';
+import { FieldsPanel } from './FieldsPanel';
 
 const endpoint = { url: 'http://fields.test/graphql' };
 
@@ -70,5 +71,54 @@ describe('FieldsPanel', () => {
     const rows = screen.getAllByTestId('fields-row');
     expect(rows.length).toBeGreaterThan(0);
     expect(rows[0]!.textContent).toBeTruthy();
+  });
+});
+
+/**
+ * The panel follows the answer, not the anchor.
+ *
+ * Rendered directly rather than through `App`: driving a conversational turn end to end
+ * needs a planner, and the behaviour under test is the panel's, not the planner's.
+ */
+describe('FieldsPanel — showing a collection the query is not anchored on', () => {
+  const collection = {
+    id: 'toxicology_reports',
+    label: 'Toxicology reports',
+    typeName: 'ToxicologyReport',
+    description: 'A post-mortem toxicology screen.',
+    filterFields: ['panel_type'],
+    detailColumns: [
+      { field: 'panelType', slot: 'panel_type', label: 'Panel type', kind: 'scalar' as const },
+    ],
+  } as never;
+
+  const props = {
+    collection,
+    highlighted: new Set(['panel_type']),
+    hiddenFields: new Set<string>(),
+    onAddFilter: () => {},
+    onToggleField: () => {},
+    showColumnToggles: false,
+  };
+
+  it('says why it is showing fields the user did not anchor on', () => {
+    render(<FieldsPanel {...props} asideFromAnchor onAdoptAnchor={() => {}} />);
+    // Without this the reader sees unfamiliar fields and cannot tell an answer from a bug.
+    expect(screen.getByTestId('fields-panel-aside')).toBeInTheDocument();
+  });
+
+  it('says nothing when the shown collection IS the anchor', () => {
+    render(<FieldsPanel {...props} />);
+    expect(screen.queryByTestId('fields-panel-aside')).not.toBeInTheDocument();
+  });
+
+  it('offers to make it the anchor, and does not act until asked', async () => {
+    // Discovery leads into query building by a deliberate gesture. Adopting silently would
+    // move the reader's query out from under them.
+    let adopted = 0;
+    render(<FieldsPanel {...props} asideFromAnchor onAdoptAnchor={() => { adopted += 1; }} />);
+    expect(adopted).toBe(0);
+    await userEvent.click(screen.getByRole('button', { name: /return rows of toxicology reports/i }));
+    expect(adopted).toBe(1);
   });
 });

@@ -25,6 +25,8 @@ export function FieldsPanel({
   onAddFilter,
   onToggleField,
   showColumnToggles,
+  asideFromAnchor,
+  onAdoptAnchor,
 }: {
   collection: CollectionModel;
   /** Slot/field names the current turn named — emphasis only, never a filter. */
@@ -34,6 +36,10 @@ export function FieldsPanel({
   onToggleField: (field: string) => void;
   /** Column toggles are meaningless until there is a result table to apply them to. */
   showColumnToggles: boolean;
+  /** This is what the last answer was about, and it is NOT the query's anchor. */
+  asideFromAnchor?: boolean;
+  /** Make the shown collection the anchor. Absent when it already is. */
+  onAdoptAnchor?: () => void;
 }) {
   const isNamed = (c: ColumnModel) =>
     highlighted.has(c.slot ?? '') || highlighted.has(c.field);
@@ -63,6 +69,20 @@ export function FieldsPanel({
           </span>
         )}
       </header>
+
+      {/* Say why the panel moved. Without this the reader sees fields they did not ask
+          for and has no way to tell an answer from a bug -- which is exactly how the
+          old behaviour read, only with the fields being wrong instead of right. */}
+      {asideFromAnchor && (
+        <p className="fields-panel-aside" data-testid="fields-panel-aside">
+          <span>This is what the answer was about. Your query still returns other rows.</span>
+          {onAdoptAnchor && (
+            <button type="button" className="action-button" onClick={onAdoptAnchor}>
+              Return rows of {collection.label}
+            </button>
+          )}
+        </p>
+      )}
 
       {collection.description && <p className="fields-panel-lead">{collection.description}</p>}
 

@@ -83,3 +83,53 @@ export function namedSlots(
   for (const slot of slotsInSpec(spec)) named.add(slot);
   return named;
 }
+
+/**
+ * Which collection the turn was about, when that is not the one being anchored.
+ *
+ * Asking about toxicology while the builder is anchored on `Aliquot` used to produce a
+ * correct answer beside a panel listing aliquot fields — the page answered the question
+ * and then showed something else. Found by driving the page at fifteen collections, where
+ * the alphabetically-first default made it the normal case rather than an edge one.
+ *
+ * Scored on slots belonging to exactly ONE collection. `name`, `id`, `notes` and
+ * `is_available` are carried by nearly everything, so crediting them would score every
+ * collection alike and pick whichever came first — the same arbitrariness this exists to
+ * remove. A shared name is evidence of nothing.
+ *
+ * **Presentational only, and deliberately not automatic.** It changes which fields are
+ * displayed; it never edits the draft, never writes the URL and never runs anything. The
+ * caller offers the user an explicit action to adopt it, so discovery leads into query
+ * building by a gesture rather than by surprise (ADR-0039).
+ */
+export function subjectCollection<T extends { typeName: string; detailColumns: readonly { field: string; slot?: string }[] }>(
+  collections: readonly T[],
+  named: ReadonlySet<string>,
+  anchor: T | undefined,
+): T | undefined {
+  if (named.size === 0) return anchor;
+
+  // How many collections carry each slot name, so the shared ones can be discounted.
+  const owners = new Map<string, number>();
+  for (const c of collections) {
+    for (const name of new Set(c.detailColumns.map((col) => col.slot ?? col.field))) {
+      owners.set(name, (owners.get(name) ?? 0) + 1);
+    }
+  }
+
+  let best: T | undefined;
+  let bestScore = 0;
+  for (const c of collections) {
+    let score = 0;
+    for (const col of c.detailColumns) {
+      const name = col.slot ?? col.field;
+      if (owners.get(name) === 1 && (named.has(name) || named.has(col.field))) score += 1;
+    }
+    // Ties go to the anchor: a tie is not evidence to move the reader's attention.
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return bestScore > 0 ? best : anchor;
+}
