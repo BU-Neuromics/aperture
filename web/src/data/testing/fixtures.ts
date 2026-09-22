@@ -8,6 +8,7 @@ import type {
 } from '../introspection';
 import type { GraphQLResult, ScopedDataClient } from '../scopedClient';
 import realIntrospectionJson from './realIntrospection.json';
+import demoIntrospectionJson from './demoIntrospection.json';
 
 /**
  * Introspection fixtures for adapter unit tests. Deliberately generic
@@ -27,6 +28,40 @@ import realIntrospectionJson from './realIntrospection.json';
  * the `ingestBatch`/`validateBatch` batch unit-of-work.
  */
 export const realIntrospection = realIntrospectionJson as unknown as IntrospectionSchema;
+
+/**
+ * The captured `__schema` of **mosaic v0.13.0** — the version
+ * `datahelix:certification/composition.lock.json` pins — over
+ * `mosaic-demo-small`'s fifteen-collection demo schema.
+ *
+ * Added beside `realIntrospection` rather than replacing it. The two answer
+ * different questions and both are needed: `realIntrospection` is the capture
+ * the read/write-shape and batch contracts are written against, and rewriting
+ * it would re-baseline six test files for no gain here.
+ *
+ * What this one carries that the older capture cannot (ADR-0041):
+ *
+ * - **edge-only references** (Mosaic ADR-0005) — `Sample.donor` resolves to a
+ *   `Donor` object and there is no `donorId` scalar beside it, so a referenced
+ *   value is reachable *only* through a nested selection. The older capture
+ *   predates that and still carries `Book.authorId` next to `Book.author`.
+ * - **forward to-many references** — `Workflow.inputSamples`,
+ *   `Publication.datasets`, `RunConfiguration.reagentLots`, each with a free
+ *   `<rel>Count` companion. The older capture has no entity-level list-of-object
+ *   field at all, so explode is untestable against it.
+ * - **the typed filter surface** — `<Type>Filter` inputs with `and`/`or`/`not`
+ *   and `SampleEdgeQuantifiers { some, none }` relationship predicates.
+ *
+ * Captured from **v0.13.0 deliberately, not from `main`**: `main` is 40 commits
+ * ahead and advertises surfaces (the MCP boundary, `converseQuerySpec`, reverse
+ * edges via `inverse:`) that no certifiable deployment serves yet, so a capture
+ * taken there would let tests assert capabilities that gate off in production.
+ *
+ * It therefore has **no reverse edges** — `Donor` has no `samples` field and
+ * `DonorFilter` no `samples` predicate — which is the honest picture today and
+ * is what the reverse-edge gating is tested against.
+ */
+export const demoIntrospection = demoIntrospectionJson as unknown as IntrospectionSchema;
 
 export const scalar = (name: string): TypeRef => ({ kind: 'SCALAR', name, ofType: null });
 export const enumRef = (name: string): TypeRef => ({ kind: 'ENUM', name, ofType: null });

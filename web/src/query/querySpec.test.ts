@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Capabilities } from '../data/capabilities';
 import { NO_CAPABILITIES } from '../data/capabilities';
 import type { CollectionModel } from '../data/schemaModel';
+import { deriveCollections } from '../data/schemaModel';
+import { demoIntrospection } from '../data/testing/fixtures';
 import type { QuerySpec } from './querySpec';
 import {
   deriveEdges,
@@ -84,6 +86,74 @@ describe('deriveEdges', () => {
         relatedCollectionId: 'donors',
       }),
     ]);
+  });
+
+  /**
+   * ADR-0041. These run against the v0.13.0 capture of the fifteen-collection
+   * demo schema rather than the hand-built models above, because the point is
+   * what a real generated schema offers.
+   */
+  describe('against the demo schema (mosaic v0.13.0)', () => {
+    const demo = deriveCollections(demoIntrospection);
+    const find = (id: string) => demo.find((c) => c.id === id)!;
+
+    it('offers a forward to-many reference, which was skipped entirely before', () => {
+      const edges = deriveEdges(find('workflows'), demo);
+      const samplesEdge = edges.find((e) => e.key === 'input_samples');
+      // `Workflow.inputSamples` is a resolved list with a free `inputSamplesCount`
+      // companion. deriveEdges used to test `kind !== 'ref'` on both branches, so
+      // this edge existed in the schema and nowhere in the builder.
+      expect(samplesEdge).toMatchObject({
+        direction: 'forward',
+        toMany: true,
+        relatedCollectionId: 'samples',
+        selectField: 'inputSamples',
+      });
+    });
+
+    it('marks a to-one reference as selectable and single', () => {
+      const donorEdge = deriveEdges(find('samples'), demo).find((e) => e.key === 'donor');
+      // No grain decision to make: one Sample has one Donor.
+      expect(donorEdge).toMatchObject({ direction: 'forward', toMany: false, selectField: 'donor' });
+    });
+
+    it('infers a reverse edge but leaves it unselectable', () => {
+      const edges = deriveEdges(find('donors'), demo);
+      const reverse = edges.find((e) => e.key === 'rev:samples.donor')!;
+      // Nothing on Donor names its samples at v0.13.0 — `Donor.samples` needs a
+      // declared `inverse:` slot (Mosaic ADR-0011). So the edge is recoverable
+      // for filtering (the semijoin) but has no field to select through, which
+      // is what gates reverse display columns honestly rather than silently.
+      expect(reverse).toMatchObject({ direction: 'reverse', toMany: true });
+      expect(reverse.selectField).toBeUndefined();
+    });
+
+    it('drops the inferred reverse edge once the schema declares the real one', () => {
+      // Simulates what declaring `inverse: donor` on `Donor.samples` does to the
+      // derived model (Wave 1 of the cross-component change). Without the
+      // precedence rule the builder would offer the same relationship twice —
+      // once as the declared `samples`, once as the inferred `rev:samples.donor`.
+      const donorsWithInverse: CollectionModel = {
+        ...find('donors'),
+        detailColumns: [
+          ...find('donors').detailColumns,
+          {
+            field: 'samples',
+            label: 'Samples',
+            kind: 'refList',
+            targetType: 'Sample',
+            targetIdField: 'id',
+          },
+        ],
+      };
+      const demoWithInverse = demo.map((c) => (c.id === 'donors' ? donorsWithInverse : c));
+      const edges = deriveEdges(donorsWithInverse, demoWithInverse);
+
+      expect(edges.filter((e) => e.relatedCollectionId === 'samples')).toEqual([
+        expect.objectContaining({ key: 'samples', direction: 'forward', toMany: true }),
+      ]);
+      expect(edges.some((e) => e.key.startsWith('rev:samples.'))).toBe(false);
+    });
   });
 });
 

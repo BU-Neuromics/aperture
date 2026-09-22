@@ -200,6 +200,26 @@ export interface QueryEdge {
   /** The reference column field name on whichever side holds the reference. */
   refField: string;
   refTargetIdField: string;
+  /**
+   * True when traversing this edge reaches MANY related records — a forward
+   * multivalued reference (`Workflow.inputSamples`), or any reverse edge.
+   *
+   * A display column on a to-many edge is a grain decision, not a formatting
+   * one (ADR-0041): it must resolve to `count`/`joinIds` or an explicit
+   * `explode`. To-one edges need no such choice.
+   */
+  toMany: boolean;
+  /**
+   * The GraphQL field on the ANCHOR that selects the related object(s), when
+   * one exists — the nested-selection path (`donor { … }`).
+   *
+   * Absent on an inferred reverse edge, which is exactly the point: the anchor
+   * holds no field to select through, so the edge can filter (via a semijoin)
+   * but cannot carry display columns. That is the honest gate ADR-0029 asks
+   * for, and it lifts on its own once the schema declares the `inverse:` slot
+   * (Mosaic ADR-0011) and the edge arrives as a real `refList`.
+   */
+  selectField?: string;
 }
 
 export function deriveEdges(
@@ -212,25 +232,53 @@ export function deriveEdges(
   // Scan the FULL derivable field set (detailColumns): resolved reference
   // edges sit after the computed fields in Mosaic's generated types, so the
   // curated table budget (columns) routinely truncates them away.
+  // `refList` is included alongside `ref` (ADR-0041). A forward multivalued
+  // reference (`Workflow.inputSamples`) was previously skipped outright, so the
+  // builder could neither filter on it nor read through it — even though Mosaic
+  // has advertised both the resolved list and a `<rel>Count` companion since
+  // v0.13.0.
   for (const column of anchor.detailColumns) {
-    if (column.kind !== 'ref' || !column.targetType || !column.targetIdField) continue;
+    const isRef = column.kind === 'ref' || column.kind === 'refList';
+    if (!isRef || !column.targetType || !column.targetIdField) continue;
     const related = byType(column.targetType);
     if (!related) continue;
+    const toMany = column.kind === 'refList';
     edges.push({
       // v2: the LinkML slot name, unprefixed — the vocabulary a planning
       // service emits and Mosaic validates. `column.field` is the GraphQL
       // camelCase rename, so this is a real translation, not a prefix strip.
       key: slotName(column.field),
-      label: `${humanize(column.targetType)} (its ${column.label.toLowerCase()})`,
+      label: toMany
+        ? `${humanize(column.targetType)} (its ${column.label.toLowerCase()}, many)`
+        : `${humanize(column.targetType)} (its ${column.label.toLowerCase()})`,
       direction: 'forward',
       relatedCollectionId: related.id,
       refField: column.field,
       refTargetIdField: column.targetIdField,
+      toMany,
+      // The anchor holds the field, so it is selectable — this is what lets a
+      // forward edge carry display columns as well as criteria.
+      selectField: column.field,
     });
   }
 
+  // Reverse edges are INFERRED: nothing on the anchor names them, so they are
+  // recovered by scanning other collections for a reference pointing back here.
+  //
+  // A declared edge always wins over an inferred one covering the same pair
+  // (ADR-0041). Once a deployment declares the LinkML `inverse:` slot (Mosaic
+  // ADR-0011) the same relationship arrives above as a real forward `refList`
+  // — `Donor.samples` — and without this check the builder would offer it
+  // twice: once as `samples`, once as `rev:samples.donor`. The declared form is
+  // strictly better (server-filterable, and selectable for display), so the
+  // inferred one suppresses itself rather than competing.
+  const declaredTargets = new Set(
+    edges.filter((e) => e.direction === 'forward').map((e) => e.relatedCollectionId),
+  );
+
   for (const other of collections) {
     if (other.id === anchor.id) continue;
+    if (declaredTargets.has(other.id)) continue;
     for (const column of other.detailColumns) {
       if (column.kind !== 'ref' || column.targetType !== anchor.typeName) continue;
       if (!column.targetIdField) continue;
@@ -241,6 +289,10 @@ export function deriveEdges(
         relatedCollectionId: other.id,
         refField: column.field,
         refTargetIdField: column.targetIdField,
+        // Reverse traversal reaches many related records by construction.
+        toMany: true,
+        // No `selectField`: the anchor holds no field to select through, so
+        // this edge can filter but cannot carry display columns.
       });
     }
   }
