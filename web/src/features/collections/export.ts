@@ -85,8 +85,20 @@ export function toCSV(columns: ColumnModel[], rows: Record<string, unknown>[]): 
   return [header, ...lines].join('\r\n') + '\r\n';
 }
 
-export function toJSONExport(rows: Record<string, unknown>[]): string {
-  return JSON.stringify(rows, null, 2);
+export function toJSONExport(
+  rows: Record<string, unknown>[],
+  columns?: ColumnModel[],
+): string {
+  // Projecting is opt-in so every existing caller keeps exporting whole rows.
+  // When columns ARE given, the export must match what the user chose to see:
+  // a JSON file carrying fields they hid would quietly contradict the screen,
+  // and CSV already honours the selection.
+  if (!columns) return JSON.stringify(rows, null, 2);
+  const fields = columns.map((c) => c.field);
+  const projected = rows.map((row) =>
+    Object.fromEntries(fields.filter((f) => f in row).map((f) => [f, row[f]])),
+  );
+  return JSON.stringify(projected, null, 2);
 }
 
 export function downloadFile(filename: string, mime: string, content: string): void {

@@ -972,3 +972,38 @@ fieldset.query-frame {
 .chat-reply-error .chat-message {
   color: var(--error);
 }
+
+/* Choosing which result fields to read.
+   The QuerySpec cannot express field selection (`columns` is reserved and
+   rejected upstream), so this is the client-side projection its own error
+   message prescribes. Styled as a quiet panel rather than a modal: picking
+   fields is an adjustment to what is already on screen, not a task that
+   deserves to take the screen over. */
+.query-fieldpicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface-subtle, #fafafa);
+}
+
+.query-fieldpicker legend {
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs, 0.75rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #6b7280);
+}
+
+.query-fieldpicker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm, 0.875rem);
+  white-space: nowrap;
+  cursor: pointer;
+}
