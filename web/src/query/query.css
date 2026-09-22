@@ -945,6 +945,23 @@ fieldset.query-frame {
   color: var(--text-secondary);
 }
 
+/* The panel is showing a collection the query is not anchored on, because that is
+   what the last answer was about. Tokens only -- the picker this replaces shipped
+   with five invented ones that silently rendered as hardcoded fallbacks. */
+.fields-panel-aside {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--type-color, var(--accent));
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .fields-list {
   list-style: none;
   margin: 0;
