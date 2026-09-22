@@ -1,5 +1,6 @@
 import type { IntrospectionSchema, TypeRef } from './introspection';
 import { deriveCollections, deriveCapabilities, deriveHistory, humanize } from './schemaModel';
+import { buildListQuery } from './hippoSource';
 import {
   arg,
   bareSchema,
@@ -850,5 +851,49 @@ describe('pickIdColumn (id-column selection)', () => {
     // collection (the wrong-collection bug). The entity's own id-typed field wins.
     expect(rnas.idColumn).toBe('accession');
     expect(rnas.idColumn).not.toBe('donorId');
+  });
+
+  /**
+   * A class declaring more than MAX_COLUMNS (8) fields before its `id` — the
+   * ordinary case on a real schema, not a contrived one: the 15-collection demo
+   * deployment has `id` at index 8 on Instrument and index 9 on Publication.
+   */
+  function lateIdSchema(): IntrospectionSchema {
+    const wide = Array.from({ length: 9 }, (_, i) => field(`slot${i}`, scalar('String')));
+    return {
+      queryType: { name: 'Query' },
+      types: [
+        objectType('Query', [
+          field('instruments', nonNull(list(nonNull(object('Instrument')))), [
+            arg('limit', scalar('Int')),
+            arg('offset', scalar('Int')),
+          ]),
+          field('instrument', object('Instrument'), [arg('id', nonNull(scalar('ID')))]),
+        ]),
+        objectType('Instrument', [...wide, field('id', scalar('ID'))]),
+      ],
+    };
+  }
+
+  it('identifies a record by its id even when the table budget excludes it', () => {
+    const [instruments] = deriveCollections(lateIdSchema());
+    // Issue #67. `idColumn` used to be picked from `columns` — the MAX_COLUMNS
+    // slice — so an `id` past index 7 fell through to the "first non-FK column"
+    // arm and the collection identified its records by `slot0`. A presentation
+    // budget must not decide what identifies a record, above all because the
+    // planner's semijoin reads `row[idColumn]` and an `IN` over the wrong field
+    // matches nothing while reporting no error.
+    expect(instruments.columns.some((c) => c.field === 'id')).toBe(false);
+    expect(instruments.idColumn).toBe('id');
+  });
+
+  it('selects the identifying column even when it is outside the table budget', () => {
+    const [instruments] = deriveCollections(lateIdSchema());
+    const { document } = buildListQuery(instruments, { page: 1, pageSize: 25 });
+    // Naming the right column is only half of it: the list query selects
+    // `columns`, so without appending the identifier every consumer would read
+    // `undefined` — a missing id in place of a wrong one, no better.
+    expect(document).toContain('id');
+    expect(document).toContain('slot0');
   });
 });

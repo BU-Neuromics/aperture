@@ -751,7 +751,23 @@ function deriveColumns(
   return detailColumns;
 }
 
-/** Prefer the entity's own id-named column over other ID-typed fields (FK renames). */
+/**
+ * Prefer the entity's own id-named column over other ID-typed fields (FK renames).
+ *
+ * **Takes `detailColumns`, never the `MAX_COLUMNS` table slice (issue #67).** A
+ * presentation budget must not decide what identifies a record. Passing the
+ * slice meant any class declaring more than eight slots before the envelope
+ * fields fell through to the "first non-FK column" arm and identified its
+ * records by `name` — on the 15-collection demo schema that was `instruments`
+ * (`id` at index 8) and `publications` (index 9), and declaring a single
+ * `inverse:` slot added `donors`, because the generated `<rel>Count` field
+ * lands inline at the slot's position and displaces everything after it.
+ *
+ * The failure was quiet where it mattered most: `planner.ts` reads
+ * `row[related.idColumn]` to collect linking ids for a semijoin, so a wrong
+ * answer here produced an `IN` filter over names that matched nothing and
+ * reported no error.
+ */
 function pickIdColumn(columns: ColumnModel[]): string {
   // FK-rename scalars (e.g. `donorId` beside a `donor` ref) are NOT the
   // entity's own identity. Excluding them keeps the id-column link from
@@ -899,7 +915,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     const detailColumns = attachOrderFields(deriveColumns(schema, entityType), orderFieldEnum);
     if (detailColumns.length === 0) continue;
     const columns = detailColumns.slice(0, MAX_COLUMNS);
-    const idColumn = pickIdColumn(columns);
+    const idColumn = pickIdColumn(detailColumns);
     const fieldRange = deriveFieldRange(schema, queryFields, field.name);
 
     collections.push({
@@ -1057,7 +1073,7 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     const detailColumns = attachOrderFields(deriveColumns(schema, entityType), orderFieldEnum);
     if (detailColumns.length === 0) continue;
     const columns = detailColumns.slice(0, MAX_COLUMNS);
-    const idColumn = pickIdColumn(columns);
+    const idColumn = pickIdColumn(detailColumns);
     const filterTypeName = args.filter ? namedType(args.filter.type).name : null;
     const filterType = findType(schema, filterTypeName);
 

@@ -164,6 +164,27 @@ function selectionSet(columns: ColumnModel[], extra?: ColumnModel[]): string {
   return all.map(selectionFor).join(' ');
 }
 
+/**
+ * The table's columns, plus the identifying column when the budget excluded it
+ * (issue #67).
+ *
+ * `idColumn` now derives from the full field set rather than the `MAX_COLUMNS`
+ * table slice, so it can name a column the slice does not carry. Selecting only
+ * the slice would then hand every consumer `undefined` — trading a *wrong* id
+ * for a *missing* one, which breaks row navigation and the planner's semijoin
+ * just as thoroughly and is harder to see.
+ *
+ * Appended rather than hoisted into `columns`: the table should not grow a UUID
+ * column on classes that correctly lead with a human-readable name. It travels
+ * in the row payload and is read by field name.
+ */
+function listColumns(collection: CollectionModel): ColumnModel[] {
+  const { columns, idColumn } = collection;
+  if (!idColumn || columns.some((c) => c.field === idColumn)) return columns;
+  const identifying = collection.detailColumns.find((c) => c.field === idColumn);
+  return identifying ? [...columns, identifying] : columns;
+}
+
 export interface BuiltQuery {
   document: string;
   variables: Record<string, unknown>;
@@ -255,7 +276,7 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
       'orderDir',
       options.orderBy?.field ? (options.orderBy.dir ?? 'ASC') : undefined,
     );
-    const rows = selectionSet(collection.columns, options.extraColumns);
+    const rows = selectionSet(listColumns(collection), options.extraColumns);
     return {
       document: builder.document(
         twin.field,
@@ -307,8 +328,8 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
 
   const envelope = collection.pageShape === 'envelope';
   const selections = envelope
-    ? `items { ${selectionSet(collection.columns, options.extraColumns)} } total`
-    : selectionSet(collection.columns, options.extraColumns);
+    ? `items { ${selectionSet(listColumns(collection), options.extraColumns)} } total`
+    : selectionSet(listColumns(collection), options.extraColumns);
   return {
     document: builder.document(collection.id, selections),
     variables: builder.variables,
