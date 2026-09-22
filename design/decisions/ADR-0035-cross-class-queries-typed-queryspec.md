@@ -147,13 +147,35 @@ scripting layer.
 
   Two scope notes, stated rather than implied. **Reverse edges keep the Aperture-local
   `rev:<collectionId>.<field>` key**, because a reverse edge has no LinkML name until the schema
-  declares the inverting slot — which Mosaic ADR-0011 (`mosaic#204`) adds and which has not
-  merged. Naming one now would invent a vocabulary upstream has already settled differently, and
+  declares the inverting slot — which Mosaic ADR-0011 (`mosaic#204`) adds. Naming one now would
+  invent a vocabulary upstream has already settled differently, and
   stripping the prefix would be wrong regardless: `rev:samples.donor` reduces to `donor`, a slot on
   `Sample` rather than on the `Donor` anchor, colliding with the forward edge of the same name.
   These keys never reach a server; they drive the client-side semijoin. And Aperture's shape
   remains a documented **subset** of Mosaic's `QuerySpec`, which also carries `as_of` and `sort` —
   a pre-existing gap this amendment does not close.
+
+  **Correction (2026-09-22, ADR-0041): `mosaic#204` has merged.** The sentence above read "and
+  which has not merged", which was true when written and is not now — `7fc300c` is on Mosaic's
+  `main`, tested across the QuerySpec compiler, GraphQL, MCP and both storage adapters, and a
+  deployment that declares `inverse: donor` gets `Donor.samples: [Sample!]!` plus
+  `DonorFilter.samples: SampleEdgeQuantifiers` with no Mosaic code change. The `rev:` key's
+  *rationale* survives intact, because it was never "upstream has not built this" but "upstream
+  will name it, so do not invent a name": the LinkML `inverse` slot name is now that name, and a
+  `rev:` key still reduces ambiguously (`rev:samples.donor` → `donor`, a slot on `Sample`, not on
+  the `Donor` anchor). What changed is only the horizon — the key is now a *migration* target
+  rather than a placeholder for something unbuilt. Two caveats keep it in place for now: no tag
+  contains `7fc300c` (Mosaic's latest is `v0.13.0`, which certification pins), and no deployment
+  LinkML declares an `inverse:` slot yet.
+
+- **Amendment (2026-09-22) — `columns` is built by ADR-0041, split in two.** The `columns` field
+  this ADR reserved is two decisions with different owners, separated by the test *does changing
+  it change the row set?* Traversal and grain (`explode`) stay here, in the artifact; visibility
+  and order become a view-side `ColumnView` that never reaches a server. See
+  [ADR-0041](./ADR-0041-referenced-class-slots-projection-vs-presentation.md), which also records
+  why the field went unbuilt for a year: bound together, the explode half needed a server compiler
+  (Mosaic still answers `COLUMNS_NOT_SUPPORTED`) and the visibility half needed nothing, so
+  neither shipped.
 
   The only persisted specs are URLs. Saved views (ADR-0032) carry `collection/page/q/filters/sort`
   and never a `QuerySpec`, so the migration surface is bookmarked and shared links, not stored
