@@ -167,7 +167,7 @@ export function ChatPanel() {
   };
 
   return (
-    <section className="chat" data-testid="chat-panel" aria-label="Query composer">
+    <section className="chat" data-testid="chat-panel" aria-label="Conversation">
       <header className="chat-head">
         <div className="chat-head-titles">
           <span className="chat-eyebrow">Composer</span>

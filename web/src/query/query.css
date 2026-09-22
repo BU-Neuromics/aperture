@@ -851,76 +851,6 @@
   color: var(--text-tertiary);
 }
 
-/* Nothing run yet: the workbench's main column is wide, so say plainly that
-   it is waiting rather than leaving a void that reads as a broken render. */
-.query-blank {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-6);
-  text-align: center;
-  color: var(--text-tertiary);
-}
-
-/* Anchor → edge → match, as a diagram. The pulse is slow and low-contrast: a
-   sign of life on a waiting screen, not an attention-grab. */
-.query-blank-figure {
-  display: flex;
-  align-items: center;
-  margin-bottom: var(--space-4);
-  opacity: 0.75;
-}
-
-.query-blank-node {
-  width: 11px;
-  height: 11px;
-  border-radius: var(--radius-pill);
-  background: var(--border-strong);
-}
-
-.query-blank-node-anchor {
-  width: 15px;
-  height: 15px;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-weak);
-  animation: blank-pulse 2.8s var(--ease-out) infinite;
-}
-
-.query-blank-link {
-  width: 34px;
-  height: 1px;
-  background: var(--border-strong);
-}
-
-@keyframes blank-pulse {
-  0%,
-  70%,
-  100% {
-    box-shadow: 0 0 0 4px var(--accent-weak);
-  }
-  35% {
-    box-shadow: 0 0 0 8px var(--accent-weak);
-  }
-}
-
-.query-blank-lead {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--text-secondary);
-}
-
-.query-blank-detail {
-  margin: 0;
-  max-width: 34ch;
-  font-size: 0.8rem;
-  line-height: 1.55;
-}
-
 /* Elapsed seconds beside the typing indicator. Mono + tabular so the width
    does not jitter as the count ticks, and tertiary so a long wait informs
    without alarming (design Decision 10). */
@@ -940,17 +870,12 @@
   background: var(--bg-subtle);
 }
 
+/* A caption on the frame, not a banner over it. The amber bar this replaced
+   outranked the user's own content to report an edit they had not attempted. */
 .query-locked-note {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--warning);
-  border-radius: var(--radius-md);
-  background: var(--warning-bg);
-  color: var(--warning);
-  font-size: 0.82rem;
+  margin: 0 0 var(--space-1);
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
 }
 
 /* A fieldset resets the frame's flex layout in some engines; restate it. */
@@ -973,37 +898,170 @@ fieldset.query-frame {
   color: var(--error);
 }
 
-/* Choosing which result fields to read.
-   The QuerySpec cannot express field selection (`columns` is reserved and
-   rejected upstream), so this is the client-side projection its own error
-   message prescribes. Styled as a quiet panel rather than a modal: picking
-   fields is an adjustment to what is already on screen, not a task that
-   deserves to take the screen over. */
-.query-fieldpicker {
+/* ── The fields panel ─────────────────────────────────────────────────────────
+   What the surface shows when it has no results. It replaced a placeholder that
+   drew a schematic of a query and said "Nothing run yet" — which was never true,
+   since the page always knows the schema.
+
+   Styled as a working surface, not a card: it is the main content of the column
+   whenever a query has not run, so it does not float on the canvas the way the
+   builder frame deliberately does. */
+
+.fields-panel {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-4);
-  margin: 0 0 var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle, #e5e7eb);
-  border-radius: var(--radius-md, 6px);
-  background: var(--surface-subtle, #fafafa);
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  animation: rise var(--dur-base) var(--ease-out) both;
 }
 
-.query-fieldpicker legend {
+.fields-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.fields-panel-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  /* The per-type hue the nav, table and graph all use, so an entity looks like
+     itself wherever it appears. */
+  border-left: 3px solid var(--type-color, var(--accent));
+  padding-left: var(--space-2);
+}
+
+.fields-panel-count {
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.fields-panel-lead {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--text-secondary);
+}
+
+.fields-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* Intrinsic rather than a fixed count: the column is 1fr of a three-track grid
+     and the page has exactly one breakpoint, so the rows have to size themselves. */
+  grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr));
+  gap: var(--space-2);
+}
+
+.fields-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Named by the current turn. A left edge rather than a fill: emphasis that
+   survives being wrong, since the extraction is heuristic and a false positive
+   should look like a suggestion, not an assertion. */
+.fields-row[data-named] {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.fields-row-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fields-row-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fields-row-slot {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.fields-row-type {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-pill);
   padding: 0 var(--space-2);
-  font-size: var(--text-xs, 0.75rem);
+}
+
+.fields-row-req {
+  font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted, #6b7280);
+  color: var(--text-tertiary);
 }
 
-.query-fieldpicker-item {
+.fields-row-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.fields-row-values {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+}
+
+.fields-row-values code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+}
+
+.fields-row-ref {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.fields-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.fields-action {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fields-action:hover {
+  text-decoration: underline;
+}
+
+.fields-action-toggle {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm, 0.875rem);
-  white-space: nowrap;
+  gap: var(--space-1);
+  color: var(--text-secondary);
   cursor: pointer;
 }

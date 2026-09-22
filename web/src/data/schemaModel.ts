@@ -3,6 +3,8 @@ import type {
   IntrospectionInputValue,
   IntrospectionSchema,
   IntrospectionType,
+  SlotEnrichment,
+  SlotInfo,
 } from './introspection';
 import { findType, isListType, namedType, typeRefToSDL } from './introspection';
 import type { Capabilities } from './capabilities';
@@ -43,6 +45,30 @@ export interface ColumnModel {
    * unsortable, regardless of the collection-level sort capability.
    */
   orderField?: string;
+
+  // ── Slot enrichment (`hippoSchema`) ──────────────────────────────────────
+  // All optional, all absent on an endpoint that does not advertise it. Nothing
+  // downstream may require them: the table, facets and detail view predate this
+  // and must keep working unchanged.
+
+  /**
+   * The schema author's own description of the slot.
+   *
+   * NOT available from `__schema` — its generated object types carry a description on the
+   * TYPE and `null` on every field. This is the prose that lets a user's own vocabulary
+   * find a field whose name shares none of its words ("head injuries" → `history_of_rhi`).
+   */
+  description?: string;
+  /** The raw LinkML range — `integer`, `string`, `CohortEnum`, `Workflow`. */
+  range?: string;
+  /** Mosaic's own classification: scalar | enum | reference | structured. */
+  slotKind?: string;
+  /** Whether a value must be present on every record. */
+  required?: boolean;
+  /** For enum slots, the name of the vocabulary. */
+  enumName?: string;
+  /** The LinkML slot name (snake_case), which differs from `field` (camelCase). */
+  slot?: string;
 }
 
 /**
@@ -140,6 +166,14 @@ export interface CollectionModel {
   label: string;
   /** The entity type name, e.g. `Subject`. */
   typeName: string;
+  /**
+   * The schema author's description of the entity type.
+   *
+   * `__schema` has always returned this and derivation has always dropped it. Unlike the
+   * per-FIELD description (which `__schema` reports as null and only `hippoSchema`
+   * carries), this one needs no enrichment query.
+   */
+  description?: string;
   /** The curated table columns (budgeted). */
   columns: ColumnModel[];
   /** The full derivable field set, for the detail view. */
@@ -871,7 +905,49 @@ function attachOrderFields(columns: ColumnModel[], enumType: IntrospectionType |
  * (the stub shape, kept as the fallback). Nav derives all of them
  * (derive-all; config reorder/relabel/hide is later — R3.1).
  */
-export function deriveCollections(schema: IntrospectionSchema): CollectionModel[] {
+/**
+ * Attach Mosaic's per-slot metadata to columns that already exist.
+ *
+ * A separate pass rather than a parameter threaded through `columnFor`: derivation is
+ * driven by the GraphQL surface and should stay that way, and enrichment is optional data
+ * that decorates the result. Keeping them apart means an endpoint without `hippoSchema`
+ * takes literally the same code path it always did.
+ *
+ * **Joined on SLOT name, not field name.** `ColumnModel.field` is the GraphQL field
+ * (`historyOfRhi`); `hippoSchema` speaks LinkML (`history_of_rhi`). `specProse` already
+ * resolves this same mismatch the same way.
+ */
+function enrichColumn(column: ColumnModel, slots: ReadonlyMap<string, SlotInfo>): ColumnModel {
+  const slot = slots.get(slotName(column.field)) ?? slots.get(column.field);
+  if (!slot) return column;
+  return {
+    ...column,
+    slot: slot.name,
+    description: slot.description ?? undefined,
+    range: slot.range,
+    slotKind: slot.kind,
+    required: slot.required,
+    enumName: slot.enumName ?? undefined,
+    // Only fill enum values we do not already have: the GraphQL enum is the one the
+    // filter input actually accepts, and it is what the rest of the app matches against.
+    enumValues: column.enumValues ?? (slot.enumValues.length ? slot.enumValues : undefined),
+  };
+}
+
+function enrichCollection(collection: CollectionModel, enrichment: SlotEnrichment): CollectionModel {
+  const slots = enrichment.get(collection.typeName);
+  if (!slots) return collection;
+  return {
+    ...collection,
+    columns: collection.columns.map((c) => enrichColumn(c, slots)),
+    detailColumns: collection.detailColumns.map((c) => enrichColumn(c, slots)),
+  };
+}
+
+export function deriveCollections(
+  schema: IntrospectionSchema,
+  enrichment?: SlotEnrichment,
+): CollectionModel[] {
   const queryType = findType(schema, schema.queryType.name);
   const queryFields = queryType?.fields ?? [];
   const collections: CollectionModel[] = [];
@@ -1121,7 +1197,13 @@ export function deriveCollections(schema: IntrospectionSchema): CollectionModel[
     });
   }
 
-  return collections;
+  // The entity description comes from `__schema` and needs no enrichment, so it is filled
+  // whether or not `hippoSchema` is advertised.
+  const described = collections.map((c) => {
+    const entityType = findType(schema, c.typeName);
+    return entityType?.description ? { ...c, description: entityType.description } : c;
+  });
+  return enrichment ? described.map((c) => enrichCollection(c, enrichment)) : described;
 }
 
 /**
