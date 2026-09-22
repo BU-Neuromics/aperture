@@ -282,7 +282,26 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   const [error, setError] = useState<string | null>(null);
   const [exportNote, setExportNote] = useState<string | null>(null);
 
+  /**
+   * Which result fields to show.
+   *
+   * The goal this surface exists for ends in "the specific data elements they
+   * wish to include in a query" — and a QuerySpec cannot say that. `columns` is
+   * reserved and hard-rejected upstream (COLUMNS_NOT_SUPPORTED), whose message
+   * prescribes the remedy: "request full envelopes and project client-side".
+   * This is that projection. Every field still crosses the wire; the user
+   * chooses what to read and what to export.
+   *
+   * Held as HIDDEN rather than shown so a schema that gains a field shows it by
+   * default — the opposite would silently omit new data from every saved view.
+   */
+  const [hiddenFields, setHiddenFields] = useState<ReadonlySet<string>>(new Set());
+  const [pickingFields, setPickingFields] = useState(false);
+
   const anchor = resolveAnchor(draft, collections);
+  // What the results table and the exports actually use. Derived rather than
+  // stored, so it stays correct when the anchor's column set changes.
+  const shownColumns = (anchor?.columns ?? []).filter((c) => !hiddenFields.has(c.field));
   const slots = useMemo(() => (anchor ? filterSlots(anchor) : []), [anchor]);
   const edges = useMemo(
     () => (anchor ? deriveEdges(anchor, collections) : []),
@@ -356,6 +375,17 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
     if (canonical) setDraft(canonical);
   }, [proposalJson, proposal, collections]);
 
+  // A hidden-field set belongs to one entity type. Carrying it across an anchor
+  // change would hide fields by coincidence of name, or hide nothing at all
+  // while looking like it had.
+  const anchorName = draft.anchor;
+  const lastAnchor = useRef(anchorName);
+  useEffect(() => {
+    if (anchorName === lastAnchor.current) return;
+    lastAnchor.current = anchorName;
+    setHiddenFields(new Set());
+  }, [anchorName]);
+
   const urlSpecJson = executed ? JSON.stringify(executed) : null;
   const lastUrlSpec = useRef(urlSpecJson);
   useEffect(() => {
@@ -402,7 +432,10 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
       if (!result.mayHaveMore) break;
       pageNo += 1;
     }
-    const content = format === 'csv' ? toCSV(anchor.columns, rows) : toJSONExport(rows);
+    // Export what the user chose to see. A file carrying fields they hid
+    // would quietly contradict the screen it was exported from.
+    const chosen = anchor.columns.filter((c) => !hiddenFields.has(c.field));
+    const content = format === 'csv' ? toCSV(chosen, rows) : toJSONExport(rows, chosen);
     downloadFile(
       `query-${anchor.id}.${format}`,
       format === 'csv' ? 'text/csv' : 'application/json',
@@ -601,6 +634,16 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               )}
             </span>
             <div className="collection-actions">
+              <button
+                type="button"
+                className="action-button"
+                aria-expanded={pickingFields}
+                onClick={() => setPickingFields((v) => !v)}
+              >
+                {hiddenFields.size > 0
+                  ? `Fields (${shownColumns.length} of ${anchor.columns.length})`
+                  : 'Fields'}
+              </button>
               <button type="button" className="action-button" onClick={() => urlState.openGraphView()}>
                 Explore as graph
               </button>
@@ -617,10 +660,43 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               {exportNote}
             </span>
           )}
+          {pickingFields && (
+            <fieldset className="query-fieldpicker">
+              <legend>Show these fields</legend>
+              {anchor.columns.map((c) => (
+                <label key={c.field} className="query-fieldpicker-item">
+                  <input
+                    type="checkbox"
+                    checked={!hiddenFields.has(c.field)}
+                    onChange={() =>
+                      setHiddenFields((prev) => {
+                        const next = new Set(prev);
+                        // The last visible column cannot be hidden: a table with
+                        // no columns is a worse answer than an unfiltered one,
+                        // and there would be no control left to undo it with.
+                        if (next.has(c.field)) next.delete(c.field);
+                        else if (shownColumns.length > 1) next.add(c.field);
+                        return next;
+                      })
+                    }
+                  />
+                  {c.label}
+                </label>
+              ))}
+              <button
+                type="button"
+                className="action-button"
+                disabled={hiddenFields.size === 0}
+                onClick={() => setHiddenFields(new Set())}
+              >
+                Show all
+              </button>
+            </fieldset>
+          )}
           <table className="collection-table">
             <thead>
               <tr>
-                {anchor.columns.map((c) => (
+                {shownColumns.map((c) => (
                   <th key={c.field} className={isRightAligned(c) ? 'cell-right' : undefined}>
                     {c.label}
                   </th>
@@ -637,7 +713,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
                     if (id != null) urlState.openIn(anchor.id, String(id));
                   }}
                 >
-                  {anchor.columns.map((c) => (
+                  {shownColumns.map((c) => (
                     <td key={c.field} className={isRightAligned(c) ? 'cell-right' : undefined}>
                       {renderCell(c, row[c.field])}
                     </td>
@@ -646,7 +722,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               ))}
               {run.rows.length === 0 && (
                 <tr>
-                  <td colSpan={anchor.columns.length} className="query-empty">
+                  <td colSpan={shownColumns.length} className="query-empty">
                     No matches.
                   </td>
                 </tr>
