@@ -3,8 +3,18 @@ import type { BatchModel, BatchOperation, BatchResult } from './batch';
 import { buildIngestBatch, deriveBatchModel, normalizeBatchResult } from './batch';
 import type { ConversationModel, ConverseRequest, ConverseResponse } from './conversation';
 import { buildConverseMutation, deriveConversationModel, normalizeConverseResult } from './conversation';
-import type { IntrospectionData } from './introspection';
-import { INTROSPECTION_QUERY } from './introspection';
+import type {
+  IntrospectionData,
+  IntrospectionSchema,
+  SlotEnrichment,
+  SlotEnrichmentData,
+} from './introspection';
+import {
+  findType,
+  HIPPO_SCHEMA_QUERY,
+  indexSlotEnrichment,
+  INTROSPECTION_QUERY,
+} from './introspection';
 import type { ScopedDataClient } from './scopedClient';
 import type { CollectionModel, ColumnModel, HistoryModel } from './schemaModel';
 import { deriveCapabilities, deriveCollections, deriveHistory } from './schemaModel';
@@ -441,6 +451,31 @@ export function buildSupersedeMutation(
   };
 }
 
+/**
+ * Read `hippoSchema` when the endpoint advertises it.
+ *
+ * Gated on the same presence check `deriveCapabilities` uses for
+ * `schemaIntrospection`, so an endpoint that does not expose the field is never asked for
+ * it — a GraphQL validation error on an unknown field would be a needless round trip and a
+ * confusing log line.
+ */
+async function fetchSlotEnrichment(
+  client: ScopedDataClient,
+  schema: IntrospectionSchema,
+): Promise<SlotEnrichment | undefined> {
+  const queryType = findType(schema, schema.queryType.name);
+  if (!(queryType?.fields ?? []).some((f) => f.name === 'hippoSchema')) return undefined;
+  try {
+    const result = await client.query<SlotEnrichmentData>(HIPPO_SCHEMA_QUERY);
+    if (result.error) return undefined;
+    return indexSlotEnrichment(result.data);
+  } catch {
+    // Enrichment is an improvement, never a requirement. A throw here would take down an
+    // endpoint that introspects perfectly well.
+    return undefined;
+  }
+}
+
 export async function connectHippoSource(client: ScopedDataClient): Promise<HippoSource> {
   const result = await client.query<IntrospectionData>(INTROSPECTION_QUERY);
   if (result.error || !result.data?.__schema) {
@@ -450,7 +485,18 @@ export async function connectHippoSource(client: ScopedDataClient): Promise<Hipp
   }
 
   const schema = result.data.__schema;
-  const collections = deriveCollections(schema);
+
+  // Per-slot enrichment, when the endpoint advertises it. Standard `__schema` carries a
+  // description on each TYPE but null on every FIELD, so the prose a curator wrote about a
+  // slot — the thing that lets a user's own vocabulary find a field whose name shares none
+  // of their words — is only reachable here.
+  //
+  // Issued once, at connect. A failure is NOT fatal: an endpoint without `hippoSchema` has
+  // to keep working exactly as it did, so this degrades to `undefined` and every consumer
+  // treats the enrichment as optional (ADR-0029).
+  const enrichment = await fetchSlotEnrichment(client, schema);
+
+  const collections = deriveCollections(schema, enrichment);
   const capabilities = deriveCapabilities(schema, collections);
   const history = deriveHistory(schema);
   const batch = deriveBatchModel(schema);

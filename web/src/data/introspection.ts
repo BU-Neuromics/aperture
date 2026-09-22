@@ -110,3 +110,89 @@ export function typeRefToSDL(ref: TypeRef): string {
   if (ref.kind === 'LIST' && ref.ofType) return `[${typeRefToSDL(ref.ofType)}]`;
   return ref.name ?? 'String';
 }
+
+/**
+ * Mosaic's own LinkML type model, exposed as `hippoSchema` (Mosaic ADR-0009).
+ *
+ * Standard `__schema` carries a description on each TYPE but — verified against a live
+ * endpoint — `null` on every FIELD, because the generated object types do not propagate
+ * slot descriptions. The per-slot prose a curator wrote, the true LinkML range, whether a
+ * slot is required, and what a reference points at all live here instead.
+ *
+ * `deriveCollections` detects this field's presence already and records it as
+ * `capabilities.schemaIntrospection`; this is the query that detection was waiting for
+ * (see this file's header note about enrichment being a later concern — the query shape is
+ * now confirmed against a live server).
+ *
+ * The name keeps its historical `hippo` spelling: it is a data-contract identifier, not a
+ * product name (Mosaic ADR-0004).
+ */
+export const HIPPO_SCHEMA_QUERY = `
+  query ApertureSlotEnrichment {
+    hippoSchema {
+      name
+      accessorName
+      description
+      fields {
+        name
+        kind
+        range
+        role
+        required
+        multivalued
+        identifier
+        description
+        targetEntityType
+        enumName
+        enumValues
+      }
+    }
+  }
+`;
+
+/** One slot of an entity type, as Mosaic's shared LinkML type model classifies it. */
+export interface SlotInfo {
+  name: string;
+  /** scalar | enum | reference | structured */
+  kind: string;
+  /** The raw LinkML range — `integer`, `string`, `CohortEnum`, `Workflow`. */
+  range: string;
+  /** user | system — a user's own fields vs the ones the runtime supplies. */
+  role: string;
+  required: boolean;
+  multivalued: boolean;
+  identifier: boolean;
+  description: string | null;
+  targetEntityType: string | null;
+  enumName: string | null;
+  enumValues: readonly string[];
+}
+
+export interface EntityTypeInfo {
+  name: string;
+  accessorName: string;
+  description: string | null;
+  fields: readonly SlotInfo[];
+}
+
+export interface SlotEnrichmentData {
+  hippoSchema: readonly EntityTypeInfo[];
+}
+
+/**
+ * Slot enrichment keyed by entity type name, then by slot name.
+ *
+ * `undefined` throughout when the endpoint does not advertise `hippoSchema`, or when the
+ * query fails. Every consumer must read it as optional: an endpoint without it has to keep
+ * working exactly as it did (ADR-0029 honest degradation).
+ */
+export type SlotEnrichment = ReadonlyMap<string, ReadonlyMap<string, SlotInfo>>;
+
+export function indexSlotEnrichment(data: SlotEnrichmentData | null | undefined): SlotEnrichment | undefined {
+  if (!data?.hippoSchema) return undefined;
+  const byType = new Map<string, ReadonlyMap<string, SlotInfo>>();
+  for (const entity of data.hippoSchema) {
+    byType.set(entity.name, new Map(entity.fields.map((f) => [f.name, f])));
+  }
+  return byType;
+}

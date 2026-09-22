@@ -29,6 +29,9 @@ import {
 import { currentQuerySpec } from '../data/conversation';
 import { useConversation } from './ConversationContext';
 import { OP_LABELS } from './specProse';
+import type { ColumnModel } from '../data/schemaModel';
+import { FieldsPanel } from './FieldsPanel';
+import { namedSlots } from './namedSlots';
 import './query.css';
 
 /**
@@ -299,6 +302,48 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   const [pickingFields, setPickingFields] = useState(false);
 
   const anchor = resolveAnchor(draft, collections);
+  /**
+   * Add a condition on this field to the DRAFT.
+   *
+   * Deliberately not `urlState.setQuerySpec`: in this builder a spec in the URL is an
+   * EXECUTED query (`executed = urlState.querySpec`, run by an effect). Writing there would
+   * run the query off a single click on a field listing, which is exactly what ADR-0039
+   * rules out — the user's run has to stay a deliberate act. Run is still the only way to
+   * execute.
+   */
+  /**
+   * Slot names the current turn named — emphasis only.
+   *
+   * The wire contract carries no structured list of them, so they are recovered from the
+   * message (see `namedSlots`). A miss dims a row; the panel still lists every field, so
+   * being wrong here never withholds anything.
+   */
+  const latestTurn = conversation?.turns[conversation.turns.length - 1];
+  const highlightedSlots = useMemo(() => {
+    const known = (anchor?.detailColumns ?? []).map((c) => c.slot ?? c.field);
+    return namedSlots(latestTurn?.message, currentQuerySpec(conversation?.turns ?? []), known);
+  }, [latestTurn?.message, conversation?.turns, anchor]);
+
+  const addFilterFor = useCallback(
+    (column: ColumnModel) => {
+      const slot = column.slot ?? column.field;
+      setDraft((prev) => ({
+        ...prev,
+        criteria: [...prev.criteria, { kind: 'field', slot, op: 'eq', value: '' }],
+      }));
+    },
+    [],
+  );
+
+  const toggleField = useCallback((field: string) => {
+    setHiddenFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      return next;
+    });
+  }, []);
+
   // What the results table and the exports actually use. Derived rather than
   // stored, so it stays correct when the anchor's column set changes.
   const shownColumns = (anchor?.columns ?? []).filter((c) => !hiddenFields.has(c.field));
@@ -461,19 +506,23 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
           (design Decision 11). Not presentation: Mosaic asserts the wire
           `query_spec` agrees with what it derives from `turns` and 400s
           otherwise, so a hand-edit underneath a live conversation would break
-          the next turn. It stays visible rather than disappearing, with an
-          explicit way back to manual editing. */}
+          the next turn. The note stays visible rather than disappearing, with
+          an explicit way back to manual editing — it now lives inside the
+          frame, beside the controls it describes. */}
+      {/* Demoted from a full-width amber banner to a caption. It was the loudest thing on
+          the page — louder than the user's own answer — to report a hand-edit they had not
+          attempted.
+
+          It sits OUTSIDE the fieldset deliberately: `fieldset[disabled]` disables every
+          descendant control, so moving this inside silently disabled the one button that
+          escapes the lock. Caught by ChatPanel.test.tsx, which clicks it. */}
       {locked && (
-        <div className="query-locked-note" role="status">
-          <span className="chat-dot chat-dot-warning" aria-hidden="true" />
-          <span>
-            The composer is building this query. Editing it by hand would
-            disagree with the conversation.
-          </span>
+        <p className="query-locked-note" role="status">
+          The composer is building this query.{' '}
           <button type="button" className="chat-inline-link" onClick={() => conversation?.clear()}>
             Clear conversation &amp; edit manually
           </button>
-        </div>
+        </p>
       )}
       <fieldset className="query-frame" disabled={locked} data-locked={locked || undefined}>
         <div className="query-condition">
@@ -595,25 +644,19 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
         </ul>
       )}
 
+      {/* No results yet? Show the schema, not a placeholder saying there is nothing to
+          show. The page always knows the fields; a user who has run nothing is the one who
+          most needs them. This is also where a conversational answer that names fields but
+          builds no query finally has somewhere to land. */}
       {!run && !running && !error && (
-        <div className="query-blank" role="status">
-          {/* A schematic of what a run produces — anchor, edge, matches. Drawn
-              in CSS from the anchor's own colour and hidden from assistive
-              tech, so the wide empty column reads as "waiting" rather than as
-              a failed render, without inventing data that isn't there. */}
-          <div className="query-blank-figure" aria-hidden="true">
-            <span className="query-blank-node query-blank-node-anchor" />
-            <span className="query-blank-link" />
-            <span className="query-blank-node" />
-            <span className="query-blank-link" />
-            <span className="query-blank-node" />
-          </div>
-          <p className="query-blank-lead">Nothing run yet</p>
-          <p className="query-blank-detail">
-            Build the query above — or describe it in the composer — then Run to see matching{' '}
-            {anchor.label.toLowerCase()}.
-          </p>
-        </div>
+        <FieldsPanel
+          collection={anchor}
+          highlighted={highlightedSlots}
+          hiddenFields={hiddenFields}
+          onAddFilter={addFilterFor}
+          onToggleField={toggleField}
+          showColumnToggles={false}
+        />
       )}
 
       {run && (
@@ -660,44 +703,25 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               {exportNote}
             </span>
           )}
+          {/* The same panel the surface shows before a run, now carrying the column
+              toggles: "which fields exist" and "which do I want to see" are one question
+              asked twice, and the standalone picker that answered the second half is
+              retired into this. */}
           {pickingFields && (
-            <fieldset className="query-fieldpicker">
-              <legend>Show these fields</legend>
-              {anchor.columns.map((c) => (
-                <label key={c.field} className="query-fieldpicker-item">
-                  <input
-                    type="checkbox"
-                    checked={!hiddenFields.has(c.field)}
-                    onChange={() =>
-                      setHiddenFields((prev) => {
-                        const next = new Set(prev);
-                        // The last visible column cannot be hidden: a table with
-                        // no columns is a worse answer than an unfiltered one,
-                        // and there would be no control left to undo it with.
-                        if (next.has(c.field)) next.delete(c.field);
-                        else if (shownColumns.length > 1) next.add(c.field);
-                        return next;
-                      })
-                    }
-                  />
-                  {c.label}
-                </label>
-              ))}
-              <button
-                type="button"
-                className="action-button"
-                disabled={hiddenFields.size === 0}
-                onClick={() => setHiddenFields(new Set())}
-              >
-                Show all
-              </button>
-            </fieldset>
+            <FieldsPanel
+              collection={anchor}
+              highlighted={highlightedSlots}
+              hiddenFields={hiddenFields}
+              onAddFilter={addFilterFor}
+              onToggleField={toggleField}
+              showColumnToggles
+            />
           )}
           <table className="collection-table">
             <thead>
               <tr>
                 {shownColumns.map((c) => (
-                  <th key={c.field} className={isRightAligned(c) ? 'cell-right' : undefined}>
+                  <th key={c.field} className={isRightAligned(c) ? 'align-right' : undefined}>
                     {c.label}
                   </th>
                 ))}
@@ -714,7 +738,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
                   }}
                 >
                   {shownColumns.map((c) => (
-                    <td key={c.field} className={isRightAligned(c) ? 'cell-right' : undefined}>
+                    <td key={c.field} className={isRightAligned(c) ? 'align-right' : undefined}>
                       {renderCell(c, row[c.field])}
                     </td>
                   ))}
