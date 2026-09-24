@@ -3,7 +3,7 @@ import type { Capabilities } from '../data/capabilities';
 import { NO_CAPABILITIES } from '../data/capabilities';
 import type { CollectionModel } from '../data/schemaModel';
 import { deriveCollections } from '../data/schemaModel';
-import { demoIntrospection } from '../data/testing/fixtures';
+import { certIntrospection, demoIntrospection } from '../data/testing/fixtures';
 import type { QuerySpec } from './querySpec';
 import {
   deriveEdges,
@@ -128,31 +128,46 @@ describe('deriveEdges', () => {
       expect(reverse.selectField).toBeUndefined();
     });
 
-    it('drops the inferred reverse edge once the schema declares the real one', () => {
-      // Simulates what declaring `inverse: donor` on `Donor.samples` does to the
-      // derived model (Wave 1 of the cross-component change). Without the
-      // precedence rule the builder would offer the same relationship twice —
-      // once as the declared `samples`, once as the inferred `rev:samples.donor`.
-      const donorsWithInverse: CollectionModel = {
-        ...find('donors'),
-        detailColumns: [
-          ...find('donors').detailColumns,
-          {
-            field: 'samples',
-            label: 'Samples',
-            kind: 'refList',
-            targetType: 'Sample',
-            targetIdField: 'id',
-          },
-        ],
-      };
-      const demoWithInverse = demo.map((c) => (c.id === 'donors' ? donorsWithInverse : c));
-      const edges = deriveEdges(donorsWithInverse, demoWithInverse);
+    it('gates reverse display columns off when nothing declares the edge', () => {
+      const reverse = deriveEdges(find('donors'), demo).find((e) => e.key === 'rev:samples.donor')!;
+      // `mosaic-demo-small`'s schema declares no `inverse:` slot, so nothing on
+      // Donor names its samples. The edge is still recoverable for filtering,
+      // but there is no field to select through — the honest gate (ADR-0029).
+      expect(reverse.selectField).toBeUndefined();
+    });
+  });
 
-      expect(edges.filter((e) => e.relatedCollectionId === 'samples')).toEqual([
-        expect.objectContaining({ key: 'samples', direction: 'forward', toMany: true }),
+  /**
+   * The certification fixture (1.1.0) declares `Author.books` with
+   * `inverse: author`, so this exercises the post-Wave-1 world against a real
+   * generated schema rather than a hand-built model.
+   */
+  describe('against the certification schema (fixture 1.1.0, mosaic v0.14.0)', () => {
+    const cert = deriveCollections(certIntrospection);
+    const find = (id: string) => cert.find((c) => c.id === id)!;
+
+    it('prefers the declared reverse edge and drops the inferred duplicate', () => {
+      const edges = deriveEdges(find('authors'), cert);
+      // Author reaches Book two ways: the declared `books` refList, and an
+      // inference from `Book.author` pointing back. Offering both would show
+      // one relationship twice under two names.
+      expect(edges.filter((e) => e.relatedCollectionId === 'books')).toEqual([
+        expect.objectContaining({ key: 'books', direction: 'forward', toMany: true }),
       ]);
-      expect(edges.some((e) => e.key.startsWith('rev:samples.'))).toBe(false);
+      expect(edges.some((e) => e.key.startsWith('rev:books.'))).toBe(false);
+    });
+
+    it('makes a declared reverse edge selectable, unlike an inferred one', () => {
+      const books = deriveEdges(find('authors'), cert).find((e) => e.key === 'books')!;
+      // This is the whole payoff of declaring `inverse:`: the anchor now holds
+      // a field, so the edge can carry display columns and not just criteria.
+      // No Aperture change made that true — the schema did.
+      expect(books.selectField).toBe('books');
+    });
+
+    it('offers a stored forward multivalued reference too', () => {
+      const coAuthors = deriveEdges(find('books'), cert).find((e) => e.key === 'co_authors');
+      expect(coAuthors).toMatchObject({ direction: 'forward', toMany: true, selectField: 'coAuthors' });
     });
   });
 });
