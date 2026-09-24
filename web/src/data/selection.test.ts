@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { deriveCollections } from './schemaModel';
 import { demoIntrospection } from './testing/fixtures';
-import { pathLabel, selectionForPaths, valueAtPath } from './selection';
-import type { PathColumn } from './selection';
+import { flattenRows, pathLabel, selectionForPaths, valueAtPath } from './selection';
+import type { ManyMode, PathColumn } from './selection';
 
 const demo = deriveCollections(demoIntrospection);
 const find = (id: string) => demo.find((c) => c.id === id)!;
@@ -83,5 +83,73 @@ describe('pathLabel', () => {
   it('labels a traversal by its path', () => {
     expect(pathLabel(['donor', 'cohort'], find('samples'), demo)).toBe('Donor → Cohort');
     expect(pathLabel(['accession'], find('samples'), demo)).toBe('Accession');
+  });
+});
+
+describe('flattenRows', () => {
+  const cohort = (mode?: ManyMode): PathColumn => ({
+    path: ['inputSamples', 'accession'],
+    column: col('samples', 'accession'),
+    label: 'Sample → Accession',
+    many: mode ? { mode } : undefined,
+  });
+  const status: PathColumn = { path: ['status'], column: col('workflows', 'status'), label: 'Status' };
+
+  const rows = [
+    { id: 'w1', status: 'done', inputSamples: [{ id: 's1', accession: 'A1' }, { id: 's2', accession: 'A2' }] },
+    { id: 'w2', status: 'failed', inputSamples: [] },
+  ];
+
+  it('keeps anchor grain for count, and reports no grain change', () => {
+    const out = flattenRows(rows, [status, cohort('count')], 'id');
+    expect(out.rows).toHaveLength(2);
+    expect(out.rows[0].values['inputSamples.accession']).toBe(2);
+    expect(out.rows[1].values['inputSamples.accession']).toBe(0);
+    expect(out.grain).toBeUndefined();
+  });
+
+  it('joins member values without changing the row count', () => {
+    const out = flattenRows(rows, [status, cohort('joinIds')], 'id');
+    expect(out.rows).toHaveLength(2);
+    expect(out.rows[0].values['inputSamples.accession']).toBe('A1; A2');
+  });
+
+  it('explodes to one row per member and repeats the anchor values', () => {
+    const out = flattenRows(rows, [status, cohort('explode')], 'id');
+    // The repetition is the feature: w1 appears twice, once per sample.
+    expect(out.rows.map((r) => r.values['status'])).toEqual(['done', 'done', 'failed']);
+    expect(out.rows.map((r) => r.values['inputSamples.accession'])).toEqual(['A1', 'A2', undefined]);
+  });
+
+  it('keeps an anchor with no members when exploding', () => {
+    const out = flattenRows(rows, [status, cohort('explode')], 'id');
+    // Dropping w2 would turn an explode into a filter — the table would stop
+    // agreeing with the result total for a reason nothing on screen explains.
+    expect(out.rows.filter((r) => r.anchorId === 'w2')).toHaveLength(1);
+  });
+
+  it('states the grain change with both counts', () => {
+    const out = flattenRows(rows, [status, cohort('explode')], 'id');
+    // "3 rows from 2 workflows" — ADR-0041 requires this wherever the rows are.
+    expect(out.grain).toMatchObject({ anchorCount: 2, rowCount: 3 });
+  });
+
+  it('gives exploded siblings distinct keys', () => {
+    const out = flattenRows(rows, [status, cohort('explode')], 'id');
+    // The anchor id alone collides, and React would reuse a row across members.
+    expect(new Set(out.rows.map((r) => r.key)).size).toBe(out.rows.length);
+    expect(out.rows.every((r) => r.anchorId === 'w1' || r.anchorId === 'w2')).toBe(true);
+  });
+
+  it('ignores a second explode rather than multiplying rows', () => {
+    const second: PathColumn = {
+      path: ['runConfigurations', 'name'],
+      column: col('workflows', 'name'),
+      label: 'x',
+      many: { mode: 'explode' },
+    };
+    const out = flattenRows(rows, [status, cohort('explode'), second], 'id');
+    // A cartesian product has no user model behind it (v1 cap, ADR-0041).
+    expect(out.rows).toHaveLength(3);
   });
 });
