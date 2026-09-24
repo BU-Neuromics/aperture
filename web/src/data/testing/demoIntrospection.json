@@ -16975,6 +16975,20 @@
      }
     },
     {
+     "name": "hasDefault",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
      "name": "description",
      "description": null,
      "args": [],
@@ -17024,6 +17038,30 @@
         }
        }
       }
+     }
+    },
+    {
+     "name": "isExternalXref",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "NON_NULL",
+      "name": null,
+      "ofType": {
+       "kind": "SCALAR",
+       "name": "Boolean",
+       "ofType": null
+      }
+     }
+    },
+    {
+     "name": "inverseOf",
+     "description": null,
+     "args": [],
+     "type": {
+      "kind": "SCALAR",
+      "name": "String",
+      "ofType": null
      }
     }
    ],
