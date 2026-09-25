@@ -220,12 +220,86 @@ export interface CollectionModel {
   fieldRange?: FieldRangeModel;
   /** All non-combinator fields of the filter input (equality-filterable). */
   filterFields: string[];
+  /**
+   * The typed `where:` input's shape, when the endpoint advertises one
+   * (Mosaic ADR-0006 increment 2+). Keyed by the input's own field name —
+   * camelCase, the GraphQL spelling, not the LinkML slot.
+   *
+   * Derived rather than assumed because the three field *shapes* compile
+   * differently and are told apart only by their input type:
+   *
+   * - `ops` — a `<Scalar>FilterOps` object (`{eq, neq, in, gt, …}`);
+   * - `nested` — another `<Type>Filter`, which a to-one reference takes
+   *   directly (`SampleFilter.donor: DonorFilter`);
+   * - `quantifiers` — a `<Type>EdgeQuantifiers` (`{some, none}`), which a
+   *   to-many or `inverse:`-declared edge takes (ADR-0006 M5a/M5b).
+   *
+   * Absent → the endpoint predates the typed contract and the planner keeps
+   * compiling to the flat `filters:` list.
+   */
+  whereFields?: Record<string, WhereField>;
   /** How to fetch one entity, when the endpoint offers a way (else detail gates off). */
   detail?: DetailPath;
   /** Create/update mutation paths + derived forms; absent members gate the write UI off. */
   write: WriteModel;
   /** Availability/supersede mutation paths (W4.4); absent members gate those affordances off. */
   lifecycle: LifecycleModel;
+}
+
+/** One field of a typed `<Type>Filter` input, classified by how it compiles. */
+export interface WhereField {
+  /** The input type's own field name (camelCase). */
+  field: string;
+  kind: 'ops' | 'nested' | 'quantifiers';
+  /** The named input type — `StringFilterOps`, `DonorFilter`, `SampleEdgeQuantifiers`. */
+  inputType: string;
+  /** For `ops`: the operator members the endpoint actually advertises for it. */
+  ops?: string[];
+}
+
+/** Combinators are structure, not fields — the compiler emits them itself. */
+const WHERE_COMBINATORS = new Set(['and', 'or', 'not']);
+
+/**
+ * Classify every field of a typed filter input (Mosaic ADR-0006).
+ *
+ * The classification is read off the input types themselves rather than
+ * matched by name: a to-one reference and a to-many edge are both named after
+ * their slot, and only the type distinguishes `DonorFilter` (nested) from
+ * `SampleEdgeQuantifiers` (quantified). Name-matching would compile a
+ * relationship predicate into the wrong shape and fail GraphQL validation.
+ */
+function deriveWhereFields(
+  schema: IntrospectionSchema,
+  whereTypeName: string | undefined,
+): Record<string, WhereField> | undefined {
+  const input = whereTypeName ? findType(schema, whereTypeName) : undefined;
+  if (input?.kind !== 'INPUT_OBJECT') return undefined;
+
+  const fields: Record<string, WhereField> = {};
+  for (const field of input.inputFields ?? []) {
+    if (WHERE_COMBINATORS.has(field.name)) continue;
+    const named = namedType(field.type);
+    const typeName = named.name;
+    if (!typeName) continue;
+    const target = findType(schema, typeName);
+    if (target?.kind !== 'INPUT_OBJECT') continue;
+
+    const members = (target.inputFields ?? []).map((f) => f.name);
+    const isQuantifier =
+      members.length > 0 && members.every((m) => m === 'some' || m === 'none');
+    // A nested filter carries combinators; an ops object never does. That is a
+    // structural test, so it holds for any naming convention.
+    const isNested = members.some((m) => WHERE_COMBINATORS.has(m));
+
+    fields[field.name] = {
+      field: field.name,
+      kind: isQuantifier ? 'quantifiers' : isNested ? 'nested' : 'ops',
+      inputType: typeName,
+      ops: isQuantifier || isNested ? undefined : members,
+    };
+  }
+  return Object.keys(fields).length > 0 ? fields : undefined;
 }
 
 /** Derived from a Query `entityHistory`-style field, when advertised (R3.7). */
@@ -1029,6 +1103,7 @@ export function deriveCollections(
       facetCounts: deriveFacetCounts(schema, queryFields, field.name),
       fieldRange,
       filterFields: args.filter ? deriveColumnFilterFields(detailColumns) : [],
+      whereFields: deriveWhereFields(schema, args.where ? (namedType(args.where.type).name ?? undefined) : undefined),
       detail: deriveDetailPath(queryFields, entityType.name, undefined, idColumn),
       write: deriveWriteModel(schema, entityType.name, detailColumns),
       lifecycle: deriveLifecycleModel(schema, entityType.name),
