@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import type { CollectionModel, ColumnModel } from '../data/schemaModel';
 import { typeColorStyle } from '../data/typeColor';
+import type { ManyMode, PathColumn } from '../data/selection';
+import { pathKey } from '../data/selection';
+import type { QueryEdge } from './querySpec';
 
 /**
  * What the query surface shows when it has no results: the schema.
@@ -27,6 +31,7 @@ export function FieldsPanel({
   showColumnToggles,
   asideFromAnchor,
   onAdoptAnchor,
+  traversal,
 }: {
   collection: CollectionModel;
   /** Slot/field names the current turn named — emphasis only, never a filter. */
@@ -40,6 +45,11 @@ export function FieldsPanel({
   asideFromAnchor?: boolean;
   /** Make the shown collection the anchor. Absent when it already is. */
   onAdoptAnchor?: () => void;
+  /**
+   * Columns reached through a reference (ADR-0041). Absent → the panel behaves
+   * exactly as it did before, which is what the pre-run and aside cases want.
+   */
+  traversal?: TraversalProps;
 }) {
   const isNamed = (c: ColumnModel) =>
     highlighted.has(c.slot ?? '') || highlighted.has(c.field);
@@ -144,7 +154,144 @@ export function FieldsPanel({
           </li>
         ))}
       </ul>
+
+      {showColumnToggles && traversal && (
+        <RelatedColumns collection={collection} {...traversal} />
+      )}
     </section>
+  );
+}
+
+export interface TraversalProps {
+  edges: QueryEdge[];
+  collections: CollectionModel[];
+  selected: PathColumn[];
+  onTogglePath: (edge: QueryEdge, column: ColumnModel) => void;
+  onSetMode: (path: string[], mode: ManyMode) => void;
+}
+
+const MODE_LABELS: Record<ManyMode, string> = {
+  count: 'how many',
+  joinIds: 'list them',
+  explode: 'one row each',
+};
+
+/**
+ * Result columns reached through a reference.
+ *
+ * Grouped under the edge rather than mixed in with the anchor's own fields,
+ * because "Name" on its own stops meaning anything once three classes have
+ * one — the grouping IS the disambiguation, and it matches the column headers
+ * ("Donor → Cohort").
+ *
+ * Everything offered comes from `deriveEdges`, so the panel enumerates nothing
+ * (ADR-0002): a schema that gains a reference gains a group here with no code
+ * change.
+ */
+function RelatedColumns({
+  collection,
+  edges,
+  collections,
+  selected,
+  onTogglePath,
+  onSetMode,
+}: TraversalProps & { collection: CollectionModel }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const chosen = new Map(selected.map((c) => [pathKey(c.path), c]));
+
+  return (
+    <div className="fields-related" data-testid="fields-related">
+      <h3 className="fields-related-title">Through a reference</h3>
+      {edges.length === 0 && (
+        <p className="fields-related-empty">{collection.label} references nothing.</p>
+      )}
+
+      {edges.map((edge) => {
+        const target = collections.find((c) => c.id === edge.relatedCollectionId);
+        if (!target) return null;
+
+        // An edge nothing on the anchor names has no field to select through.
+        // It still filters, so it is shown and disabled with the reason rather
+        // than hidden — an absent row would read as "this data does not exist".
+        // It becomes selectable on its own once the schema declares the
+        // inverting slot (Mosaic ADR-0011); nothing here changes.
+        if (!edge.selectField) {
+          return (
+            <div
+              key={edge.key}
+              className="fields-related-edge fields-related-gated"
+              data-testid="fields-related-gated"
+            >
+              <span className="fields-related-name">{edge.label}</span>
+              <span className="fields-related-gate">
+                available as a filter only — this endpoint exposes no reverse edge from{' '}
+                {collection.label.toLowerCase()}, so these fields cannot be read into the table
+              </span>
+            </div>
+          );
+        }
+
+        const isOpen = open === edge.key;
+        return (
+          <div key={edge.key} className="fields-related-edge">
+            <button
+              type="button"
+              className="fields-related-toggle"
+              aria-expanded={isOpen}
+              onClick={() => setOpen(isOpen ? null : edge.key)}
+            >
+              <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span> {edge.label}
+              <span className="fields-related-type" style={typeColorStyle(target.typeName)}>
+                {target.label}
+              </span>
+            </button>
+
+            {isOpen && (
+              <ul className="fields-related-list">
+                {target.detailColumns.map((column) => {
+                  const path = [edge.selectField!, column.field];
+                  const pick = chosen.get(pathKey(path));
+                  return (
+                    <li key={column.field} className="fields-related-row">
+                      <label className="fields-action fields-action-toggle">
+                        <input
+                          type="checkbox"
+                          checked={pick != null}
+                          onChange={() => onTogglePath(edge, column)}
+                        />
+                        {column.label}
+                      </label>
+
+                      {/* A to-many column cannot be added without answering
+                          what a row means, so the choice is inline and a grain
+                          change is never the silent default. */}
+                      {pick && edge.toMany && (
+                        <span className="fields-related-mode">
+                          {(['count', 'joinIds', 'explode'] as ManyMode[]).map((mode) => (
+                            <label key={mode} className="fields-related-mode-option">
+                              <input
+                                type="radio"
+                                name={`mode-${pathKey(path)}`}
+                                checked={pick.many?.mode === mode}
+                                onChange={() => onSetMode(path, mode)}
+                              />
+                              {MODE_LABELS[mode]}
+                            </label>
+                          ))}
+                          {pick.many?.mode === 'explode' && (
+                            <em className="fields-related-grain">changes what a row is</em>
+                          )}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
