@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HippoSource } from '../data/hippoSource';
 import type { CollectionModel } from '../data/schemaModel';
-import { renderCell, isRightAligned } from '../features/collections/cells';
+import { renderPathCell, isPathRightAligned } from '../features/collections/cells';
+import type { ManyMode, PathColumn } from '../data/selection';
+import { flattenRows, pathKey, pathLabel } from '../data/selection';
+import { toCSVPaths, toJSONExportPaths } from '../features/collections/export';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import { useNavView } from '../nav/NavConfigContext';
-import { downloadFile, toCSV, toJSONExport } from '../features/collections/export';
+import { downloadFile } from '../features/collections/export';
 import type { QueryRunResult } from './planner';
 import { runQuerySpec, SEMIJOIN_CAP } from './planner';
 import type {
@@ -312,6 +315,17 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    * default — the opposite would silently omit new data from every saved view.
    */
   const [hiddenFields, setHiddenFields] = useState<ReadonlySet<string>>(new Set());
+
+  /**
+   * Columns reached through a reference (ADR-0041).
+   *
+   * Held as an INCLUDE set, unlike `hiddenFields` above. The asymmetry is
+   * deliberate: an anchor's own fields should appear by default, so a schema
+   * that gains one shows it; a traversal is only ever there because someone
+   * asked for it, and defaulting every reachable field on would fetch a graph
+   * nobody requested.
+   */
+  const [pathColumns, setPathColumns] = useState<PathColumn[]>([]);
   const [pickingFields, setPickingFields] = useState(false);
 
   const anchor = resolveAnchor(draft, collections);
@@ -368,6 +382,48 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
     [],
   );
 
+  const togglePath = useCallback(
+    (edge: QueryEdge, column: ColumnModel) => {
+      const path = [edge.selectField!, column.field];
+      const key = pathKey(path);
+      setPathColumns((prev) => {
+        if (prev.some((c) => pathKey(c.path) === key)) {
+          return prev.filter((c) => pathKey(c.path) !== key);
+        }
+        return [
+          ...prev,
+          {
+            path,
+            column,
+            label: pathLabel(path, anchor!, collections),
+            // A to-many column defaults to `count`, never to `explode`: the
+            // grain change has to be asked for, not arrived at.
+            many: edge.toMany ? { mode: 'count' as ManyMode } : undefined,
+          },
+        ];
+      });
+    },
+    [anchor, collections],
+  );
+
+  const setPathMode = useCallback((path: string[], mode: ManyMode) => {
+    const key = pathKey(path);
+    setPathColumns((prev) =>
+      prev.map((c) => {
+        if (pathKey(c.path) !== key) return c;
+        if (mode !== 'explode') return { ...c, many: { mode } };
+        // One explode per query (ADR-0041 v1 cap): a second would be a
+        // cartesian product with no user model behind it, so choosing one
+        // demotes the other rather than silently multiplying the rows.
+        return { ...c, many: { mode } };
+      }).map((c) =>
+        mode === 'explode' && pathKey(c.path) !== key && c.many?.mode === 'explode'
+          ? { ...c, many: { mode: 'count' as ManyMode } }
+          : c,
+      ),
+    );
+  }, []);
+
   const toggleField = useCallback((field: string) => {
     setHiddenFields((prev) => {
       const next = new Set(prev);
@@ -379,16 +435,40 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
 
   // What the results table and the exports actually use. Derived rather than
   // stored, so it stays correct when the anchor's column set changes.
-  const shownColumns = (anchor?.columns ?? []).filter((c) => !hiddenFields.has(c.field));
+  // The anchor's own columns, as paths, so the table has one column vocabulary
+  // instead of two. A traversal column and an anchor column differ only in
+  // path length from here on.
+  const anchorColumns: PathColumn[] = (anchor?.columns ?? [])
+    .filter((c) => !hiddenFields.has(c.field))
+    .map((c) => ({ path: [c.field], column: c, label: c.label }));
+  const shownColumns: PathColumn[] = [...anchorColumns, ...pathColumns];
   const slots = useMemo(() => (anchor ? filterSlots(anchor) : []), [anchor]);
   const edges = useMemo(
     () => (anchor ? deriveEdges(anchor, collections) : []),
     [anchor, collections],
   );
+  const flat = useMemo(
+    () => (run ? flattenRows(run.rows, shownColumns, anchor?.idColumn) : null),
+    [run, shownColumns, anchor?.idColumn],
+  );
+
   const validation = useMemo(
     () => validateQuerySpec(draft, collections, capabilities),
     [draft, collections, capabilities],
   );
+
+  /**
+   * The chosen paths, read through a ref inside `execute`.
+   *
+   * `execute` is memoised on the source and the spec; adding the columns to its
+   * dependencies would re-run the query on every checkbox, turning a
+   * presentation choice into a fetch. The ref keeps the latest value available
+   * without making the callback identity depend on it — choosing a column
+   * takes effect on the next Run, which is the only execution gesture
+   * (ADR-0039).
+   */
+  const pathsRef = useRef<PathColumn[]>(pathColumns);
+  pathsRef.current = pathColumns;
 
   const executed = urlState.querySpec;
   const page = urlState.page;
@@ -397,7 +477,9 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
       setRunning(true);
       setError(null);
       try {
-        setRun(await runQuerySpec(source, collections, capabilities, spec, pageNo, PAGE_SIZE));
+        setRun(
+          await runQuerySpec(source, collections, capabilities, spec, pageNo, PAGE_SIZE, pathsRef.current),
+        );
       } catch (e) {
         setRun(null);
         setError(e instanceof Error ? e.message : String(e));
@@ -500,6 +582,11 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
         pageSize: EXPORT_PAGE_SIZE,
         conditions: run.anchorConditions,
         filterMode: run.filterMode,
+        // The same typed filter and the same traversal selection the run used.
+        // Re-deriving either here would let the file drift from the screen it
+        // was exported from.
+        where: run.where,
+        pathSelection: run.pathSelection,
       });
       rows.push(...result.rows);
       if (rows.length >= EXPORT_CAP) {
@@ -510,19 +597,30 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
       if (!result.mayHaveMore) break;
       pageNo += 1;
     }
-    // Export what the user chose to see. A file carrying fields they hid
-    // would quietly contradict the screen it was exported from.
-    const chosen = anchor.columns.filter((c) => !hiddenFields.has(c.field));
-    const content = format === 'csv' ? toCSV(chosen, rows) : toJSONExport(rows, chosen);
+    // Export what the user chose to see, at the grain they are seeing it.
+    // A file carrying fields they hid — or one row per anchor when the screen
+    // shows one per pair — would quietly contradict the screen it came from.
+    const flatExport = flattenRows(rows, shownColumns, anchor.idColumn);
+    const content =
+      format === 'csv'
+        ? toCSVPaths(shownColumns, flatExport.rows)
+        : toJSONExportPaths(shownColumns, flatExport.rows);
     downloadFile(
       `query-${anchor.id}.${format}`,
       format === 'csv' ? 'text/csv' : 'application/json',
       content,
     );
+    // The cap counts ANCHOR rows fetched, which is not what an exploded file
+    // contains — saying "5,000 rows" over a 12,000-line file would be wrong.
+    const unit = anchor.label.toLowerCase();
+    const exploded = flatExport.grain != null;
     setExportNote(
       truncated
-        ? `Exported the first ${rows.length.toLocaleString('en-US')} rows — the set is larger (cap).`
-        : `Exported ${rows.length.toLocaleString('en-US')} rows.`,
+        ? `Exported the first ${rows.length.toLocaleString('en-US')} ${unit}` +
+          (exploded ? ` — ${flatExport.rows.length.toLocaleString('en-US')} rows` : '') +
+          ' — the set is larger (cap).'
+        : `Exported ${flatExport.rows.length.toLocaleString('en-US')} rows` +
+          (exploded ? ` from ${rows.length.toLocaleString('en-US')} ${unit}.` : '.'),
     );
   };
 
@@ -718,8 +816,8 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
                 aria-expanded={pickingFields}
                 onClick={() => setPickingFields((v) => !v)}
               >
-                {hiddenFields.size > 0
-                  ? `Fields (${shownColumns.length} of ${anchor.columns.length})`
+                {hiddenFields.size > 0 || pathColumns.length > 0
+                  ? `Fields (${shownColumns.length} of ${anchor.columns.length + pathColumns.length})`
                   : 'Fields'}
               </button>
               <button type="button" className="action-button" onClick={() => urlState.openGraphView()}>
@@ -753,36 +851,62 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               onAddFilter={addFilterFor}
               onToggleField={toggleField}
               showColumnToggles
+              traversal={{
+                edges,
+                collections,
+                selected: pathColumns,
+                onTogglePath: togglePath,
+                onSetMode: setPathMode,
+              }}
             />
+          )}
+          {/* A grain change is stated where the rows are. Without this the
+              total above counts anchors while the table counts pairs, and
+              nothing on screen reconciles them (ADR-0041). */}
+          {flat?.grain && (
+            <span className="query-grain" role="status" data-testid="query-grain">
+              1 row per {anchor.label.toLowerCase()} × {flat.grain.edgeLabel} —{' '}
+              {flat.grain.rowCount.toLocaleString('en-US')} rows from{' '}
+              {flat.grain.anchorCount.toLocaleString('en-US')}{' '}
+              {anchor.label.toLowerCase()} on this page
+            </span>
           )}
           <table className="collection-table">
             <thead>
               <tr>
                 {shownColumns.map((c) => (
-                  <th key={c.field} className={isRightAligned(c) ? 'align-right' : undefined}>
+                  <th
+                    key={pathKey(c.path)}
+                    className={isPathRightAligned(c) ? 'align-right' : undefined}
+                  >
                     {c.label}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {run.rows.map((row, i) => (
+              {(flat?.rows ?? []).map((row) => (
                 <tr
-                  key={String(row[anchor.idColumn ?? ''] ?? i)}
+                  key={row.key}
                   className="query-row"
                   onClick={() => {
-                    const id = row[anchor.idColumn ?? ''];
-                    if (id != null) urlState.openIn(anchor.id, String(id));
+                    // Always the anchor, even on an exploded row: the row
+                    // describes a pair, but the record it belongs to is the
+                    // anchor entity.
+                    if (row.anchorId != null) urlState.openIn(anchor.id, row.anchorId);
                   }}
                 >
                   {shownColumns.map((c) => (
-                    <td key={c.field} className={isRightAligned(c) ? 'align-right' : undefined}>
-                      {renderCell(c, row[c.field])}
+                    <td
+                      key={pathKey(c.path)}
+                      className={isPathRightAligned(c) ? 'align-right' : undefined}
+                    >
+                      {renderPathCell(c, row.values[pathKey(c.path)])}
                     </td>
                   ))}
                 </tr>
               ))}
-              {run.rows.length === 0 && (
+              {(flat?.rows.length ?? 0) === 0 && (
                 <tr>
                   <td colSpan={shownColumns.length} className="query-empty">
                     No matches.

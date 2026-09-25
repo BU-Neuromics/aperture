@@ -72,6 +72,17 @@ export interface ListOptions {
    * AND-mode spec. For OR it would silently change the query's meaning.
    */
   where?: Record<string, unknown>;
+  /**
+   * Extra selection for result columns reached through a reference (ADR-0041),
+   * already compiled — `donor { id cohort }`.
+   *
+   * A compiled string rather than the paths themselves, because resolving a
+   * path needs the whole collection graph and this layer only ever holds one
+   * collection. The planner owns that compilation, as it already does for
+   * `where`, and both the live query and the export page-through pass the same
+   * string so the file cannot disagree with the screen.
+   */
+  pathSelection?: string;
   search?: string;
   /**
    * Server-side ordering (Mosaic ADR-0007), when the collection advertises
@@ -189,6 +200,21 @@ function selectionSet(columns: ColumnModel[], extra?: ColumnModel[]): string {
 }
 
 /**
+ * The full row selection: the anchor's own columns plus any traversal paths.
+ *
+ * The two are appended rather than merged into one tree, because they overlap
+ * only on reference fields and `selectionFor` already emits those as
+ * `field { id }`. A path through the same reference emits a richer selection
+ * for it, and GraphQL merges sibling selections on the same field — so asking
+ * for `donor { id }` and `donor { cohort }` yields `donor { id cohort }`,
+ * which is what we want and costs nothing to say twice.
+ */
+function rowSelection(collection: CollectionModel, options: ListOptions): string {
+  const base = selectionSet(listColumns(collection), options.extraColumns);
+  return options.pathSelection ? `${base} ${options.pathSelection}` : base;
+}
+
+/**
  * The table's columns, plus the identifying column when the budget excluded it
  * (issue #67).
  *
@@ -300,7 +326,7 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
       'orderDir',
       options.orderBy?.field ? (options.orderBy.dir ?? 'ASC') : undefined,
     );
-    const rows = selectionSet(listColumns(collection), options.extraColumns);
+    const rows = rowSelection(collection, options);
     return {
       document: builder.document(
         twin.field,
@@ -353,8 +379,8 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
 
   const envelope = collection.pageShape === 'envelope';
   const selections = envelope
-    ? `items { ${selectionSet(listColumns(collection), options.extraColumns)} } total`
-    : selectionSet(listColumns(collection), options.extraColumns);
+    ? `items { ${rowSelection(collection, options)} } total`
+    : rowSelection(collection, options);
   return {
     document: builder.document(collection.id, selections),
     variables: builder.variables,

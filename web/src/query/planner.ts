@@ -5,6 +5,8 @@ import { slotName } from '../data/schemaModel';
 import type { Criterion, FieldCondition, QuerySpec } from './querySpec';
 import { deriveEdges, edgeByKey, filterOpMember, resolveAnchor } from './querySpec';
 import { compileWhere } from './whereCompiler';
+import type { PathColumn } from '../data/selection';
+import { selectionForPaths } from '../data/selection';
 
 /**
  * The QuerySpec planner (ADR-0035): server-first execution with one declared
@@ -36,6 +38,8 @@ export interface QueryRunResult {
   filterMode: 'AND' | 'OR';
   /** The typed filter sent, when the spec compiled to one (for export re-use). */
   where?: Record<string, unknown>;
+  /** The compiled traversal selection, so the export asks for the same fields. */
+  pathSelection?: string;
 }
 
 function toFilterCondition(c: FieldCondition): FilterCondition {
@@ -53,6 +57,8 @@ export async function runQuerySpec(
   spec: QuerySpec,
   page: number,
   pageSize: number,
+  /** Result columns reached through a reference (ADR-0041). */
+  paths?: PathColumn[],
 ): Promise<QueryRunResult> {
   const anchor = resolveAnchor(spec, collections);
   if (!anchor) throw new Error(`This endpoint exposes no type “${spec.anchor}”`);
@@ -133,9 +139,16 @@ export async function runQuerySpec(
     });
   }
 
+  // Compiled here rather than in the source adapter: resolving a path needs the
+  // whole collection graph, which that layer never holds.
+  const pathSelection = paths?.length
+    ? selectionForPaths(paths, anchor, collections) || undefined
+    : undefined;
+
   const result = await source.listEntities(anchor.id, {
     page,
     pageSize,
+    pathSelection,
     conditions: anchorConditions,
     // A mixed query ANDs the compensations onto `where`; the spec's own mode
     // already lives inside the typed input, so re-applying it here would
@@ -175,5 +188,6 @@ export async function runQuerySpec(
     anchorConditions,
     filterMode: usingWhere ? 'AND' : spec.mode,
     where: usingWhere ? compiled.where ?? undefined : undefined,
+    pathSelection,
   };
 }
