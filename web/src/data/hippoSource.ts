@@ -58,6 +58,20 @@ export interface ListOptions {
   conditions?: FilterCondition[];
   /** AND (default) / OR across all filter entries, when the endpoint advertises FilterMode. */
   filterMode?: 'AND' | 'OR';
+  /**
+   * The typed `<Type>Filter` input (Mosaic ADR-0006), when the collection
+   * advertises a `where` argument.
+   *
+   * Applies to the base list field only. The search twin takes its own
+   * `where` on the server, but `SearchTwinModel` does not derive it yet and
+   * the QuerySpec planner never searches — composing search with typed
+   * filters is Mosaic's search-composition work, tracked separately.
+   *
+   * Composes with `conditions`/`filters` **by AND** — the server's own
+   * documented contract, which is why the planner may mix the two only for an
+   * AND-mode spec. For OR it would silently change the query's meaning.
+   */
+  where?: Record<string, unknown>;
   search?: string;
   /**
    * Server-side ordering (Mosaic ADR-0007), when the collection advertises
@@ -327,6 +341,7 @@ export function buildListQuery(collection: CollectionModel, options: ListOptions
       hasEqualityFilters ? options.filters : undefined,
     );
   }
+  builder.add(collection.args.where, collection.argTypes.where, 'where', options.where);
   builder.add(collection.args.search, collection.argTypes.search, 'search', options.search || undefined);
   builder.add(collection.args.orderBy, collection.argTypes.orderBy, 'orderBy', options.orderBy?.field);
   builder.add(

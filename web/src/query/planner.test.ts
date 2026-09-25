@@ -1,3 +1,5 @@
+import { deriveCollections } from '../data/schemaModel';
+import { demoIntrospection } from '../data/testing/fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import { NO_CAPABILITIES } from '../data/capabilities';
 import type { EntityPage, HippoSource, ListOptions } from '../data/hippoSource';
@@ -230,5 +232,85 @@ describe('runQuerySpec', () => {
     );
     expect(run.rows).toEqual([]);
     expect(run.notes.some((n) => n.includes('matched no related records'))).toBe(true);
+  });
+});
+
+describe('runQuerySpec — server-first execution (ADR-0035/0041)', () => {
+  const demo = deriveCollections(demoIntrospection);
+
+  function recordingSource(): { source: HippoSource; calls: ListOptions[] } {
+    const calls: ListOptions[] = [];
+    const source = {
+      capabilities: NO_CAPABILITIES,
+      collections: demo,
+      listEntities: async (_id: string, options: ListOptions) => {
+        calls.push(options);
+        return { rows: [], mayHaveMore: false, total: 0 };
+      },
+    } as unknown as HippoSource;
+    return { source, calls };
+  }
+
+  it('pushes a fully-compilable spec down and issues one query', async () => {
+    const { source, calls } = recordingSource();
+    const result = await runQuerySpec(
+      source,
+      demo,
+      NO_CAPABILITIES,
+      { v: 1, anchor: 'Workflow', mode: 'AND', criteria: [
+        { kind: 'related', edge: 'input_samples', quantifier: 'some', criteria: [
+          { kind: 'field', slot: 'sample_type', op: 'eq', value: 'tissue' },
+        ] },
+      ] },
+      1,
+      25,
+    );
+    // One round trip, no semijoin pre-query, and the tier says so.
+    expect(calls).toHaveLength(1);
+    expect(calls[0].where).toEqual({ inputSamples: { some: { sampleType: { eq: 'tissue' } } } });
+    expect(calls[0].conditions).toEqual([]);
+    expect(result.relationshipTier).toBe('server');
+  });
+
+  it('compensates only the criterion the endpoint cannot express', async () => {
+    const { source, calls } = recordingSource();
+    const result = await runQuerySpec(
+      source,
+      demo,
+      NO_CAPABILITIES,
+      { v: 1, anchor: 'Donor', mode: 'AND', criteria: [
+        { kind: 'field', slot: 'age_at_death', op: 'gte', value: 60 },
+        // The demo schema declares no inverse slot, so this edge has no
+        // server-side predicate and must still compensate.
+        { kind: 'related', edge: 'rev:samples.donor', quantifier: 'some', criteria: [] },
+      ] },
+      1,
+      25,
+    );
+    const main = calls[calls.length - 1];
+    expect(main.where).toEqual({ ageAtDeath: { gte: 60 } });
+    expect(main.conditions?.some((c) => c.op === 'IN')).toBe(true);
+    expect(result.relationshipTier).toBe('compensated');
+  });
+
+  it('refuses to mix a typed filter with a compensation under OR', async () => {
+    const { source, calls } = recordingSource();
+    const result = await runQuerySpec(
+      source,
+      demo,
+      NO_CAPABILITIES,
+      { v: 1, anchor: 'Donor', mode: 'OR', criteria: [
+        { kind: 'field', slot: 'age_at_death', op: 'gte', value: 60 },
+        { kind: 'related', edge: 'rev:samples.donor', quantifier: 'some', criteria: [] },
+      ] },
+      1,
+      25,
+    );
+    const main = calls[calls.length - 1];
+    // The server ANDs `filters` onto `where`, so mixing under OR would run a
+    // query that is not the one the spec describes. All of it falls back.
+    expect(main.where).toBeUndefined();
+    expect(main.filterMode).toBe('OR');
+    expect(result.notes.some((n) => n.includes('cannot be'))).toBe(true);
   });
 });
