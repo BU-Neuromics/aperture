@@ -12,8 +12,13 @@ import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App';
-import { capableSchema, fakeClient } from '../data/testing/fixtures';
+import { capableSchema, certIntrospection, demoIntrospection, fakeClient } from '../data/testing/fixtures';
+import { deriveCollections } from '../data/schemaModel';
+import type { CollectionModel } from '../data/schemaModel';
+import type { PathColumn } from '../data/selection';
+import { deriveEdges } from './querySpec';
 import { FieldsPanel } from './FieldsPanel';
+import type { TraversalProps } from './FieldsPanel';
 
 const endpoint = { url: 'http://fields.test/graphql' };
 
@@ -120,5 +125,96 @@ describe('FieldsPanel — showing a collection the query is not anchored on', ()
     expect(adopted).toBe(0);
     await userEvent.click(screen.getByRole('button', { name: /return rows of toxicology reports/i }));
     expect(adopted).toBe(1);
+  });
+});
+
+describe('FieldsPanel — columns through a reference (ADR-0041)', () => {
+  const demo = deriveCollections(demoIntrospection);
+  const cert = deriveCollections(certIntrospection);
+  const of = (list: CollectionModel[], id: string) => list.find((c) => c.id === id)!;
+
+  function panel(
+    collections: CollectionModel[],
+    collectionId: string,
+    selected: PathColumn[] = [],
+    handlers: Partial<TraversalProps> = {},
+  ) {
+    const collection = of(collections, collectionId);
+    return renderApp(
+      <FieldsPanel
+        collection={collection}
+        highlighted={new Set()}
+        hiddenFields={new Set()}
+        onAddFilter={() => {}}
+        onToggleField={() => {}}
+        showColumnToggles
+        traversal={{
+          edges: deriveEdges(collection, collections),
+          collections,
+          selected,
+          onTogglePath: () => {},
+          onSetMode: () => {},
+          ...handlers,
+        }}
+      />,
+    );
+  }
+
+  it('groups a reference and reveals its fields on demand', async () => {
+    panel(demo, 'samples');
+    const group = screen.getByRole('button', { name: /Donor/i });
+    // Collapsed by default — a fifteen-collection schema would otherwise open
+    // as a wall of every reachable field.
+    expect(screen.queryByText('Cohort')).not.toBeInTheDocument();
+    await userEvent.click(group);
+    expect(screen.getByText('Cohort')).toBeInTheDocument();
+  });
+
+  it('shows a gated edge with its reason instead of hiding it', () => {
+    panel(demo, 'donors');
+    // The demo schema declares no inverse slot, so Donor→Samples can filter but
+    // cannot be read into the table. Omitting the row would read as "no such
+    // data"; ADR-0029 wants the gate visible.
+    // Several classes reference Donor — samples, diagnoses, assessments — so
+    // every one of them is listed, and every one is gated for the same reason.
+    const gated = screen.getAllByTestId('fields-related-gated');
+    expect(gated.length).toBeGreaterThan(1);
+    for (const row of gated) expect(row).toHaveTextContent(/filter only/i);
+  });
+
+  it('offers no mode choice for a to-one column', async () => {
+    const donorCohort: PathColumn = {
+      path: ['donor', 'cohort'],
+      column: of(demo, 'donors').detailColumns.find((c) => c.field === 'cohort')!,
+      label: 'Donor → Cohort',
+    };
+    panel(demo, 'samples', [donorCohort]);
+    await userEvent.click(screen.getByRole('button', { name: /Donor/i }));
+    // One sample has one donor: there is no grain question to answer.
+    expect(screen.queryByText('one row each')).not.toBeInTheDocument();
+  });
+
+  it('makes the grain choice explicit for a to-many column', async () => {
+    const accession = of(demo, 'samples').detailColumns.find((c) => c.field === 'accession')!;
+    const picked: PathColumn = {
+      path: ['inputSamples', 'accession'],
+      column: accession,
+      label: 'Sample → Accession',
+      many: { mode: 'explode' },
+    };
+    panel(demo, 'workflows', [picked]);
+    await userEvent.click(screen.getByRole('button', { name: /Sample/i }));
+    expect(screen.getByText('one row each')).toBeInTheDocument();
+    // The consequence is stated beside the choice, not left to be discovered.
+    expect(screen.getByText(/changes what a row is/i)).toBeInTheDocument();
+  });
+
+  it('offers a declared reverse edge for columns, not just filtering', async () => {
+    panel(cert, 'authors');
+    // `inverse: author` in the certification fixture. Same component, same
+    // props — the schema is what changed.
+    expect(screen.queryByTestId('fields-related-gated')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Books/i }));
+    expect(screen.getByText('Title')).toBeInTheDocument();
   });
 });

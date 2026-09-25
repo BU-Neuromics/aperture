@@ -2,8 +2,11 @@ import type { Capabilities } from '../data/capabilities';
 import type { FilterCondition, HippoSource } from '../data/hippoSource';
 import type { CollectionModel } from '../data/schemaModel';
 import { slotName } from '../data/schemaModel';
-import type { FieldCondition, QuerySpec } from './querySpec';
+import type { Criterion, FieldCondition, QuerySpec } from './querySpec';
 import { deriveEdges, edgeByKey, filterOpMember, resolveAnchor } from './querySpec';
+import { compileWhere } from './whereCompiler';
+import type { PathColumn } from '../data/selection';
+import { selectionForPaths } from '../data/selection';
 
 /**
  * The QuerySpec planner (ADR-0035): server-first execution with one declared
@@ -24,11 +27,19 @@ export interface QueryRunResult {
   mayHaveMore: boolean;
   /** Honesty notes: caps hit, compensation tier, empty semijoins. */
   notes: string[];
-  /** 'compensated' when any RelatedCondition ran as a client-planned semijoin. */
+  /**
+   * How relationship criteria executed. 'server' — compiled to the typed
+   * `where:` input and pushed down whole; 'compensated' — at least one ran as
+   * a client-planned semijoin; null — the spec had none.
+   */
   relationshipTier: 'server' | 'compensated' | null;
   /** The compiled anchor conditions (for export page-through re-use). */
   anchorConditions: FilterCondition[];
   filterMode: 'AND' | 'OR';
+  /** The typed filter sent, when the spec compiled to one (for export re-use). */
+  where?: Record<string, unknown>;
+  /** The compiled traversal selection, so the export asks for the same fields. */
+  pathSelection?: string;
 }
 
 function toFilterCondition(c: FieldCondition): FilterCondition {
@@ -46,6 +57,8 @@ export async function runQuerySpec(
   spec: QuerySpec,
   page: number,
   pageSize: number,
+  /** Result columns reached through a reference (ADR-0041). */
+  paths?: PathColumn[],
 ): Promise<QueryRunResult> {
   const anchor = resolveAnchor(spec, collections);
   if (!anchor) throw new Error(`This endpoint exposes no type “${spec.anchor}”`);
@@ -53,8 +66,27 @@ export async function runQuerySpec(
   const notes: string[] = [];
   let relationshipTier: QueryRunResult['relationshipTier'] = null;
 
+  /**
+   * Server-first (ADR-0035): compile as much of the spec as the endpoint's
+   * typed `where:` input can express, and compensate only the remainder.
+   *
+   * **Mixing is legal only under AND.** The server composes `filters` with
+   * `where` by AND — its own documented contract — so an AND-mode spec can
+   * push some criteria down and compensate the rest. Under OR the two would
+   * not mean what the spec says, so a partially-compilable OR spec falls back
+   * to the legacy path entirely rather than running a subtly wrong query.
+   */
+  const compiled = compileWhere(spec, anchor, collections);
+  const canMix = spec.mode === 'AND' || compiled.uncompiled.length === 0;
+  const usingWhere = compiled.where != null && canMix;
+  const toCompensate: Criterion[] = usingWhere ? compiled.uncompiled : [...spec.criteria];
+
+  if (usingWhere && compiled.uncompiled.length === 0) {
+    relationshipTier = spec.criteria.some((c) => c.kind === 'related') ? 'server' : null;
+  }
+
   const anchorConditions: FilterCondition[] = [];
-  for (const criterion of spec.criteria) {
+  for (const criterion of toCompensate) {
     if (criterion.kind === 'field') {
       anchorConditions.push(toFilterCondition(criterion));
       continue;
@@ -107,17 +139,42 @@ export async function runQuerySpec(
     });
   }
 
+  // Compiled here rather than in the source adapter: resolving a path needs the
+  // whole collection graph, which that layer never holds.
+  const pathSelection = paths?.length
+    ? selectionForPaths(paths, anchor, collections) || undefined
+    : undefined;
+
   const result = await source.listEntities(anchor.id, {
     page,
     pageSize,
+    pathSelection,
     conditions: anchorConditions,
-    filterMode: spec.mode,
+    // A mixed query ANDs the compensations onto `where`; the spec's own mode
+    // already lives inside the typed input, so re-applying it here would
+    // double-count it.
+    filterMode: usingWhere ? 'AND' : spec.mode,
+    where: usingWhere ? compiled.where ?? undefined : undefined,
   });
 
   if (relationshipTier === 'compensated') {
     notes.push(
-      'Relationship criteria ran as a client-planned semijoin (compensated tier) — ' +
-        'exact but capped; the server does not advertise relationship predicates yet.',
+      'Some relationship criteria ran as a client-planned semijoin (compensated tier) — ' +
+        'exact but capped. This endpoint exposes no predicate for that edge; declaring the ' +
+        'inverting slot in the schema (Mosaic ADR-0011) moves it to the server.',
+    );
+  }
+  if (usingWhere && compiled.uncompiled.length > 0) {
+    notes.push(
+      `${compiled.uncompiled.length} of ${spec.criteria.length} criteria compiled to the ` +
+        'server’s typed filter; the rest were compensated client-side and combined with AND.',
+    );
+  }
+  if (!usingWhere && compiled.where != null) {
+    notes.push(
+      'This query mixes OR with a criterion the endpoint cannot express, so all of it ran ' +
+        'through the flat filter list — the typed filter and a client compensation cannot be ' +
+        'combined under OR without changing what the query means.',
     );
   }
   void capabilities;
@@ -129,6 +186,8 @@ export async function runQuerySpec(
     notes,
     relationshipTier,
     anchorConditions,
-    filterMode: spec.mode,
+    filterMode: usingWhere ? 'AND' : spec.mode,
+    where: usingWhere ? compiled.where ?? undefined : undefined,
+    pathSelection,
   };
 }

@@ -8,6 +8,8 @@ import type {
 } from '../introspection';
 import type { GraphQLResult, ScopedDataClient } from '../scopedClient';
 import realIntrospectionJson from './realIntrospection.json';
+import demoIntrospectionJson from './demoIntrospection.json';
+import certIntrospectionJson from './certIntrospection.json';
 
 /**
  * Introspection fixtures for adapter unit tests. Deliberately generic
@@ -27,6 +29,65 @@ import realIntrospectionJson from './realIntrospection.json';
  * the `ingestBatch`/`validateBatch` batch unit-of-work.
  */
 export const realIntrospection = realIntrospectionJson as unknown as IntrospectionSchema;
+
+/**
+ * The captured `__schema` of **mosaic v0.13.0** — the version
+ * `datahelix:certification/composition.lock.json` pins — over
+ * `mosaic-demo-small`'s fifteen-collection demo schema.
+ *
+ * Added beside `realIntrospection` rather than replacing it. The two answer
+ * different questions and both are needed: `realIntrospection` is the capture
+ * the read/write-shape and batch contracts are written against, and rewriting
+ * it would re-baseline six test files for no gain here.
+ *
+ * What this one carries that the older capture cannot (ADR-0041):
+ *
+ * - **edge-only references** (Mosaic ADR-0005) — `Sample.donor` resolves to a
+ *   `Donor` object and there is no `donorId` scalar beside it, so a referenced
+ *   value is reachable *only* through a nested selection. The older capture
+ *   predates that and still carries `Book.authorId` next to `Book.author`.
+ * - **forward to-many references** — `Workflow.inputSamples`,
+ *   `Publication.datasets`, `RunConfiguration.reagentLots`, each with a free
+ *   `<rel>Count` companion. The older capture has no entity-level list-of-object
+ *   field at all, so explode is untestable against it.
+ * - **the typed filter surface** — `<Type>Filter` inputs with `and`/`or`/`not`
+ *   and `SampleEdgeQuantifiers { some, none }` relationship predicates.
+ *
+ * Captured from **v0.13.0 deliberately, not from `main`**: `main` is 40 commits
+ * ahead and advertises surfaces (the MCP boundary, `converseQuerySpec`, reverse
+ * edges via `inverse:`) that no certifiable deployment serves yet, so a capture
+ * taken there would let tests assert capabilities that gate off in production.
+ *
+ * It therefore has **no reverse edges** — `Donor` has no `samples` field and
+ * `DonorFilter` no `samples` predicate — which is the honest picture today and
+ * is what the reverse-edge gating is tested against.
+ */
+export const demoIntrospection = demoIntrospectionJson as unknown as IntrospectionSchema;
+
+/**
+ * The captured `__schema` of **mosaic v0.14.0** over DataHelix's certification
+ * fixture schema (`portal_schema.yaml`, fixture **1.1.0**) — the exact pair
+ * `composition.lock.json` pins and the golden-path scenarios run against.
+ *
+ * This is the fixture that carries **reverse edges as a real schema feature**
+ * rather than a simulation, because fixture 1.1.0 was bumped to declare them:
+ *
+ * - `Author.books` + `booksCount` — an `inverse:`-declared virtual reverse edge
+ *   (Mosaic ADR-0011). `Author` therefore has BOTH a declared reverse edge and
+ *   an inferrable one (from `Book.author`), which is precisely the collision
+ *   ADR-0041's declared-over-inferred precedence rule exists to resolve.
+ * - `Book.coAuthors` + `coAuthorsCount` — a stored forward multivalued
+ *   reference.
+ * - `AuthorFilter.books` — the reverse relationship predicate on the typed
+ *   filter surface.
+ *
+ * Together with `demoIntrospection` (fifteen collections, **no** reverse edges,
+ * because `mosaic-demo-small`'s schema declares none) these two give the
+ * before/after pair ADR-0041's capability gating needs: the same derivation
+ * code must offer reverse display columns against one and honestly gate them
+ * off against the other, with no branch on a version number.
+ */
+export const certIntrospection = certIntrospectionJson as unknown as IntrospectionSchema;
 
 export const scalar = (name: string): TypeRef => ({ kind: 'SCALAR', name, ofType: null });
 export const enumRef = (name: string): TypeRef => ({ kind: 'ENUM', name, ofType: null });

@@ -1,5 +1,7 @@
 import type { FilterCondition, FilterValues, HippoSource } from '../../data/hippoSource';
 import type { CollectionModel, ColumnModel } from '../../data/schemaModel';
+import type { DisplayRow, PathColumn } from '../../data/selection';
+import { pathKey } from '../../data/selection';
 
 /**
  * Export (R3.10, L8): client-side page-through of the current filtered set →
@@ -111,4 +113,51 @@ export function downloadFile(filename: string, mime: string, content: string): v
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * CSV over path-addressed columns and already-flattened rows (ADR-0041).
+ *
+ * Separate from `toCSV` rather than a widening of it: that one is keyed by
+ * `column.field` and serves the ordinary collection table, where a row is an
+ * entity. Here a row may be an anchor × member pair, the header is the path
+ * label ("Donor → Cohort"), and the cell value was resolved upstream by the
+ * flattener — including the `count`/`joinIds` summaries, which have no
+ * representation in a `ColumnModel`.
+ */
+export function toCSVPaths(columns: PathColumn[], rows: DisplayRow[]): string {
+  const header = columns.map((c) => csvEscape(c.label)).join(',');
+  const lines = rows.map((row) =>
+    columns
+      .map((c) => {
+        const value = row.values[pathKey(c.path)];
+        if (value == null) return '';
+        // Only a bare reference still needs unwrapping; every other shape was
+        // resolved to a scalar by the flattener.
+        if (!c.many && (c.column.kind === 'ref' || c.column.kind === 'refList')) {
+          return csvEscape(cellValue(c.column, value));
+        }
+        return csvEscape(String(value));
+      })
+      .join(','),
+  );
+  return [header, ...lines].join('\r\n') + '\r\n';
+}
+
+/**
+ * JSON export of the same rows, keyed by path.
+ *
+ * Deliberately keyed by `pathKey` (`donor.cohort`) rather than the leaf name:
+ * two traversals can end in the same leaf — `donor.name` and `storageLocation.name`
+ * — and collapsing them to `name` would silently drop one column from the file
+ * while both remain on screen.
+ */
+export function toJSONExportPaths(columns: PathColumn[], rows: DisplayRow[]): string {
+  return JSON.stringify(
+    rows.map((row) =>
+      Object.fromEntries(columns.map((c) => [pathKey(c.path), row.values[pathKey(c.path)] ?? null])),
+    ),
+    null,
+    2,
+  );
 }

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Capabilities } from '../data/capabilities';
 import { NO_CAPABILITIES } from '../data/capabilities';
 import type { CollectionModel } from '../data/schemaModel';
+import { deriveCollections } from '../data/schemaModel';
+import { certIntrospection, demoIntrospection } from '../data/testing/fixtures';
 import type { QuerySpec } from './querySpec';
 import {
   deriveEdges,
@@ -85,6 +87,89 @@ describe('deriveEdges', () => {
       }),
     ]);
   });
+
+  /**
+   * ADR-0041. These run against the v0.13.0 capture of the fifteen-collection
+   * demo schema rather than the hand-built models above, because the point is
+   * what a real generated schema offers.
+   */
+  describe('against the demo schema (mosaic v0.13.0)', () => {
+    const demo = deriveCollections(demoIntrospection);
+    const find = (id: string) => demo.find((c) => c.id === id)!;
+
+    it('offers a forward to-many reference, which was skipped entirely before', () => {
+      const edges = deriveEdges(find('workflows'), demo);
+      const samplesEdge = edges.find((e) => e.key === 'input_samples');
+      // `Workflow.inputSamples` is a resolved list with a free `inputSamplesCount`
+      // companion. deriveEdges used to test `kind !== 'ref'` on both branches, so
+      // this edge existed in the schema and nowhere in the builder.
+      expect(samplesEdge).toMatchObject({
+        direction: 'forward',
+        toMany: true,
+        relatedCollectionId: 'samples',
+        selectField: 'inputSamples',
+      });
+    });
+
+    it('marks a to-one reference as selectable and single', () => {
+      const donorEdge = deriveEdges(find('samples'), demo).find((e) => e.key === 'donor');
+      // No grain decision to make: one Sample has one Donor.
+      expect(donorEdge).toMatchObject({ direction: 'forward', toMany: false, selectField: 'donor' });
+    });
+
+    it('infers a reverse edge but leaves it unselectable', () => {
+      const edges = deriveEdges(find('donors'), demo);
+      const reverse = edges.find((e) => e.key === 'rev:samples.donor')!;
+      // Nothing on Donor names its samples at v0.13.0 — `Donor.samples` needs a
+      // declared `inverse:` slot (Mosaic ADR-0011). So the edge is recoverable
+      // for filtering (the semijoin) but has no field to select through, which
+      // is what gates reverse display columns honestly rather than silently.
+      expect(reverse).toMatchObject({ direction: 'reverse', toMany: true });
+      expect(reverse.selectField).toBeUndefined();
+    });
+
+    it('gates reverse display columns off when nothing declares the edge', () => {
+      const reverse = deriveEdges(find('donors'), demo).find((e) => e.key === 'rev:samples.donor')!;
+      // `mosaic-demo-small`'s schema declares no `inverse:` slot, so nothing on
+      // Donor names its samples. The edge is still recoverable for filtering,
+      // but there is no field to select through — the honest gate (ADR-0029).
+      expect(reverse.selectField).toBeUndefined();
+    });
+  });
+
+  /**
+   * The certification fixture (1.1.0) declares `Author.books` with
+   * `inverse: author`, so this exercises the post-Wave-1 world against a real
+   * generated schema rather than a hand-built model.
+   */
+  describe('against the certification schema (fixture 1.1.0, mosaic v0.14.0)', () => {
+    const cert = deriveCollections(certIntrospection);
+    const find = (id: string) => cert.find((c) => c.id === id)!;
+
+    it('prefers the declared reverse edge and drops the inferred duplicate', () => {
+      const edges = deriveEdges(find('authors'), cert);
+      // Author reaches Book two ways: the declared `books` refList, and an
+      // inference from `Book.author` pointing back. Offering both would show
+      // one relationship twice under two names.
+      expect(edges.filter((e) => e.relatedCollectionId === 'books')).toEqual([
+        expect.objectContaining({ key: 'books', direction: 'forward', toMany: true }),
+      ]);
+      expect(edges.some((e) => e.key.startsWith('rev:books.'))).toBe(false);
+    });
+
+    it('makes a declared reverse edge selectable, unlike an inferred one', () => {
+      const books = deriveEdges(find('authors'), cert).find((e) => e.key === 'books')!;
+      // This is the whole payoff of declaring `inverse:`: the anchor now holds
+      // a field, so the edge can carry display columns and not just criteria.
+      // No Aperture change made that true — the schema did.
+      expect(books.selectField).toBe('books');
+    });
+
+    it('offers a stored forward multivalued reference too', () => {
+      const coAuthors = deriveEdges(find('books'), cert).find((e) => e.key === 'co_authors');
+      expect(coAuthors).toMatchObject({ direction: 'forward', toMany: true, selectField: 'coAuthors' });
+    });
+  });
 });
 
 describe('filterSlots', () => {
@@ -148,7 +233,7 @@ describe('validateQuerySpec', () => {
     expect(result.errors.some((e) => e.includes('does not support “gt”'))).toBe(true);
   });
 
-  it('gates the none quantifier off until server relationship predicates', () => {
+  it('rejects `none` on an edge the endpoint exposes no predicate for', () => {
     const result = validateQuerySpec(
       {
         v: 1,
@@ -161,7 +246,32 @@ describe('validateQuerySpec', () => {
       collections,
       caps,
     );
-    expect(result.errors.some((e) => e.includes('relationship predicates'))).toBe(true);
+    // "Having none" is an anti-join, and the compensation cannot express it:
+    // the semijoin collects ids that DO match and filters with `in`. So this
+    // stays an error rather than degrading to a silently wrong result.
+    expect(result.errors.some((e) => e.includes('server-side relationship predicate'))).toBe(true);
+  });
+
+  it('accepts `none` where the schema declares the edge', () => {
+    const cert = deriveCollections(certIntrospection);
+    const result = validateQuerySpec(
+      {
+        v: 1,
+        anchor: 'Author',
+        mode: 'AND',
+        criteria: [
+          { kind: 'related', edge: 'books', quantifier: 'none', criteria: [
+            { kind: 'field', slot: 'title', op: 'contains', value: 'Dune' },
+          ] },
+        ],
+      },
+      cert,
+      caps,
+    );
+    // Same validator, opposite answer — because `inverse: author` gives
+    // AuthorFilter.books a `none` quantifier. The gate reads the schema, not a
+    // version number (ADR-0029).
+    expect(result.errors).toEqual([]);
   });
 
   it('rejects unknown anchors, slots, and edges', () => {
