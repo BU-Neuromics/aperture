@@ -233,7 +233,7 @@ describe('validateQuerySpec', () => {
     expect(result.errors.some((e) => e.includes('does not support “gt”'))).toBe(true);
   });
 
-  it('gates the none quantifier off until server relationship predicates', () => {
+  it('rejects `none` on an edge the endpoint exposes no predicate for', () => {
     const result = validateQuerySpec(
       {
         v: 1,
@@ -246,7 +246,32 @@ describe('validateQuerySpec', () => {
       collections,
       caps,
     );
-    expect(result.errors.some((e) => e.includes('relationship predicates'))).toBe(true);
+    // "Having none" is an anti-join, and the compensation cannot express it:
+    // the semijoin collects ids that DO match and filters with `in`. So this
+    // stays an error rather than degrading to a silently wrong result.
+    expect(result.errors.some((e) => e.includes('server-side relationship predicate'))).toBe(true);
+  });
+
+  it('accepts `none` where the schema declares the edge', () => {
+    const cert = deriveCollections(certIntrospection);
+    const result = validateQuerySpec(
+      {
+        v: 1,
+        anchor: 'Author',
+        mode: 'AND',
+        criteria: [
+          { kind: 'related', edge: 'books', quantifier: 'none', criteria: [
+            { kind: 'field', slot: 'title', op: 'contains', value: 'Dune' },
+          ] },
+        ],
+      },
+      cert,
+      caps,
+    );
+    // Same validator, opposite answer — because `inverse: author` gives
+    // AuthorFilter.books a `none` quantifier. The gate reads the schema, not a
+    // version number (ADR-0029).
+    expect(result.errors).toEqual([]);
   });
 
   it('rejects unknown anchors, slots, and edges', () => {

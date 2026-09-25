@@ -1,6 +1,7 @@
 import type { Capabilities } from '../data/capabilities';
 import type { CollectionModel } from '../data/schemaModel';
 import { humanize, slotName } from '../data/schemaModel';
+import { supportsRelationship } from './whereCompiler';
 
 /**
  * The QuerySpec noun (ADR-0035): a typed, serializable, introspection-
@@ -432,16 +433,25 @@ export function validateQuerySpec(
       errors.push(`${where}: unknown relationship “${criterion.edge}”.`);
       return;
     }
-    if (criterion.quantifier === 'none') {
+    // Relationship criteria have two execution paths now, and the validator
+    // must not reject a spec the better one can run. Server-side predicates
+    // (Mosaic ADR-0006 M5a/M5b) take the criterion whole; the semijoin
+    // compensates only when the endpoint exposes no predicate for that edge.
+    const onServer = supportsRelationship(anchor, criterion.edge, criterion.quantifier);
+    if (!onServer && criterion.quantifier === 'none') {
+      // "Having none" is an anti-join. The semijoin collects ids that DO match
+      // and filters the anchor with `in`, which cannot express the negation, so
+      // there is nothing to fall back to — this stays an error rather than
+      // becoming a silently wrong result.
       errors.push(
-        `${where}: “having none” needs server-side relationship predicates ` +
-          `(Mosaic ADR-0006 M5) — not yet advertised by this endpoint.`,
+        `${where}: “having none” needs a server-side relationship predicate for this edge. ` +
+          `Declaring the inverting slot in the schema (Mosaic ADR-0011) provides one.`,
       );
     }
-    if (!ops.has('IN')) {
+    if (!onServer && criterion.quantifier === 'some' && !ops.has('IN')) {
       errors.push(
-        `${where}: relationship criteria compensate through the “in” operator, ` +
-          `which this endpoint does not advertise.`,
+        `${where}: this edge has no server-side predicate, so it compensates through the ` +
+          `“in” operator — which this endpoint does not advertise either.`,
       );
     }
     const related = collections.find((c) => c.id === edge.relatedCollectionId);
