@@ -398,7 +398,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             label: pathLabel(path, anchor!, collections),
             // A to-many column defaults to `count`, never to `explode`: the
             // grain change has to be asked for, not arrived at.
-            many: edge.toMany ? { mode: 'count' as ManyMode } : undefined,
+            many: edge.toMany ? { mode: 'count' as ManyMode, edgeLabel: edge.label } : undefined,
           },
         ];
       });
@@ -411,14 +411,14 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
     setPathColumns((prev) =>
       prev.map((c) => {
         if (pathKey(c.path) !== key) return c;
-        if (mode !== 'explode') return { ...c, many: { mode } };
+        if (mode !== 'explode') return { ...c, many: { ...c.many, mode } };
         // One explode per query (ADR-0041 v1 cap): a second would be a
         // cartesian product with no user model behind it, so choosing one
         // demotes the other rather than silently multiplying the rows.
-        return { ...c, many: { mode } };
+        return { ...c, many: { ...c.many, mode } };
       }).map((c) =>
         mode === 'explode' && pathKey(c.path) !== key && c.many?.mode === 'explode'
-          ? { ...c, many: { mode: 'count' as ManyMode } }
+          ? { ...c, many: { ...c.many, mode: 'count' as ManyMode } }
           : c,
       ),
     );
@@ -470,6 +470,17 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   const pathsRef = useRef<PathColumn[]>(pathColumns);
   pathsRef.current = pathColumns;
 
+  /**
+   * Bumped by Run, so Run always executes.
+   *
+   * Without it, Run wrote the same spec to the URL and the effect below — keyed
+   * on that spec — never fired, so choosing a traversal column produced a
+   * header with no data behind it. The columns deliberately stay out of the
+   * effect's dependencies (a checkbox must not fetch); this is what makes the
+   * user's explicit Run the thing that picks them up.
+   */
+  const [runNonce, setRunNonce] = useState(0);
+
   const executed = urlState.querySpec;
   const page = urlState.page;
   const execute = useCallback(
@@ -492,7 +503,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
 
   useEffect(() => {
     if (executed) void execute(executed, page);
-  }, [executed, page, execute]);
+  }, [executed, page, execute, runNonce]);
 
   /**
    * Adopt a spec that arrives in the URL from somewhere other than this
@@ -747,7 +758,10 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
             className="action-button"
             data-testid="query-run"
             disabled={validation.errors.length > 0 || running}
-            onClick={() => urlState.openQueryBuilder(draft)}
+            onClick={() => {
+              urlState.openQueryBuilder(draft);
+              setRunNonce((n) => n + 1);
+            }}
           >
             {running ? 'Running…' : 'Run'}
           </button>
@@ -865,9 +879,8 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               nothing on screen reconciles them (ADR-0041). */}
           {flat?.grain && (
             <span className="query-grain" role="status" data-testid="query-grain">
-              1 row per {anchor.label.toLowerCase()} × {flat.grain.edgeLabel} —{' '}
-              {flat.grain.rowCount.toLocaleString('en-US')} rows from{' '}
-              {flat.grain.anchorCount.toLocaleString('en-US')}{' '}
+              Exploded by {flat.grain.edgeLabel} — {flat.grain.rowCount.toLocaleString('en-US')}{' '}
+              rows from {flat.grain.anchorCount.toLocaleString('en-US')}{' '}
               {anchor.label.toLowerCase()} on this page
             </span>
           )}

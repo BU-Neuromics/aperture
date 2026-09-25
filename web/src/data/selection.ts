@@ -36,7 +36,11 @@ export interface PathColumn {
    * grain; `explode` changes it, and ADR-0041 requires that be explicit and
    * stated on screen.
    */
-  many?: { mode: ManyMode };
+  many?: {
+    mode: ManyMode;
+    /** The edge's own label, so a grain note names the relationship. */
+    edgeLabel?: string;
+  };
 }
 
 /** Depth cap: 2 hops, well inside Mosaic's `DEFAULT_MAX_QUERY_DEPTH` of 10. */
@@ -272,6 +276,12 @@ export function flattenRows(
   if (!exploded) return { rows: out };
   return {
     rows: out,
-    grain: { anchorCount: rows.length, rowCount: out.length, edgeLabel: exploded.label },
+    grain: {
+      anchorCount: rows.length,
+      rowCount: out.length,
+      // The edge, not the column: "Samples" reads better than
+      // "Sample → Accession" when describing what a row now is.
+      edgeLabel: exploded.many?.edgeLabel ?? exploded.label,
+    },
   };
 }
