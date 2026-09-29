@@ -1082,3 +1082,67 @@ fieldset.query-frame {
   color: var(--text-secondary);
   cursor: pointer;
 }
+
+/* Traversal columns (ADR-0041) — nested under the edge they come from, so a
+   leaf name that repeats across classes is disambiguated by its group. */
+.fields-related {
+  margin-top: var(--space-4, 1rem);
+  border-top: 1px solid var(--border-subtle, #2a2a33);
+  padding-top: var(--space-3, 0.75rem);
+}
+.fields-related-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-2, 0.5rem);
+  color: var(--text-secondary, #9aa0aa);
+}
+.fields-related-empty { color: var(--text-tertiary, #6b7280); font-size: 0.8125rem; }
+.fields-related-edge { margin-bottom: var(--space-2, 0.5rem); }
+.fields-related-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fields-related-type {
+  font-size: 0.75rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.6rem;
+  background: var(--type-tint, rgba(255, 255, 255, 0.06));
+  color: var(--type-color, inherit);
+}
+.fields-related-list { list-style: none; margin: 0; padding: 0 0 0 var(--space-4, 1rem); }
+.fields-related-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  padding: 0.1rem 0;
+}
+.fields-related-mode { display: flex; gap: var(--space-2, 0.5rem); flex-wrap: wrap; }
+.fields-related-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #9aa0aa);
+}
+.fields-related-grain { font-size: 0.75rem; color: var(--accent-warn, #d9a441); font-style: italic; }
+/* A gated edge is shown, not hidden: absence would read as "no such data". */
+.fields-related-gated { opacity: 0.65; }
+.fields-related-gate { display: block; font-size: 0.75rem; color: var(--text-tertiary, #6b7280); }
+
+/* The grain change an explode produces, stated where the rows are. */
+.query-grain {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--accent-warn, #d9a441);
+  padding: var(--space-2, 0.5rem) 0;
+}

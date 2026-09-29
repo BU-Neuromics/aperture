@@ -182,6 +182,47 @@ exist. The first is query semantics; the second is presentation. They have been 
   Split across two changes, that query builder is rewritten twice, its contract tests re-baselined
   twice, and the composition re-certified twice, for no gain.
 
+## Status corrections (2026-09-25)
+
+Two sweeps' worth of drift, recorded rather than edited into the text above, per the
+repo's convention (`decisions/README.md`: supersede, don't edit history). The Context
+section describes what was true when this was written on 2026-09-22; these are what has
+changed since, and one place where the Decision overstates what was built.
+
+**The split is currently semantic, not structural.** Decision items 1–3 describe two
+artifacts — `QuerySpec.columns` for traversal and grain, a separate `ColumnView` for
+visibility and order. **The implementation has neither.** There is one `PathColumn[]` held
+in component state (`QueryBuilderView`), where `many.mode` carries the grain decision and
+membership of the list carries the display decision. No `ColumnView` type exists, and
+`QuerySpec` has no `columns` field.
+
+That is consistent with Decision item 4 ("nothing is added to the wire artifact until
+Mosaic's validator accepts it") and with the test the whole ADR turns on — the code does
+keep grain separate from visibility, and hiding a column still cannot change the row set.
+What it does not do is *reify* the separation, because nothing yet persists either half:
+the `columns` field has no server compiler, and whether `ColumnView` rides the URL is still
+open below. Reifying two artifacts to serve a persistence layer that does not exist would
+be speculative structure.
+
+**The two separate when either half first needs to persist** — a `cols` URL parameter, or
+Mosaic accepting `columns` on the wire. Until then, read items 1–3 as *where each decision
+belongs*, not as a description of types that exist today.
+
+**Facts the Context section states that have since moved:**
+
+| Stated | Now |
+|---|---|
+| `7fc300c` "carried by no tag", among 40 unreleased commits | **mosaic v0.14.0** released; certification pins it |
+| Typed filter contract "complete in the certified pin — `v0.13.0`" | still complete; the pin is now **v0.14.0** |
+| Certification fixture has no multivalued reference and no `inverse:` slot, so explode and reverse traversal are "uncertifiable" | **fixture 1.1.0** carries both, and `fixture 1.1.0 · aperture0.5.0+mosaic0.14.0` is a passing ledger entry |
+| No deployment LinkML declares an `inverse:` slot | `mosaic-demo-small` declares four (`Donor.samples`, `Donor.diagnoses`, `Sample.aliquots`, `Workflow.datasets`), verified against its existing database with no re-ingest |
+| Anchor-field toggles are "in flight on `fix/discovery-turn-chrome` (`12cf637`, not yet on `main`)" | merged (aperture#69); `FieldsPanel` is on `main` and is where the traversal picker was built |
+
+None of these changes the decision. The reverse-edge gating in particular behaves exactly as
+designed: the same derivation code offers reverse columns where a schema declares the
+inverting slot and gates them off where it does not, deciding from introspection and never
+from a version number.
+
 ## Alternatives considered
 
 - **Put everything in `QuerySpec.columns`, visibility included** (ADR-0035's literal sketch). Makes

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ColumnModel } from '../../data/schemaModel';
+import type { PathColumn } from '../../data/selection';
 
 /**
  * Cell renderers keyed by LinkML-ish slot kind (R3.2), translated from the
@@ -67,4 +68,30 @@ export function renderCell(column: ColumnModel, value: unknown): ReactNode {
     case 'text':
       return <span className="cell-text">{formatValue(value)}</span>;
   }
+}
+
+/**
+ * Render a path-addressed cell (ADR-0041).
+ *
+ * The value arrives already read through every hop, so this only has to decide
+ * *how* to draw it — and for a to-many path that depends on the mode, not on
+ * the leaf column's kind. A `count` is a number however the leaf was typed; a
+ * `joinIds` is joined text. Only `explode` and to-one paths render as the leaf.
+ */
+export function renderPathCell(column: PathColumn, value: unknown): ReactNode {
+  const mode = column.many?.mode;
+  if (mode === 'count') {
+    const count = typeof value === 'number' ? value : 0;
+    return <span className={count === 0 ? 'cell-count cell-count-zero' : 'cell-count'}>{count}</span>;
+  }
+  if (mode === 'joinIds') {
+    return value == null || value === '' ? EMPTY : <span className="cell-ref">{String(value)}</span>;
+  }
+  return renderCell(column.column, value);
+}
+
+export function isPathRightAligned(column: PathColumn): boolean {
+  if (column.many?.mode === 'count') return true;
+  if (column.many?.mode === 'joinIds') return false;
+  return isRightAligned(column.column);
 }
