@@ -1,8 +1,8 @@
 # ADR-0041: A result table's referenced-class values are two decisions, not one — traversal/grain is query, visibility/order is view
 
-- **Status:** Proposed
-- **Date:** 2026-09-22
-- **Deciders:** labadorf (pending); clandaverde (investigation)
+- **Status:** Accepted
+- **Date:** 2026-09-22 (ratified 2026-10-02; see aperture#65)
+- **Deciders:** labadorf; clandaverde (investigation, implementation)
 - **Related:** **ADR-0035** (cross-class queries are a typed `QuerySpec`; this ADR resolves the
   `columns` field ADR-0035 reserved and never built, and is the amendment vehicle Reel ADR-0006 §3
   requires for a change to the noun) · ADR-0002 (derived, never enumerated) · ADR-0004 (no middle
@@ -223,6 +223,37 @@ designed: the same derivation code offers reverse columns where a schema declare
 inverting slot and gates them off where it does not, deciding from introspection and never
 from a version number.
 
+## Ratification note (2026-10-02)
+
+Ratified by labadorf. **Retroactively**, which is itself worth recording: the decision shipped
+before it was approved. PR [#70](https://github.com/BU-Neuromics/aperture/pull/70) merged
+2026-09-29 with no reviews, went out as **v0.6.0**, and was certified as
+`aperture-0.6.0+mosaic-0.14.0` against fixture 1.1.0 — all while this file read `Proposed` and
+named a pending decider. The triage notes on #65 (2026-09-23, 2026-09-28) flagged it twice and
+correctly declined to act. That sequence is a workflow exception tracked on its own; it is not a
+precedent, and it is not an argument for or against the decision, which stands on its merits.
+
+**The four open sub-questions resolved three different ways.** Recorded here rather than edited
+into the section below, per this repo's supersede-don't-edit convention.
+
+| Sub-question | Resolution at ratification |
+|---|---|
+| Does an `explode` show all members, or only those matching a `RelatedCondition` on the same edge? | **All members**, as recommended — criteria select anchors, not members. The per-explode *"only the ones matching my criteria"* toggle was **not** built. It stays open as a defaults refinement, not a capability gap: both readings remain cheap on either side of the wire. |
+| Cap `explode` to one path per query in v1? | **Capped**, as recommended — enforced in `QueryBuilderView.tsx` when a second path asks for `explode`, and again in `flattenRows` (`data/selection.ts`), which documents the cap where it would otherwise produce a cartesian product. |
+| The hidden-last-visible-column wart on an exploded path | **Dissolved rather than resolved**, by the shape the implementation took. Traversal columns are an include set with no visibility flag (see the 2026-09-25 correction), so a path can only be *unchosen* — a query edit that takes its `explode` with it. There is no state in which a hidden column leaves unexplained duplicate rows. **This wart returns the moment a `ColumnView` with a visibility flag is reified**; the recommended resolution above (keep them separate, keep the grain note visible) is the answer to apply then. |
+| Does the `ColumnView` ride the URL? | **Confirmed yes — and still open, wider than stated.** Neither half persists today: `hiddenFields` and `pathColumns` are both `useState`. `qs` rides the URL and columns do not, so a shared link reproduces the row set but neither the chosen traversals nor the visibility — and on an exploded path the recipient gets a different *grain*. The query half not persisting is the more serious of the two by this ADR's own test. Tracked in [#73](https://github.com/BU-Neuromics/aperture/issues/73), which is also the trigger the 2026-09-25 correction names for reifying the split structurally. |
+
+**What the ratification does not decide.** The depth cap of 2 hops and the `ColumnView` → View
+Contract `encoding` landing both stand exactly as written, untested by anything that has shipped;
+`platform/design/view-contract.md` is still a stub. Mosaic's obligations are unchanged and
+correctly deferred: ADR-0009 records that its validator must follow this split
+(`COLUMNS_NOT_SUPPORTED` stays until the compiler lands), and ADR-0011 is now **Accepted** with
+v0.14.0 carrying it — both obligations this ADR named have been met on Mosaic's side.
+
+**One Consequences item landed better than written.** *"Adjacent — and it should ship in the same
+pass"* (the typed `where:` surface) did ship in the same pass, in PR #70, exactly as argued —
+`buildListQuery`'s filter and selection paths were rewritten once, not twice.
+
 ## Alternatives considered
 
 - **Put everything in `QuerySpec.columns`, visibility included** (ADR-0035's literal sketch). Makes
@@ -246,6 +277,10 @@ from a version number.
   Rejected.
 
 ## Notes / open sub-questions
+
+> **Resolved 2026-10-02 at ratification** — read the Ratification note above alongside this
+> section. The first four items below are closed (three decided, one carried to
+> [#73](https://github.com/BU-Neuromics/aperture/issues/73)); the last two remain open.
 
 - **Does an `explode` show all members, or only those matching a `RelatedCondition` on the same
   edge?** Recorded as unresolved in `APERTURE_EXON_CONTRACT.md` and in ADR-0035 itself.
