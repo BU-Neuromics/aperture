@@ -245,10 +245,26 @@ into the section below, per this repo's supersede-don't-edit convention.
 
 **What the ratification does not decide.** The depth cap of 2 hops and the `ColumnView` → View
 Contract `encoding` landing both stand exactly as written, untested by anything that has shipped;
-`platform/design/view-contract.md` is still a stub. Mosaic's obligations are unchanged and
-correctly deferred: ADR-0009 records that its validator must follow this split
-(`COLUMNS_NOT_SUPPORTED` stays until the compiler lands), and ADR-0011 is now **Accepted** with
-v0.14.0 carrying it — both obligations this ADR named have been met on Mosaic's side.
+`platform/design/view-contract.md` is still a stub.
+
+**Mosaic's two obligations are now both resolved, the second on the same day as this
+ratification.** ADR-0011 is **Accepted** with v0.14.0 carrying it, so reverse traversal is a
+schema-authoring act. And the server-side `columns` compiler is no longer open-ended: Mosaic
+[#215](https://github.com/BU-Neuromics/mosaic/issues/215) reported the gap from the *planner's*
+side — a question about **which field** (*"how long did each processing run take?"*) is not
+sayable in an artifact offering only criteria and sort, so a planner reaches for the nearest date
+slot — and Mosaic [#222](https://github.com/BU-Neuromics/mosaic/pull/222) amends ADR-0009 to scope
+and approve the first increment: **anchor-owned, single-hop paths only**, manifest-validated and
+compiled to server-side projection, with `COLUMNS_NOT_SUPPORTED` **narrowing to multi-hop rather
+than lifting**.
+
+That boundary is this ADR's split test applied on the server: an anchor-owned projection cannot
+change the row set, so it ships without a grain decision riding along, while traversal and its
+`aggregate`/`explode` choice stay deferred to a second increment. It also sharpens what Aperture's
+client-side projection is and is not — it gave the **user** field selection, and never could give
+it to the **planner**, which is the gap #215 is about. When that compiler lands, Aperture sends
+`columns` on the wire and deletes its client projection, and **the artifact does not change** —
+the server-independence payoff this ADR inherits from ADR-0035.
 
 **One Consequences item landed better than written.** *"Adjacent — and it should ship in the same
 pass"* (the typed `where:` surface) did ship in the same pass, in PR #70, exactly as argued —
