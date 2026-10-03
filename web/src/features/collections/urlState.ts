@@ -7,6 +7,8 @@ import {
 } from 'nuqs';
 import type { FilterCondition, FilterValues, RangeValues } from '../../data/hippoSource';
 import type { QuerySpec } from '../../query/querySpec';
+import { validateColumnsShape } from '../../query/columnView';
+import type { ColumnsParam } from '../../query/columnView';
 import { validateQuerySpecShape } from '../../query/querySpec';
 
 /**
@@ -96,6 +98,8 @@ export function useCollectionUrlState() {
     view: parseAsStringLiteral(['query', 'graph'] as const),
     /** The QuerySpec artifact rides the URL — shareable/bookmarkable (ADR-0035). */
     qs: parseAsJson(validateQuerySpecShape),
+    /** Column choices + visibility (aperture#73): traversals with grain, hidden anchor fields. */
+    cols: parseAsJson(validateColumnsShape),
     /** Server-side sort (issue #20): `<column field>:<asc|desc>`. */
     sort: parseAsString,
   });
@@ -115,6 +119,7 @@ export function useCollectionUrlState() {
     workflow: state.workflow,
     view: state.view,
     querySpec: state.qs,
+    columns: state.cols,
     sort,
 
     selectCollection: (collection: string) =>
@@ -129,6 +134,7 @@ export function useCollectionUrlState() {
         workflow: null,
         view: null,
         qs: null,
+        cols: null,
         sort: null,
       }),
     /** Open the cross-class query builder (ADR-0035), optionally pre-anchored. */
@@ -142,10 +148,12 @@ export function useCollectionUrlState() {
         page: 1,
       }),
     setQuerySpec: (spec: QuerySpec) => void setState({ qs: spec, page: 1 }),
+    /** Column choices are view state: writing them never re-runs the query. */
+    setColumns: (cols: ColumnsParam | null) => void setState({ cols }),
     setQueryPage: (page: number) => void setState({ page: Math.max(1, page) }),
     /** Open the graph exploration view (ADR-0037) over the current QuerySpec. */
     openGraphView: () => void setState({ view: 'graph', entity: null, form: null }),
-    closeQueryViews: () => void setState({ view: null, qs: null, page: 1 }),
+    closeQueryViews: () => void setState({ view: null, qs: null, cols: null, page: 1 }),
     /** Drop the spec but stay in the query view (conversation reset, ADR-0039). */
     clearQuerySpec: () => void setState({ qs: null, page: 1 }),
     setPage: (page: number) => void setState({ page: Math.max(1, page) }),
