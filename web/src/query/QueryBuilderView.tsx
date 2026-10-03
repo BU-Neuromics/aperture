@@ -30,6 +30,7 @@ import {
   readQuerySpec,
   validateQuerySpec,
 } from './querySpec';
+import { decodeColumns, encodeColumns } from './columnView';
 import { currentQuerySpec } from '../data/conversation';
 import { useConversation } from './ConversationContext';
 import { OP_LABELS } from './specProse';
@@ -314,7 +315,12 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    * Held as HIDDEN rather than shown so a schema that gains a field shows it by
    * default — the opposite would silently omit new data from every saved view.
    */
-  const [hiddenFields, setHiddenFields] = useState<ReadonlySet<string>>(new Set());
+  // Seeded from `cols` so a shared link reproduces the grain and the visibility
+  // the sender saw (aperture#73); both halves are written back by an effect below.
+  const [seed] = useState(() =>
+    decodeColumns(urlState.columns, resolveAnchor(initial, collections), collections),
+  );
+  const [hiddenFields, setHiddenFields] = useState<ReadonlySet<string>>(seed.hiddenFields);
 
   /**
    * Columns reached through a reference (ADR-0041).
@@ -325,7 +331,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    * asked for it, and defaulting every reachable field on would fetch a graph
    * nobody requested.
    */
-  const [pathColumns, setPathColumns] = useState<PathColumn[]>([]);
+  const [pathColumns, setPathColumns] = useState<PathColumn[]>(seed.pathColumns);
   const [pickingFields, setPickingFields] = useState(false);
 
   const anchor = resolveAnchor(draft, collections);
@@ -556,6 +562,15 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
     lastAnchor.current = anchorName;
     setHiddenFields(new Set());
   }, [anchorName]);
+
+  // Mirror the column choices into the URL. This is view state: `cols` is not
+  // an input to the run effect, so a checkbox still never fetches.
+  const colsJson = JSON.stringify(encodeColumns(pathColumns, hiddenFields));
+  const urlColsJson = JSON.stringify(urlState.columns ?? null);
+  useEffect(() => {
+    if (colsJson !== urlColsJson) urlState.setColumns(JSON.parse(colsJson));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colsJson]);
 
   const urlSpecJson = executed ? JSON.stringify(executed) : null;
   const lastUrlSpec = useRef(urlSpecJson);
