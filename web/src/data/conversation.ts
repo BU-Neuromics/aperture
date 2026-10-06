@@ -1,4 +1,8 @@
-import type { IntrospectionInputValue, IntrospectionSchema, IntrospectionType } from './introspection';
+import type {
+  IntrospectionInputValue,
+  IntrospectionSchema,
+  IntrospectionType,
+} from './introspection';
 import { findType, namedType, typeRefToSDL } from './introspection';
 
 /**
@@ -139,7 +143,9 @@ function pick<T extends { name: string }>(items: readonly T[], role: string): T 
  * must take an utterance and return a payload carrying a turn whose own shape
  * resolves, or the panel stays off.
  */
-export function deriveConversationModel(schema: IntrospectionSchema): ConversationModel | undefined {
+export function deriveConversationModel(
+  schema: IntrospectionSchema,
+): ConversationModel | undefined {
   const mutationType = findType(schema, schema.mutationType?.name ?? null);
   for (const field of mutationType?.fields ?? []) {
     const utterance = pick(field.args, 'utterance');
@@ -205,7 +211,9 @@ function argRole(
  * JSON scalar (or an absent arg) leaves the contract's own spelling, which is
  * what the handler parses.
  */
-function turnInputNames(input: IntrospectionType | undefined): ConversationModel['turnInputFields'] {
+function turnInputNames(
+  input: IntrospectionType | undefined,
+): ConversationModel['turnInputFields'] {
   const contract = {
     id: 'id',
     utterance: 'utterance',
@@ -246,13 +254,17 @@ export function buildConverseMutation(
   if (model.args.turns) {
     varDefs.push(`$turns: ${model.args.turnsType}`);
     args.push(`${model.args.turns}: $turns`);
-    variables['turns'] = request.turns.map((t) => ({
-      [model.turnInputFields.id]: t.id,
-      [model.turnInputFields.utterance]: t.utterance,
-      [model.turnInputFields.status]: t.status,
-      [model.turnInputFields.message]: t.message,
-      [model.turnInputFields.querySpec]: t.querySpec ?? null,
-    }));
+    // `error` turns are display-only (never editable, nothing to rewind to), and
+    // the planner rejects the unknown status — so they are never sent back.
+    variables['turns'] = request.turns
+      .filter((t) => t.status !== 'error')
+      .map((t) => ({
+        [model.turnInputFields.id]: t.id,
+        [model.turnInputFields.utterance]: t.utterance,
+        [model.turnInputFields.status]: t.status,
+        [model.turnInputFields.message]: t.message,
+        [model.turnInputFields.querySpec]: t.querySpec ?? null,
+      }));
   }
   if (model.args.editTurnId && request.editTurnId) {
     varDefs.push(`$editTurnId: ${model.args.editTurnIdType}`);

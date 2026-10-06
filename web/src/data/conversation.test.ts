@@ -192,6 +192,29 @@ describe('buildConverseMutation', () => {
       },
     ]);
   });
+
+  it('does not send display-only error turns back to the planner', () => {
+    const model = deriveConversationModel(conversationalSchema())!;
+    const ok: ConversationTurn = {
+      id: 't1',
+      editable: true,
+      utterance: 'samples',
+      status: 'proposal',
+      message: 'All samples.',
+      querySpec: { v: 1, anchor: 'Sample' },
+    };
+    const err: ConversationTurn = {
+      id: 'local:error:x',
+      editable: false,
+      utterance: 'oops',
+      status: 'error',
+      message: 'boom',
+      querySpec: null,
+    };
+    const built = buildConverseMutation(model, { utterance: 'again', turns: [ok, err] });
+    const sent = built.variables['turns'] as Array<{ id: string }>;
+    expect(sent.map((t) => t.id)).toEqual(['t1']);
+  });
 });
 
 describe('normalizeConverseResult', () => {
