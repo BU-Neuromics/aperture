@@ -114,6 +114,58 @@ describe('compileWhere', () => {
     expect(where).toEqual({ books: { some: { title: { contains: 'Dune' } } } });
   });
 
+  describe('a relationship with no sub-criteria ("has / has no related record at all")', () => {
+    // Mosaic rejects an empty `and` list and an empty filter object inside a
+    // quantifier, so "donors with no samples" used to fail at run time with
+    // "`where.and` requires a non-empty list of sub-filters". Mosaic's own
+    // compile_query_spec stands in `<id> is_null false`; so does this compiler.
+    const bare = (anchor: string, edge: string, q: 'some' | 'none', list = demo, id = '') =>
+      compileWhere(
+        spec(anchor, [{ kind: 'related', edge, quantifier: q, criteria: [] }]),
+        of(list, id),
+        list,
+      );
+
+    it('compiles `none` to an existence check, never an empty `and`', () => {
+      const { where, uncompiled } = bare('Workflow', 'input_samples', 'none', demo, 'workflows');
+      expect(where).toEqual({ inputSamples: { none: { id: { isNull: false } } } });
+      expect(uncompiled).toEqual([]);
+    });
+
+    it('compiles `some` the same way ("has any")', () => {
+      expect(bare('Workflow', 'input_samples', 'some', demo, 'workflows').where).toEqual({
+        inputSamples: { some: { id: { isNull: false } } },
+      });
+    });
+
+    it('compiles on a reverse edge ("authors with no books")', () => {
+      expect(bare('Author', 'books', 'none', cert, 'authors').where).toEqual({
+        books: { none: { id: { isNull: false } } },
+      });
+    });
+
+    it('compiles a bare to-one `some` as "the reference resolves"', () => {
+      expect(bare('Sample', 'donor', 'some', demo, 'samples').where).toEqual({
+        donor: { id: { isNull: false } },
+      });
+    });
+
+    it('stays uncompiled when the target advertises no isNull on its id', () => {
+      const withoutIsNull = demo.map((c) => {
+        if (c.id !== 'samples' || !c.whereFields) return c;
+        const fields = Object.fromEntries(
+          Object.entries(c.whereFields).map(([k, f]) =>
+            f.field === 'id' ? [k, { ...f, ops: f.ops?.filter((o) => o !== 'isNull') }] : [k, f],
+          ),
+        );
+        return { ...c, whereFields: fields };
+      });
+      const { where, uncompiled } = bare('Workflow', 'input_samples', 'none', withoutIsNull, 'workflows');
+      expect(where).toBeNull();
+      expect(uncompiled).toHaveLength(1);
+    });
+  });
+
   it('reports no support when nothing declares the edge', () => {
     // The demo schema declares no inverse slots, so Donor has no `samples`.
     expect(supportsRelationship(of(demo, 'donors'), 'rev:samples.donor', 'some')).toBe(false);

@@ -205,8 +205,10 @@ function RelatedEditor({
           }
         >
           <option value="some">at least one</option>
-          <option value="none" disabled title="Needs server-side relationship predicates (Mosaic ADR-0006 M5)">
-            exactly zero (gated)
+          {/* "exactly zero" needs a to-many edge: over a single reference it
+              would mean "unset or fails", which the typed input cannot say. */}
+          <option value="none" disabled={edge ? !edge.toMany : false}>
+            exactly zero
           </option>
         </select>
         <select
