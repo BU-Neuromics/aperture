@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HippoSource } from '../data/hippoSource';
 import type { CollectionModel } from '../data/schemaModel';
+import { slotName } from '../data/schemaModel';
 import { renderPathCell, isPathRightAligned } from '../features/collections/cells';
 import type { ManyMode, PathColumn } from '../data/selection';
-import { flattenRows, pathKey, pathLabel } from '../data/selection';
+import { explodeKey, flattenRows, normalizeExplode, pathKey, selectionForPaths } from '../data/selection';
 import { toCSVPaths, toJSONExportPaths } from '../features/collections/export';
 import { useCollectionUrlState } from '../features/collections/urlState';
 import { useNavView } from '../nav/NavConfigContext';
@@ -30,12 +31,13 @@ import {
   readQuerySpec,
   validateQuerySpec,
 } from './querySpec';
-import { decodeColumns, encodeColumns } from './columnView';
+import { decodeColumns, encodeColumns, resolvePath, toPathColumn } from './columnView';
 import { currentQuerySpec } from '../data/conversation';
 import { useConversation } from './ConversationContext';
 import { OP_LABELS } from './specProse';
 import type { ColumnModel } from '../data/schemaModel';
 import { FieldsPanel } from './FieldsPanel';
+import { SaveViewButton } from '../features/collections/SaveViewButton';
 import { namedSlots, subjectCollection } from './namedSlots';
 import './query.css';
 
@@ -390,46 +392,64 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
     [],
   );
 
+  /**
+   * Add or remove a traversal column by its GraphQL path (one or two hops).
+   *
+   * Resolution goes through `resolvePath`, the same function that restores a
+   * shared link's `cols`, so the picker can only build columns a link can
+   * reproduce. A column added through a link that is already exploded joins
+   * the explosion: "one row each" belongs to the link, not to a column.
+   */
   const togglePath = useCallback(
-    (edge: QueryEdge, column: ColumnModel) => {
-      const path = [edge.selectField!, column.field];
+    (path: string[]) => {
+      if (!anchor) return;
       const key = pathKey(path);
       setPathColumns((prev) => {
         if (prev.some((c) => pathKey(c.path) === key)) {
           return prev.filter((c) => pathKey(c.path) !== key);
         }
-        return [
+        const resolved = resolvePath(path, anchor, collections);
+        if (!resolved) return prev;
+        const added = toPathColumn(resolved);
+        const linkExploded = prev.some(
+          (c) => c.many?.mode === 'explode' && explodeKey(c) === explodeKey(added),
+        );
+        return normalizeExplode([
           ...prev,
-          {
-            path,
-            column,
-            label: pathLabel(path, anchor!, collections),
-            // A to-many column defaults to `count`, never to `explode`: the
-            // grain change has to be asked for, not arrived at.
-            many: edge.toMany ? { mode: 'count' as ManyMode, edgeLabel: edge.label } : undefined,
-          },
-        ];
+          linkExploded && added.many ? { ...added, many: { ...added.many, mode: 'explode' as ManyMode } } : added,
+        ]);
       });
     },
     [anchor, collections],
   );
 
+  /**
+   * Set a to-many column's mode.
+   *
+   * `count` and `list them` are per column. "One row each" is per LINK: it
+   * applies to every column through that link at once (otherwise two aliquot
+   * columns would describe different aliquots on the same row), and choosing
+   * it on one link demotes any other exploded link to `count` -- the
+   * one-explosion cap of ADR-0041 v1, enforced by link instead of by column.
+   * Turning it off for one column turns it off for the link.
+   */
   const setPathMode = useCallback((path: string[], mode: ManyMode) => {
     const key = pathKey(path);
-    setPathColumns((prev) =>
-      prev.map((c) => {
-        if (pathKey(c.path) !== key) return c;
-        if (mode !== 'explode') return { ...c, many: { ...c.many, mode } };
-        // One explode per query (ADR-0041 v1 cap): a second would be a
-        // cartesian product with no user model behind it, so choosing one
-        // demotes the other rather than silently multiplying the rows.
-        return { ...c, many: { ...c.many, mode } };
-      }).map((c) =>
-        mode === 'explode' && pathKey(c.path) !== key && c.many?.mode === 'explode'
-          ? { ...c, many: { ...c.many, mode: 'count' as ManyMode } }
-          : c,
-      ),
-    );
+    setPathColumns((prev) => {
+      const target = prev.find((c) => pathKey(c.path) === key);
+      if (!target?.many) return prev;
+      const link = explodeKey(target);
+      if (mode === 'explode') return normalizeExplode(prev, link);
+      const leavingExplode = target.many.mode === 'explode';
+      return prev.map((c) => {
+        if (!c.many) return c;
+        const sameLink = explodeKey(c) === link;
+        if (pathKey(c.path) === key || (leavingExplode && sameLink)) {
+          return { ...c, many: { ...c.many, mode } };
+        }
+        return c;
+      });
+    });
   }, []);
 
   const toggleField = useCallback((field: string) => {
@@ -448,7 +468,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   // path length from here on.
   const anchorColumns: PathColumn[] = (anchor?.columns ?? [])
     .filter((c) => !hiddenFields.has(c.field))
-    .map((c) => ({ path: [c.field], column: c, label: c.label }));
+    .map((c) => ({ path: [c.field], column: c, label: c.label, exportName: c.slot ?? slotName(c.field) }));
   const shownColumns: PathColumn[] = [...anchorColumns, ...pathColumns];
   const slots = useMemo(() => (anchor ? filterSlots(anchor) : []), [anchor]);
   const edges = useMemo(
@@ -471,8 +491,9 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    * `execute` is memoised on the source and the spec; adding the columns to its
    * dependencies would re-run the query on every checkbox, turning a
    * presentation choice into a fetch. The ref keeps the latest value available
-   * without making the callback identity depend on it — choosing a column
-   * takes effect on the next Run, which is the only execution gesture
+   * without making the callback identity depend on it. A column that needs
+   * data the last read lacks triggers a re-read of the SAME executed query
+   * (see `neededSelection` below); executing a new spec stays Run's alone
    * (ADR-0039).
    */
   const pathsRef = useRef<PathColumn[]>(pathColumns);
@@ -512,6 +533,31 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   useEffect(() => {
     if (executed) void execute(executed, page);
   }, [executed, page, execute, runNonce]);
+
+  /**
+   * Re-read the SAME executed query when the chosen columns need fields the
+   * last read did not fetch.
+   *
+   * ADR-0039 keeps Run as the only gesture that executes a query, and that
+   * stands: nothing here runs a new spec, changes the row set, or fires on a
+   * mode change (count / list / one row each are computed client-side from
+   * data already in hand). But a traversal column added after a run used to
+   * render a header over blanks and zeros until the user happened to press Run
+   * again -- data the screen claims to show, silently absent. Fetching the
+   * extra nested fields for the already-run query closes that gap without
+   * re-deciding what was asked.
+   */
+  const neededSelection = useMemo(
+    () => (anchor && pathColumns.length > 0 ? selectionForPaths(pathColumns, anchor, collections) || '' : ''),
+    [anchor, pathColumns, collections],
+  );
+  const fetchedSelection = run?.pathSelection ?? '';
+  useEffect(() => {
+    if (!executed || !run || running) return;
+    if (neededSelection === '' || neededSelection === fetchedSelection) return;
+    void execute(executed, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [neededSelection, fetchedSelection, running]);
 
   /**
    * Adopt a spec that arrives in the URL from somewhere other than this
@@ -782,6 +828,15 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
           >
             {running ? 'Running…' : 'Run'}
           </button>
+          {/* Saves what was RUN (the URL's spec and columns), not the unrun
+              draft: a saved view reopens a result the user has seen. */}
+          {executed && (
+            <SaveViewButton
+              source={source}
+              collectionId={resolveAnchor(executed, collections)?.id ?? anchor.id}
+              query={{ qs: executed, cols: urlState.columns ?? null }}
+            />
+          )}
         </div>
 
         {validation.errors.length > 0 && draft.criteria.length > 0 && (
