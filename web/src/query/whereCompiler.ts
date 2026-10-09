@@ -68,6 +68,22 @@ function compileField(
   return { [field.field]: { [member]: condition.value } };
 }
 
+/**
+ * "The related record exists, full stop" — a trivially-true predicate on the
+ * target's identifier. A `RelatedCondition` with no sub-criteria ("donors with
+ * no samples", "donors with any diagnosis") has nothing to put inside its
+ * quantifier, and Mosaic rejects both an empty `and` list and an empty filter
+ * object there. Mosaic's own `compile_query_spec` makes exactly this
+ * substitution (`<id> is_null false`), so the two compilers agree. Returns null
+ * when the endpoint advertises no `isNull` on the identifier, which leaves the
+ * criterion uncompiled instead of guessing.
+ */
+function existsPredicate(related: CollectionModel): WhereInput | null {
+  const id = whereFieldFor(related, 'id');
+  if (!id || id.kind !== 'ops' || !id.ops?.includes(OP_MEMBERS.is_null)) return null;
+  return { [id.field]: { [OP_MEMBERS.is_null]: false } };
+}
+
 function compileCriterion(
   criterion: Criterion,
   collection: CollectionModel,
@@ -86,7 +102,11 @@ function compileCriterion(
     .map((sub) => compileField(sub, related))
     .filter((w): w is WhereInput => w != null);
   if (subs.length !== criterion.criteria.length) return null;
-  const inner: WhereInput = subs.length === 1 ? subs[0] : { and: subs };
+  const inner: WhereInput | null =
+    subs.length === 0 ? existsPredicate(related)
+    : subs.length === 1 ? subs[0]
+    : { and: subs };
+  if (inner == null) return null;
 
   if (field.kind === 'quantifiers') {
     return { [field.field]: { [criterion.quantifier]: inner } };
