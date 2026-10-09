@@ -4,6 +4,7 @@ import { typeColorStyle } from '../data/typeColor';
 import type { ManyMode, PathColumn } from '../data/selection';
 import { pathKey } from '../data/selection';
 import type { QueryEdge } from './querySpec';
+import { deriveEdges } from './querySpec';
 
 /**
  * What the query surface shows when it has no results: the schema.
@@ -166,7 +167,8 @@ export interface TraversalProps {
   edges: QueryEdge[];
   collections: CollectionModel[];
   selected: PathColumn[];
-  onTogglePath: (edge: QueryEdge, column: ColumnModel) => void;
+  /** Add or remove the column at this GraphQL path (one or two hops from the anchor). */
+  onTogglePath: (path: string[]) => void;
   onSetMode: (path: string[], mode: ManyMode) => void;
 }
 
@@ -197,7 +199,44 @@ function RelatedColumns({
   onSetMode,
 }: TraversalProps & { collection: CollectionModel }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [openInner, setOpenInner] = useState<string | null>(null);
   const chosen = new Map(selected.map((c) => [pathKey(c.path), c]));
+
+  /** One field row: the include checkbox, plus the grain choice once it is a list. */
+  const fieldRow = (path: string[], column: ColumnModel) => {
+    const pick = chosen.get(pathKey(path));
+    return (
+      <li key={column.field} className="fields-related-row">
+        <label className="fields-action fields-action-toggle">
+          <input type="checkbox" checked={pick != null} onChange={() => onTogglePath(path)} />
+          {column.label}
+        </label>
+
+        {/* A column read through a list cannot be added without answering
+            what a row means, so the choice is inline and a grain change is
+            never the silent default. "one row each" applies to the whole
+            link: every column through it explodes together. */}
+        {pick?.many && (
+          <span className="fields-related-mode">
+            {(['count', 'joinIds', 'explode'] as ManyMode[]).map((mode) => (
+              <label key={mode} className="fields-related-mode-option">
+                <input
+                  type="radio"
+                  name={`mode-${pathKey(path)}`}
+                  checked={pick.many?.mode === mode}
+                  onChange={() => onSetMode(path, mode)}
+                />
+                {MODE_LABELS[mode]}
+              </label>
+            ))}
+            {pick.many.mode === 'explode' && (
+              <em className="fields-related-grain">changes what a row is</em>
+            )}
+          </span>
+        )}
+      </li>
+    );
+  };
 
   return (
     <div className="fields-related" data-testid="fields-related">
@@ -231,9 +270,17 @@ function RelatedColumns({
           );
         }
 
+        // The second hop (MAX_PATH_HOPS = 2): the related class's own links.
+        // Only links with a selectable field, and never a second list after a
+        // list -- a list of lists has no single meaning for "one row each" or
+        // for a joined summary (see resolvePath).
+        const innerAll = deriveEdges(target, collections).filter((e) => e.selectField);
+        const inner = innerAll.filter((e) => !(edge.toMany && e.toMany));
+        const skippedLists = innerAll.length - inner.length;
+
         const isOpen = open === edge.key;
         return (
-          <div key={edge.key} className="fields-related-edge">
+          <div key={edge.key} className="fields-related-edge" data-testid="fields-related-edge">
             <button
               type="button"
               className="fields-related-toggle"
@@ -247,46 +294,51 @@ function RelatedColumns({
             </button>
 
             {isOpen && (
-              <ul className="fields-related-list">
-                {target.detailColumns.map((column) => {
-                  const path = [edge.selectField!, column.field];
-                  const pick = chosen.get(pathKey(path));
-                  return (
-                    <li key={column.field} className="fields-related-row">
-                      <label className="fields-action fields-action-toggle">
-                        <input
-                          type="checkbox"
-                          checked={pick != null}
-                          onChange={() => onTogglePath(edge, column)}
-                        />
-                        {column.label}
-                      </label>
+              <>
+                <ul className="fields-related-list">
+                  {target.detailColumns.map((column) => fieldRow([edge.selectField!, column.field], column))}
+                </ul>
 
-                      {/* A to-many column cannot be added without answering
-                          what a row means, so the choice is inline and a grain
-                          change is never the silent default. */}
-                      {pick && edge.toMany && (
-                        <span className="fields-related-mode">
-                          {(['count', 'joinIds', 'explode'] as ManyMode[]).map((mode) => (
-                            <label key={mode} className="fields-related-mode-option">
-                              <input
-                                type="radio"
-                                name={`mode-${pathKey(path)}`}
-                                checked={pick.many?.mode === mode}
-                                onChange={() => onSetMode(path, mode)}
-                              />
-                              {MODE_LABELS[mode]}
-                            </label>
-                          ))}
-                          {pick.many?.mode === 'explode' && (
-                            <em className="fields-related-grain">changes what a row is</em>
+                {inner.length > 0 && (
+                  <div className="fields-related-inner" data-testid="fields-related-inner">
+                    <h4 className="fields-related-inner-title">Then through {target.label.toLowerCase()}&apos;s references</h4>
+                    {inner.map((sub) => {
+                      const subTarget = collections.find((c) => c.id === sub.relatedCollectionId);
+                      if (!subTarget) return null;
+                      const innerKey = `${edge.key}>${sub.key}`;
+                      const innerOpen = openInner === innerKey;
+                      return (
+                        <div key={innerKey} className="fields-related-edge fields-related-edge-inner">
+                          <button
+                            type="button"
+                            className="fields-related-toggle"
+                            aria-expanded={innerOpen}
+                            onClick={() => setOpenInner(innerOpen ? null : innerKey)}
+                          >
+                            <span aria-hidden="true">{innerOpen ? '▾' : '▸'}</span> {sub.label}
+                            <span className="fields-related-type" style={typeColorStyle(subTarget.typeName)}>
+                              {subTarget.label}
+                            </span>
+                          </button>
+                          {innerOpen && (
+                            <ul className="fields-related-list">
+                              {subTarget.detailColumns.map((column) =>
+                                fieldRow([edge.selectField!, sub.selectField!, column.field], column),
+                              )}
+                            </ul>
                           )}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+                        </div>
+                      );
+                    })}
+                    {skippedLists > 0 && (
+                      <p className="fields-related-note">
+                        {skippedLists} further list{skippedLists === 1 ? '' : 's'} not offered: a list inside a list has
+                        no single row meaning.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         );

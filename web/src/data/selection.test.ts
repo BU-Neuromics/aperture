@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deriveCollections } from './schemaModel';
 import { demoIntrospection } from './testing/fixtures';
-import { flattenRows, pathLabel, selectionForPaths, valueAtPath } from './selection';
+import { explodeKey, flattenRows, normalizeExplode, pathLabel, selectionForPaths, valueAtPath } from './selection';
 import type { ManyMode, PathColumn } from './selection';
 
 const demo = deriveCollections(demoIntrospection);
@@ -153,3 +153,98 @@ describe('flattenRows', () => {
     expect(out.rows).toHaveLength(3);
   });
 });
+
+describe('flattenRows across two hops (one list on the path)', () => {
+  // Workflow → inputSamples (list) → donor (one) → cohort: the RNA-seq + clinical shape.
+  const donorCohort = (mode: ManyMode): PathColumn => ({
+    path: ['inputSamples', 'donor', 'cohort'],
+    column: col('donors', 'cohort'),
+    label: 'Sample → Donor → Cohort',
+    many: { mode, depth: 1 },
+  });
+  const accession = (mode: ManyMode): PathColumn => ({
+    path: ['inputSamples', 'accession'],
+    column: col('samples', 'accession'),
+    label: 'Sample → Accession',
+    many: { mode, depth: 1 },
+  });
+  const status: PathColumn = { path: ['status'], column: col('workflows', 'status'), label: 'Status' };
+  const rows = [
+    {
+      id: 'w1',
+      status: 'completed',
+      inputSamples: [
+        { id: 's1', accession: 'A1', donor: { id: 'd1', cohort: 'case' } },
+        { id: 's2', accession: 'A2', donor: null },
+      ],
+    },
+    { id: 'w2', status: 'failed', inputSamples: [] },
+  ];
+
+  it('explodes at the list and reads the rest of the path from each member', () => {
+    const out = flattenRows(rows, [status, accession('explode'), donorCohort('explode')], 'id');
+    expect(out.rows.map((r) => [r.values['status'], r.values['inputSamples.accession'], r.values['inputSamples.donor.cohort']])).toEqual([
+      ['completed', 'A1', 'case'],
+      ['completed', 'A2', undefined], // a sample with no donor: blank, not dropped
+      ['failed', undefined, undefined], // outer join: an anchor with no members keeps one row
+    ]);
+    expect(out.grain).toMatchObject({ anchorCount: 2, rowCount: 3 });
+  });
+
+  it('summarises through the list without changing the grain', () => {
+    expect(flattenRows(rows, [donorCohort('joinIds')], 'id').rows[0].values['inputSamples.donor.cohort']).toBe('case');
+    expect(flattenRows(rows, [donorCohort('count')], 'id').rows[0].values['inputSamples.donor.cohort']).toBe(2);
+  });
+
+  it('reads a list at the second hop (Sample → donor → diagnoses)', () => {
+    const dx: PathColumn = {
+      path: ['donor', 'diagnoses', 'conditionName'],
+      column: col('samples', 'name'),
+      label: 'Donor → Diagnosis → Condition',
+      many: { mode: 'joinIds', depth: 2 },
+    };
+    const sampleRows = [
+      { id: 's1', donor: { id: 'd1', diagnoses: [{ id: 'x1', conditionName: 'CTE' }, { id: 'x2', conditionName: 'AD' }] } },
+      { id: 's2', donor: null },
+    ];
+    const out = flattenRows(sampleRows, [dx], 'id');
+    expect(out.rows.map((r) => r.values['donor.diagnoses.conditionName'])).toEqual(['CTE; AD', '']);
+  });
+});
+
+describe('one exploded LINK, not one exploded column', () => {
+  const through = (path: string[], mode: ManyMode, depth?: number): PathColumn => ({
+    path,
+    column: col('samples', 'accession'),
+    label: path.join('.'),
+    many: { mode, depth },
+  });
+
+  it('keys columns by the link they read through', () => {
+    expect(explodeKey(through(['inputSamples', 'accession'], 'count'))).toBe('inputSamples');
+    expect(explodeKey(through(['inputSamples', 'donor', 'cohort'], 'count', 1))).toBe('inputSamples');
+    expect(explodeKey(through(['donor', 'diagnoses', 'conditionName'], 'count', 2))).toBe('donor.diagnoses');
+  });
+
+  it('explodes every column through the chosen link and demotes other links', () => {
+    const out = normalizeExplode(
+      [
+        through(['inputSamples', 'accession'], 'count'),
+        through(['inputSamples', 'donor', 'cohort'], 'count', 1),
+        through(['datasets', 'name'], 'explode'),
+      ],
+      'inputSamples',
+    );
+    expect(out.map((c) => c.many?.mode)).toEqual(['explode', 'explode', 'count']);
+  });
+
+  it('keeps the first exploded link when none is preferred', () => {
+    const out = normalizeExplode([
+      through(['datasets', 'name'], 'explode'),
+      through(['inputSamples', 'accession'], 'explode'),
+      through(['datasets', 'id'], 'joinIds'),
+    ]);
+    expect(out.map((c) => c.many?.mode)).toEqual(['explode', 'count', 'explode']);
+  });
+});
+

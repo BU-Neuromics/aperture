@@ -125,6 +125,48 @@ describe('saved views (Phase 4, R3.9)', () => {
     expect(within(nav).getByTitle(/saved under an older schema/)).toBeInTheDocument();
   });
 
+  it('opening a saved QUERY reopens the query view with its spec', async () => {
+    const seeded = {
+      id: 'DOC-1',
+      kind: 'savedView',
+      name: 'All books query',
+      payload: sealPayload(1, {
+        state: {
+          collection: 'books',
+          page: 1,
+          query: { qs: { v: 1, anchor: 'Book', mode: 'AND', criteria: [] }, cols: { hidden: ['title'] } },
+        },
+        schemaFingerprint: 'whatever',
+      }),
+    };
+    const user = userEvent.setup();
+    const { client } = makeClient([seeded]);
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?collection=authors');
+
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    await user.click(await within(nav).findByText('All books query'));
+
+    // A saved query lands in the query view, not on a collection page.
+    expect(await screen.findByTestId('query-builder')).toBeInTheDocument();
+  });
+
+  it('keeps opening views saved before queries could be saved', async () => {
+    const { openSavedView } = await import('./savedViews');
+    const old = openSavedView({
+      kind: 'savedView',
+      name: 'old',
+      payload: sealPayload(1, { state: { collection: 'books', page: 1 }, schemaFingerprint: 'x' }),
+    } as never);
+    expect(old?.state.query).toBeUndefined();
+    const bad = openSavedView({
+      kind: 'savedView',
+      name: 'bad',
+      payload: sealPayload(1, { state: { collection: 'books', page: 1, query: { qs: 'nope' } }, schemaFingerprint: 'x' }),
+    } as never);
+    // A malformed query part is skipped like any other invalid payload.
+    expect(bad).toBeNull();
+  });
+
   it('skips documents whose payload fails validation', async () => {
     const { client } = makeClient([
       { id: 'DOC-1', kind: 'savedView', name: 'broken', payload: '{"v":99}' },

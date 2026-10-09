@@ -1,4 +1,6 @@
 import type { FilterValues, RangeValues } from '../data/hippoSource';
+import type { ColumnsParam } from '../query/columnView';
+import type { QuerySpec } from '../query/querySpec';
 import type { ControlPlaneDocument, Visibility } from './store';
 import { openPayload, sealPayload } from './store';
 
@@ -19,6 +21,16 @@ export interface SavedViewState {
   ranges?: RangeValues;
   /** `<column field>:<asc|desc>` (issue #20) — absent for endpoints/columns without sort. */
   sort?: string;
+  /**
+   * A saved QUERY rather than a collection page: the executed spec (`qs`) and
+   * its column choices (`cols` -- traversals, grain, hidden fields), exactly
+   * the two URL parameters that reproduce the query view. Optional and
+   * additive, so `SAVED_VIEW_VERSION` stays 1 and every existing view still
+   * opens. Shape-checked only here; `qs`/`cols` are validated again by their
+   * own URL parsers when the view is applied, so a stale one degrades to
+   * fewer columns rather than a crash.
+   */
+  query?: { qs: QuerySpec; cols?: ColumnsParam };
 }
 
 export interface SavedView {
@@ -68,7 +80,21 @@ function isSavedViewData(data: unknown): data is Omit<SavedView, 'name'> {
     (state['q'] === undefined || typeof state['q'] === 'string') &&
     (state['filters'] === undefined || isFilterValues(state['filters'])) &&
     (state['ranges'] === undefined || isRangeValues(state['ranges'])) &&
-    (state['sort'] === undefined || typeof state['sort'] === 'string')
+    (state['sort'] === undefined || typeof state['sort'] === 'string') &&
+    (state['query'] === undefined || isSavedQuery(state['query']))
+  );
+}
+
+function isSavedQuery(value: unknown): boolean {
+  if (typeof value !== 'object' || value == null || Array.isArray(value)) return false;
+  const { qs, cols } = value as Record<string, unknown>;
+  const spec = qs as Record<string, unknown> | null;
+  return (
+    typeof spec === 'object' &&
+    spec != null &&
+    typeof spec['anchor'] === 'string' &&
+    Array.isArray(spec['criteria']) &&
+    (cols === undefined || (typeof cols === 'object' && cols != null && !Array.isArray(cols)))
   );
 }
 
