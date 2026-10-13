@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
@@ -239,6 +239,36 @@ describe('ChatPanel (ADR-0039)', () => {
 
     await user.click(screen.getByRole('button', { name: /Clear conversation/i }));
     expect(screen.getByRole('combobox', { name: 'Anchor' })).toBeEnabled();
+  });
+
+  /**
+   * A query the chat built and ran must be savable. Save view used to sit in the
+   * builder's fieldset, so the lock above disabled it exactly when a
+   * conversation owned the query -- the one case with no manual way round it.
+   */
+  it('lets a query the conversation built and ran be saved as a view', async () => {
+    const user = userEvent.setup();
+    const client = conversationalClient();
+    renderApp(<App endpoint={endpoint} clientFactory={() => client} />, '?view=query');
+
+    await screen.findByTestId('chat-panel');
+    await user.type(screen.getByRole('textbox', { name: 'Describe the query' }), 'recent books');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Filtering to recent books.');
+    await user.click(screen.getByRole('button', { name: 'Run this query' }));
+    await screen.findByTestId('query-results');
+
+    // The builder is still locked; saving is not an edit, so it is not.
+    expect(screen.getByRole('combobox', { name: 'Anchor' })).toBeDisabled();
+    const save = screen.getByTestId('save-view');
+    expect(save).toBeEnabled();
+
+    await user.click(save);
+    await user.type(screen.getByLabelText('View name'), 'Recent books');
+    await user.click(screen.getByTestId('save-view-confirm'));
+
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    expect(await within(nav).findByText('Recent books')).toBeInTheDocument();
   });
 
   it('flags turns an edit invalidated instead of dropping them', async () => {
