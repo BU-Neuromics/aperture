@@ -828,15 +828,6 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
           >
             {running ? 'Running…' : 'Run'}
           </button>
-          {/* Saves what was RUN (the URL's spec and columns), not the unrun
-              draft: a saved view reopens a result the user has seen. */}
-          {executed && (
-            <SaveViewButton
-              source={source}
-              collectionId={resolveAnchor(executed, collections)?.id ?? anchor.id}
-              query={{ qs: executed, cols: urlState.columns ?? null }}
-            />
-          )}
         </div>
 
         {validation.errors.length > 0 && draft.criteria.length > 0 && (
@@ -909,6 +900,18 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               <button type="button" className="action-button" onClick={() => urlState.openGraphView()}>
                 Explore as graph
               </button>
+              {/* Saves what was RUN (the URL's spec and columns), not the unrun
+                  draft: a saved view reopens a result the user has seen. It sits
+                  with the result, not in the builder's fieldset: the fieldset is
+                  disabled while a conversation owns the query, and saving is not
+                  an edit -- a chat-built query must be savable too. */}
+              {executed && (
+                <SaveViewButton
+                  source={source}
+                  collectionId={resolveAnchor(executed, collections)?.id ?? anchor.id}
+                  query={{ qs: executed, cols: urlState.columns ?? null }}
+                />
+              )}
               <button type="button" className="action-button" onClick={() => void exportRows('csv')}>
                 Export CSV
               </button>
