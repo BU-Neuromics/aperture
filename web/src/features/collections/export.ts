@@ -125,8 +125,22 @@ export function downloadFile(filename: string, mime: string, content: string): v
  * flattener — including the `count`/`joinIds` summaries, which have no
  * representation in a `ColumnModel`.
  */
+/**
+ * Column names for an exported file: `exportName` (`sample_type`,
+ * `Aliquot.volume_ul`, `Sample.Donor.age_at_death`), the dotted convention R and
+ * pandas expect. Two columns that would share a name -- two links reaching the
+ * same class, say `inputs` and `outputs` both to Sample -- fall back to their
+ * GraphQL path (`inputs.sampleType`), so no header is ever ambiguous.
+ */
+export function exportHeaders(columns: PathColumn[]): string[] {
+  const names = columns.map((c) => c.exportName ?? c.label);
+  const counts = new Map<string, number>();
+  for (const n of names) counts.set(n, (counts.get(n) ?? 0) + 1);
+  return names.map((n, i) => ((counts.get(n) ?? 0) > 1 ? pathKey(columns[i].path) : n));
+}
+
 export function toCSVPaths(columns: PathColumn[], rows: DisplayRow[]): string {
-  const header = columns.map((c) => csvEscape(c.label)).join(',');
+  const header = exportHeaders(columns).map(csvEscape).join(',');
   const lines = rows.map((row) =>
     columns
       .map((c) => {
@@ -153,9 +167,10 @@ export function toCSVPaths(columns: PathColumn[], rows: DisplayRow[]): string {
  * while both remain on screen.
  */
 export function toJSONExportPaths(columns: PathColumn[], rows: DisplayRow[]): string {
+  const keys = exportHeaders(columns);
   return JSON.stringify(
     rows.map((row) =>
-      Object.fromEntries(columns.map((c) => [pathKey(c.path), row.values[pathKey(c.path)] ?? null])),
+      Object.fromEntries(columns.map((c, i) => [keys[i], row.values[pathKey(c.path)] ?? null])),
     ),
     null,
     2,

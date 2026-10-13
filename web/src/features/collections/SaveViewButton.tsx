@@ -3,6 +3,8 @@ import { useSavedViews } from '../../control/SavedViewsContext';
 import type { HippoSource } from '../../data/hippoSource';
 import { schemaFingerprint } from '../../workflows/engine';
 import { formatSort, useCollectionUrlState } from './urlState';
+import type { ColumnsParam } from '../../query/columnView';
+import type { QuerySpec } from '../../query/querySpec';
 
 /**
  * Saves the current query-state as a named view (Phase 4). Same name
@@ -16,9 +18,15 @@ import { formatSort, useCollectionUrlState } from './urlState';
 export function SaveViewButton({
   source,
   collectionId,
+  query,
 }: {
   source: HippoSource;
   collectionId: string;
+  /**
+   * Save a QUERY (its executed spec and column choices) instead of the
+   * collection page. Opening the view reruns that query with those columns.
+   */
+  query?: { qs: QuerySpec; cols?: ColumnsParam | null };
 }) {
   const { save, views, canWrite } = useSavedViews();
   const { page, search, filters, ranges, sort } = useCollectionUrlState();
@@ -42,6 +50,7 @@ export function SaveViewButton({
           filters: Object.keys(filters).length > 0 ? filters : undefined,
           ranges: Object.keys(ranges).length > 0 ? ranges : undefined,
           sort: sort ? formatSort(sort) : undefined,
+          query: query ? { qs: query.qs, ...(query.cols ? { cols: query.cols } : {}) } : undefined,
         },
         schemaFingerprint: schemaFingerprint(source),
       });

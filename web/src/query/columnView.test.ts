@@ -49,18 +49,49 @@ describe('cols URL parameter (aperture#73)', () => {
     expect(pathColumns).toEqual([]);
   });
 
-  it('keeps at most one explode', () => {
+  it('explodes every column through the exploded link together', () => {
+    // "One row each" belongs to the LINK. Two columns through inputSamples are
+    // one row per input sample, not a cross product -- the old per-column cap
+    // demoted one of them, so the two columns described different samples.
     const { pathColumns } = decodeColumns(
       {
         paths: [
           { path: ['inputSamples', 'accession'], mode: 'explode' },
-          { path: ['inputSamples', 'id'], mode: 'explode' },
+          { path: ['inputSamples', 'id'], mode: 'count' },
         ],
       },
       of('workflows'),
       collections,
     );
-    expect(pathColumns.filter((c) => c.many?.mode === 'explode')).toHaveLength(1);
+    expect(pathColumns.map((c) => c.many?.mode)).toEqual(['explode', 'explode']);
+  });
+
+  it('restores a two-hop column through a list, with its depth and export name', () => {
+    const { pathColumns } = decodeColumns(
+      { paths: [{ path: ['inputSamples', 'donor', 'cohort'], mode: 'explode' }] },
+      of('workflows'),
+      collections,
+    );
+    expect(pathColumns).toHaveLength(1);
+    const [col] = pathColumns;
+    expect(col!.many).toMatchObject({ mode: 'explode', depth: 1 });
+    expect(col!.label).toBe('Sample → Donor → Cohort');
+    expect(col!.exportName).toBe('Sample.Donor.cohort');
+  });
+
+  it('drops paths it cannot resolve rather than guessing', () => {
+    const { pathColumns } = decodeColumns(
+      {
+        paths: [
+          { path: ['inputSamples', 'donor', 'cohort', 'extra'] }, // three hops: over the cap
+          { path: ['inputSamples', 'noSuchField'] },
+          { path: ['nope', 'cohort'] },
+        ],
+      },
+      of('workflows'),
+      collections,
+    );
+    expect(pathColumns).toEqual([]);
   });
 
   it('rejects malformed shapes', () => {

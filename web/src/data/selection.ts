@@ -40,7 +40,64 @@ export interface PathColumn {
     mode: ManyMode;
     /** The edge's own label, so a grain note names the relationship. */
     edgeLabel?: string;
+    /**
+     * How many path segments lead up to and include the to-many hop. A
+     * one-hop column (`aliquots.volumeUl`) has depth 1; a two-hop column whose
+     * list is the first hop (`inputSamples.donor.ageAtDeath`) also has depth
+     * 1; one whose list is the second hop (`donor.diagnoses.conditionName`)
+     * has depth 2. Absent means "the hop just before the leaf", which is what
+     * every one-hop column already was. At most ONE hop on a path is to-many.
+     */
+    depth?: number;
   };
+  /**
+   * The column's name in exported files: anchor fields by slot
+   * (`sample_type`), traversed ones by the classes they pass through plus the
+   * slot (`Aliquot.volume_ul`, `Sample.Donor.age_at_death`). The screen keeps
+   * the arrow label; a file goes to R or pandas, where a dotted name is the
+   * convention and an arrow is a nuisance. Falls back to `label`.
+   */
+  exportName?: string;
+}
+
+/** Segments up to and including the to-many hop (see `PathColumn.many.depth`). */
+export function manyDepth(column: PathColumn): number {
+  return column.many?.depth ?? column.path.length - 1;
+}
+
+/**
+ * Identifies the to-many LINK a column reads through, e.g. `aliquots` or
+ * `inputSamples`. Every column through one link shares it, which is what
+ * makes "one row each" a property of the link rather than of a column:
+ * exploding `aliquots.containerType` and `aliquots.isDepleted` is one row per
+ * aliquot, not a cross product, and the two must never disagree.
+ */
+export function explodeKey(column: PathColumn): string | null {
+  if (!column.many) return null;
+  return pathKey(column.path.slice(0, manyDepth(column)));
+}
+
+/**
+ * Enforce the one-exploded-link cap (ADR-0041 v1) by LINK, not by column.
+ *
+ * `prefer` names the link the user just chose; otherwise the first exploded
+ * column wins. Columns through the winning link all explode together; any
+ * column exploding through a different link is demoted to `count`.
+ */
+export function normalizeExplode(columns: PathColumn[], prefer?: string | null): PathColumn[] {
+  const winner =
+    prefer ?? columns.map((c) => (c.many?.mode === 'explode' ? explodeKey(c) : null)).find((k) => k != null) ?? null;
+  return columns.map((c) => {
+    if (!c.many) return c;
+    const key = explodeKey(c);
+    if (winner != null && key === winner && c.many.mode !== 'explode') {
+      return { ...c, many: { ...c.many, mode: 'explode' } };
+    }
+    if (c.many.mode === 'explode' && key !== winner) {
+      return { ...c, many: { ...c.many, mode: 'count' } };
+    }
+    return c;
+  });
 }
 
 /** Depth cap: 2 hops, well inside Mosaic's `DEFAULT_MAX_QUERY_DEPTH` of 10. */
@@ -216,20 +273,23 @@ export function flattenRows(
   anchorIdField?: string,
 ): FlattenResult {
   const exploded = columns.find((c) => c.many?.mode === 'explode');
-  const explodePath = exploded ? exploded.path.slice(0, -1) : null;
+  const explodeAt = exploded ? explodeKey(exploded) : null;
+  const explodePath = exploded ? exploded.path.slice(0, manyDepth(exploded)) : null;
 
   const read = (row: Record<string, unknown>, column: PathColumn): unknown => {
-    const value = valueAtPath(row, column.path);
-    if (!column.many || column.many.mode === 'explode') return value;
+    if (!column.many) return valueAtPath(row, column.path);
     // A to-many path kept at anchor grain resolves to a scalar summary. The
-    // members are already in hand, so neither mode costs a round trip.
-    const members = valueAtPath(row, column.path.slice(0, -1));
+    // members are already in hand, so neither mode costs a round trip. The
+    // list may sit at any hop: everything after it is read per member, so
+    // `inputSamples.donor.ageAtDeath` lists each input sample's donor's age.
+    const depth = manyDepth(column);
+    const members = valueAtPath(row, column.path.slice(0, depth));
     const list = Array.isArray(members) ? members : [];
     if (column.many.mode === 'count') return list.length;
-    const leaf = column.path[column.path.length - 1];
+    const rest = column.path.slice(depth);
     return list
-      .map((m) => (m as Record<string, unknown>)?.[leaf])
-      .filter((v) => v != null)
+      .map((m) => (m == null ? undefined : valueAtPath(m as Record<string, unknown>, rest)))
+      .filter((v) => v != null && typeof v !== 'object')
       .join('; ');
   };
 
@@ -257,9 +317,9 @@ export function flattenRows(
     slots.forEach((member, m) => {
       const values: Record<string, unknown> = {};
       for (const column of columns) {
-        const onExplodedPath =
-          column.many?.mode === 'explode' &&
-          pathKey(column.path.slice(0, -1)) === pathKey(explodePath);
+        // Every column through the exploded LINK reads from this member, so
+        // two columns on one link always describe the same related record.
+        const onExplodedPath = column.many != null && explodeKey(column) === explodeAt;
         if (onExplodedPath) {
           const rest = column.path.slice(explodePath.length);
           values[pathKey(column.path)] =

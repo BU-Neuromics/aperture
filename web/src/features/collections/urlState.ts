@@ -227,6 +227,7 @@ export function useCollectionUrlState() {
       filters?: FilterValues;
       ranges?: RangeValues;
       sort?: string;
+      query?: { qs: QuerySpec; cols?: ColumnsParam };
     }) =>
       void setState({
         collection: view.collection,
@@ -238,6 +239,12 @@ export function useCollectionUrlState() {
         form: null,
         workflow: null,
         sort: view.sort ?? null,
+        // A saved query reopens the query view with its columns; a saved
+        // collection page leaves any open query view, rather than showing the
+        // page's filters under a query they do not belong to.
+        view: view.query ? 'query' : null,
+        qs: view.query?.qs ?? null,
+        cols: view.query?.cols ?? null,
       }),
   };
 }
