@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ColumnModel } from '../../data/schemaModel';
 import type { PathColumn } from '../../data/selection';
+import { formatValue } from '../../data/valueText';
 
 /**
  * Cell renderers keyed by LinkML-ish slot kind (R3.2), translated from the
@@ -13,30 +14,6 @@ export function isRightAligned(column: ColumnModel): boolean {
 }
 
 const EMPTY = <span className="cell-empty">—</span>;
-
-/**
- * Render a possibly-structured scalar value as legible text. Mosaic emits
- * inline value types (LinkML `STRUCTURED` slots — e.g. a quantity value
- * `{ value, unit }`) as a JSON passthrough scalar, so a cell value can be a
- * plain object or array. `String()` on those yields "[object Object]"; format
- * them generically instead — arrays join their items, objects render
- * `key: value` pairs — with no domain-specific field assumptions (ADR-0002).
- */
-function formatValue(value: unknown): string {
-  if (value == null) return '';
-  if (typeof value !== 'object') return String(value);
-  if (Array.isArray(value)) {
-    return value
-      .map(formatValue)
-      .filter((s) => s !== '')
-      .join(', ');
-  }
-  const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => v != null);
-  if (entries.length === 0) return '';
-  return entries
-    .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
-    .join(' · ');
-}
 
 export function renderCell(column: ColumnModel, value: unknown): ReactNode {
   if (value == null) return EMPTY;

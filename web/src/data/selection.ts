@@ -1,5 +1,6 @@
 import type { CollectionModel, ColumnModel } from './schemaModel';
 import { humanize } from './schemaModel';
+import { valueText } from './valueText';
 
 /**
  * Path-addressed result columns and the GraphQL selection they compile to
@@ -287,9 +288,11 @@ export function flattenRows(
     const list = Array.isArray(members) ? members : [];
     if (column.many.mode === 'count') return list.length;
     const rest = column.path.slice(depth);
+    // Each member's value as text for the leaf column, so a reference lists
+    // its id and a structured value its fields rather than vanishing.
     return list
-      .map((m) => (m == null ? undefined : valueAtPath(m as Record<string, unknown>, rest)))
-      .filter((v) => v != null && typeof v !== 'object')
+      .map((m) => (m == null ? '' : valueText(column.column, valueAtPath(m as Record<string, unknown>, rest))))
+      .filter((v) => v !== '')
       .join('; ');
   };
 

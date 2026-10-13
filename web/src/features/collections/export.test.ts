@@ -52,3 +52,10 @@ describe('toCSV', () => {
     expect(csv).not.toContain('78');
   });
 });
+
+describe('toCSV structured values', () => {
+  it('writes a structured slot as text, not [object Object]', () => {
+    const csv = toCSV([col('id', 'ID'), col('yield', 'Yield')], [{ id: 'D1', yield: { value: 12, unit: 'ng' } }]);
+    expect(csv.split('\r\n')[1]).toBe('D1,value: 12 · unit: ng');
+  });
+});
