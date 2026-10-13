@@ -2,6 +2,7 @@ import type { FilterCondition, FilterValues, HippoSource } from '../../data/hipp
 import type { CollectionModel, ColumnModel } from '../../data/schemaModel';
 import type { DisplayRow, PathColumn } from '../../data/selection';
 import { pathKey } from '../../data/selection';
+import { valueText } from '../../data/valueText';
 
 /**
  * Export (R3.10, L8): client-side page-through of the current filtered set →
@@ -59,22 +60,6 @@ export async function collectAllRows(
   }
 }
 
-function cellValue(column: ColumnModel, value: unknown): string {
-  if (value == null) return '';
-  if (column.kind === 'ref') {
-    const id = (value as Record<string, unknown>)[column.targetIdField ?? ''];
-    return id == null ? '' : String(id);
-  }
-  if (column.kind === 'refList') {
-    if (!Array.isArray(value)) return '';
-    return value
-      .map((item) => (item as Record<string, unknown>)[column.targetIdField ?? ''])
-      .filter((id) => id != null)
-      .join('; ');
-  }
-  return String(value);
-}
-
 function csvEscape(field: string): string {
   return /[",\n\r]/.test(field) ? `"${field.replaceAll('"', '""')}"` : field;
 }
@@ -82,7 +67,7 @@ function csvEscape(field: string): string {
 export function toCSV(columns: ColumnModel[], rows: Record<string, unknown>[]): string {
   const header = columns.map((c) => csvEscape(c.label)).join(',');
   const lines = rows.map((row) =>
-    columns.map((c) => csvEscape(cellValue(c, row[c.field]))).join(','),
+    columns.map((c) => csvEscape(valueText(c, row[c.field]))).join(','),
   );
   return [header, ...lines].join('\r\n') + '\r\n';
 }
@@ -146,12 +131,11 @@ export function toCSVPaths(columns: PathColumn[], rows: DisplayRow[]): string {
       .map((c) => {
         const value = row.values[pathKey(c.path)];
         if (value == null) return '';
-        // Only a bare reference still needs unwrapping; every other shape was
-        // resolved to a scalar by the flattener.
-        if (!c.many && (c.column.kind === 'ref' || c.column.kind === 'refList')) {
-          return csvEscape(cellValue(c.column, value));
-        }
-        return csvEscape(String(value));
+        // `count` and `joinIds` were summarised to a number or text by the
+        // flattener; any other cell still holds the leaf's own value, which may
+        // be a reference envelope or a structured object.
+        if (c.many?.mode === 'count' || c.many?.mode === 'joinIds') return csvEscape(String(value));
+        return csvEscape(valueText(c.column, value));
       })
       .join(','),
   );
