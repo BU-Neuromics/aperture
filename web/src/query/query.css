@@ -173,6 +173,56 @@
   min-height: 0;
 }
 
+/* The builder's sections stack in one column that .qwb-main scrolls, so none of
+   them may shrink. .query-view fills the column's height (for the graph canvas),
+   and a flex item squeezed below its content spills over the next one: the
+   Fields panel painted over the results table and its pager. */
+.query-builder-view > *,
+.query-builder-view .query-results > * {
+  flex-shrink: 0;
+}
+
+/* The results table keeps to its own area: it scrolls both ways inside this
+   box, with the header pinned (th is sticky), rather than running off the side
+   of the column or under the pager. */
+.query-table-scroll {
+  overflow: auto;
+  max-height: 70vh;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Opened over a result, the Fields panel is a bounded area with its own scroll,
+   so a long field list neither covers the table nor pushes it out of sight. */
+.query-results .fields-panel {
+  max-height: 45vh;
+  overflow-y: auto;
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.query-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.query-zoom .action-button {
+  min-width: 2rem;
+  padding-inline: var(--space-2);
+}
+
+.query-zoom-level {
+  min-width: 3.5ch;
+  text-align: center;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
 .query-results-bar {
   display: flex;
   justify-content: space-between;
