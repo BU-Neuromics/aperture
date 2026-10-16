@@ -269,6 +269,17 @@ function RelatedEditor({
   );
 }
 
+/** Table zoom levels, largest first. View state only: nothing is fetched or saved. */
+const TABLE_ZOOM_STEPS = [1, 0.9, 0.8, 0.7, 0.6];
+
+/** The next zoom step out (+1) or in (-1) from `current`, clamped to the ends. */
+function stepZoom(current: number, direction: 1 | -1): number {
+  const i = TABLE_ZOOM_STEPS.findIndex((z) => z <= current + 1e-9);
+  const at = i === -1 ? TABLE_ZOOM_STEPS.length - 1 : i;
+  const next = Math.min(TABLE_ZOOM_STEPS.length - 1, Math.max(0, at + direction));
+  return TABLE_ZOOM_STEPS[next]!;
+}
+
 export function QueryBuilderView({ source }: { source: HippoSource }) {
   const { collections, capabilities } = source;
   const urlState = useCollectionUrlState();
@@ -337,6 +348,8 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
    */
   const [pathColumns, setPathColumns] = useState<PathColumn[]>(seed.pathColumns);
   const [pickingFields, setPickingFields] = useState(false);
+  /** View-only scale of the results table, so a wide or long result can be taken in at once. */
+  const [tableZoom, setTableZoom] = useState(1);
 
   const anchor = resolveAnchor(draft, collections);
   /**
@@ -699,7 +712,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
   };
 
   return (
-    <div className="main-panel query-view" data-testid="query-builder">
+    <div className="main-panel query-view query-builder-view" data-testid="query-builder">
       <div className="query-header">
         <h1 className="main-panel-title">Query</h1>
         <button type="button" className="detail-link" onClick={urlState.closeQueryViews}>
@@ -887,6 +900,29 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               )}
             </span>
             <div className="collection-actions">
+              <div className="query-zoom" role="group" aria-label="Table zoom">
+                <button
+                  type="button"
+                  className="action-button"
+                  aria-label="Zoom out"
+                  disabled={tableZoom <= TABLE_ZOOM_STEPS[TABLE_ZOOM_STEPS.length - 1]}
+                  onClick={() => setTableZoom((z) => stepZoom(z, +1))}
+                >
+                  −
+                </button>
+                <span className="query-zoom-level" data-testid="query-zoom-level">
+                  {Math.round(tableZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="action-button"
+                  aria-label="Zoom in"
+                  disabled={tableZoom >= TABLE_ZOOM_STEPS[0]}
+                  onClick={() => setTableZoom((z) => stepZoom(z, -1))}
+                >
+                  +
+                </button>
+              </div>
               <button
                 type="button"
                 className="action-button"
@@ -959,7 +995,11 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               {anchor.label.toLowerCase()} on this page
             </span>
           )}
-          <table className="collection-table">
+          {/* The table scrolls inside its own box, both ways, with the header
+              pinned: a wide or long result stays in its area instead of running
+              under the pager and the panels around it. */}
+          <div className="query-table-scroll" data-testid="query-table-scroll">
+          <table className="collection-table" style={{ zoom: tableZoom }}>
             <thead>
               <tr>
                 {shownColumns.map((c) => (
@@ -1003,6 +1043,7 @@ export function QueryBuilderView({ source }: { source: HippoSource }) {
               )}
             </tbody>
           </table>
+          </div>
           <div className="query-pager">
             <button
               type="button"

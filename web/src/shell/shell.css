@@ -397,6 +397,15 @@
   display: none;
 }
 
+/* No composer (the endpoint offers no conversation, or none is bound): the
+   aside is absent or hidden, so drop its track too. Hiding the aside alone left
+   its 400px track in the grid, so main landed in that narrow track and the wide
+   one stayed empty. */
+.qwb-body:has(> .qwb-aside:empty),
+.qwb-body:not(:has(> .qwb-aside)) {
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+
 /* .qwb-main shares the plotting-paper canvas defined with .hnm-main above. */
 
 /* Below a working laptop width the composer stacks above the artifact rather
@@ -414,5 +423,12 @@
   .qwb-aside {
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+
+  /* Stacked, with no composer: main takes the whole height, not the
+     composer's row. */
+  .qwb-body:has(> .qwb-aside:empty),
+  .qwb-body:not(:has(> .qwb-aside)) {
+    grid-template-rows: minmax(0, 1fr);
   }
 }
